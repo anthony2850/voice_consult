@@ -1,65 +1,106 @@
-import Image from "next/image";
+import Link from 'next/link'
+import { Mic, Sparkles, Star } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import StartRecordButton from '@/components/StartRecordButton'
 
-export default function Home() {
+const SOCIAL_PROOF = [
+  { emoji: '🎯', text: '98% 정확도' },
+  { emoji: '⚡', text: '30초 분석' },
+  { emoji: '🔒', text: '보이스 보안' },
+]
+
+export default function HomePage() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+    <div className="flex flex-col min-h-[calc(100vh-84px)]">
+      {/* ── Top Bar ────────────────────────────────── */}
+      <header className="flex items-center justify-between px-5 pt-5 pb-2">
+        <div className="flex items-center gap-1.5">
+          <span className="text-lg font-black gradient-text">Voice Emotion</span>
+          <Badge
+            variant="secondary"
+            className="text-[10px] px-1.5 py-0 h-4 bg-primary/20 text-primary border-0"
+          >
+            AI
+          </Badge>
+        </div>
+        <Link href="/api/auth/signin">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-xs text-muted-foreground border border-border/60 rounded-full h-8 px-3 hover:bg-secondary hover:text-foreground"
+          >
+            카카오 로그인
+          </Button>
+        </Link>
+      </header>
+
+      {/* ── Hero ───────────────────────────────────── */}
+      <section className="flex-1 flex flex-col items-center justify-center px-5 pt-6 pb-8 text-center">
+        {/* floating badge */}
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full glass text-xs text-muted-foreground mb-6">
+          <Sparkles size={12} className="text-accent" />
+          <span>AI가 3만 개 목소리를 학습했어요</span>
+        </div>
+
+        {/* main headline */}
+        <h1 className="text-[2rem] font-black leading-tight tracking-tight mb-3">
+          <span className="text-foreground">내 목소리엔</span>
+          <br />
+          <span className="gradient-text">숨겨진 감정</span>
+          <span className="text-foreground">이 있다</span>
+        </h1>
+
+        <p className="text-sm text-muted-foreground leading-relaxed mb-8 max-w-[280px]">
+          목소리 톤·리듬·에너지를 AI가 분석해<br />
+          당신만의 <strong className="text-foreground">Voice Emotion</strong>을 알려드려요
+        </p>
+
+        {/* microphone animation */}
+        <div className="relative flex items-center justify-center mb-8">
+          {/* pulse rings */}
+          <span className="absolute w-36 h-36 rounded-full gradient-primary opacity-10 animate-ping" />
+          <span className="absolute w-28 h-28 rounded-full gradient-primary opacity-15 animate-ping [animation-delay:0.3s]" />
+          <div className="relative z-10 w-20 h-20 rounded-full gradient-primary flex items-center justify-center shadow-2xl shadow-primary/40">
+            <Mic size={34} className="text-white" strokeWidth={2} />
+          </div>
+        </div>
+
+        {/* social proof chips */}
+        <div className="flex items-center gap-2 mb-8">
+          {SOCIAL_PROOF.map(({ emoji, text }) => (
+            <span
+              key={text}
+              className="flex items-center gap-1 px-2.5 py-1 rounded-full glass text-[11px] text-foreground/80 font-medium"
             >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+              {emoji} {text}
+            </span>
+          ))}
+        </div>
+
+        {/* CTA button */}
+        <StartRecordButton />
+
+        <p className="mt-3 text-[11px] text-muted-foreground">
+          감정 분석 <span className="text-foreground font-semibold">무료</span> · 상세 리포트 990원
+        </p>
+      </section>
+
+      {/* ── Recent reviews ─────────────────────────── */}
+      <section className="px-5 pb-6">
+        <div className="glass rounded-2xl p-4">
+          <div className="flex items-center gap-1 mb-2">
+            {[...Array(5)].map((_, i) => (
+              <Star key={i} size={12} className="fill-accent text-accent" />
+            ))}
+            <span className="text-[11px] text-muted-foreground ml-1">4.9 · 2,847개 리뷰</span>
+          </div>
+          <p className="text-xs text-foreground/80 leading-relaxed">
+            &ldquo;목소리에서 열정이 1위로 나왔는데 진짜 공감돼서 소름 돋았어요. AI가 저를 저보다 잘 아는 것 같아요&rdquo;
           </p>
+          <p className="text-[10px] text-muted-foreground mt-1.5">— 카카오 사용자 @k****</p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+      </section>
     </div>
-  );
+  )
 }
