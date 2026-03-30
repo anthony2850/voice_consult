@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Share2, RotateCcw, FileText, Sparkles } from 'lucide-react'
+import { Share2, RotateCcw, FileText, Sparkles, Dumbbell } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { trackEvent } from '@/lib/analytics'
@@ -381,6 +381,44 @@ function PreRegisterForm() {
   )
 }
 
+// ── Training CTA Button ───────────────────────────────────
+function TrainingButton({
+  belowEmotions,
+  personaId,
+}: {
+  belowEmotions: string[]
+  personaId: number
+}) {
+  const router = useRouter()
+  const koNames = belowEmotions.map((e) => EMOTION_KO[e] ?? e)
+  const label =
+    koNames.length <= 3
+      ? koNames.join(', ')
+      : `${koNames.slice(0, 3).join(', ')} 외 ${koNames.length - 3}가지`
+
+  const handleClick = () => {
+    sessionStorage.setItem(
+      'trainingTarget',
+      JSON.stringify({ emotions: belowEmotions, personaId }),
+    )
+    router.push('/training')
+  }
+
+  return (
+    <button
+      onClick={handleClick}
+      className="w-full mt-1 h-13 px-4 py-3.5 rounded-2xl bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-sm font-bold flex items-center justify-center gap-2 shadow-lg shadow-violet-900/30 active:scale-[0.98] transition-transform"
+    >
+      <Dumbbell size={16} className="shrink-0" />
+      <span className="text-center leading-snug">
+        <span className="opacity-80 font-normal text-[12px]">{label}</span>
+        <br />
+        속성 높이는 발성 훈련 하러가기
+      </span>
+    </button>
+  )
+}
+
 // ── Persona Gap Analysis Section ─────────────────────────
 function PersonaGapSection({
   persona,
@@ -500,6 +538,14 @@ function PersonaGapSection({
               <p className="text-[11px] font-bold text-violet-400 mb-1">✦ 균형 잡힌 목소리</p>
               <p className="text-[11px] text-muted-foreground">모든 감정이 목표 범위에 가깝게 나왔어요!</p>
             </div>
+          )}
+
+          {/* Training CTA */}
+          {below.length > 0 && (
+            <TrainingButton
+              belowEmotions={below.map((g) => g.name)}
+              personaId={persona.id}
+            />
           )}
         </div>
       )}
