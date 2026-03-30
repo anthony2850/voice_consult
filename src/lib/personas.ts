@@ -171,7 +171,19 @@ export const PERSONAS: Persona[] = [
   },
 ]
 
-/** Normalize a Hume AI raw score (0–~0.14) to a 0–100 display value */
-export function normalizeHumeScore(raw: number): number {
-  return Math.min(100, Math.round((raw / 0.10) * 100))
+/**
+ * Convert a single Hume emotion score to a 0–100 percentile value
+ * relative to all 48 emotions in the user's result.
+ * This prevents clustering at 100 and gives natural variance.
+ */
+export function normalizeHumeScore(
+  emotionName: string,
+  allEmotions: Record<string, number>,
+): number {
+  const raw = allEmotions[emotionName] ?? 0
+  const allScores = Object.values(allEmotions).sort((a, b) => a - b)
+  // count how many scores are strictly below this score
+  const rank = allScores.filter((s) => s < raw).length
+  // percentile: 0 = lowest emotion, 100 = highest emotion
+  return Math.round((rank / (allScores.length - 1)) * 100)
 }

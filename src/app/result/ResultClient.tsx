@@ -393,7 +393,7 @@ function PersonaGapSection({
 }) {
   const userScores: Record<string, number> = {}
   for (const e of persona.emotions) {
-    userScores[e] = normalizeHumeScore(rawEmotions[e] ?? 0)
+    userScores[e] = normalizeHumeScore(e, rawEmotions)
   }
 
   const gaps = persona.emotions.map((e) => ({
