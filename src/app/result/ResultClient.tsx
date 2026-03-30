@@ -6,6 +6,8 @@ import { Share2, RotateCcw, FileText, Sparkles } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { trackEvent } from '@/lib/analytics'
+import { type Persona, normalizeHumeScore } from '@/lib/personas'
+import PersonaRadarChart from '@/components/PersonaRadarChart'
 
 // ── Korean labels for 48 emotions ────────────────────────
 const EMOTION_KO: Record<string, string> = {
@@ -379,13 +381,141 @@ function PreRegisterForm() {
   )
 }
 
+// ── Persona Gap Analysis Section ─────────────────────────
+function PersonaGapSection({
+  persona,
+  rawEmotions,
+  animate,
+}: {
+  persona: Persona
+  rawEmotions: Record<string, number>
+  animate: boolean
+}) {
+  const userScores: Record<string, number> = {}
+  for (const e of persona.emotions) {
+    userScores[e] = normalizeHumeScore(rawEmotions[e] ?? 0)
+  }
+
+  const gaps = persona.emotions.map((e) => ({
+    name: e,
+    target: persona.targetScores[e] ?? 0,
+    user: userScores[e],
+    gap: (persona.targetScores[e] ?? 0) - userScores[e],
+  }))
+
+  const below = gaps.filter((g) => g.gap > 10).sort((a, b) => b.gap - a.gap)
+  const above = gaps.filter((g) => g.gap < -10).sort((a, b) => a.gap - b.gap)
+
+  return (
+    <div className="glass rounded-3xl p-5">
+      <div className="flex items-center gap-2 mb-1">
+        <span className="text-base">{persona.emoji}</span>
+        <h2 className="text-sm font-bold text-foreground">페르소나 갭 분석</h2>
+      </div>
+      <p className="text-[11px] text-muted-foreground mb-4">
+        목표 페르소나 <strong className="text-foreground">{persona.name}</strong>와 내 목소리의 차이예요
+      </p>
+
+      {/* Radar Chart */}
+      <div className="mb-5">
+        <PersonaRadarChart
+          axes={persona.emotions}
+          targetScores={persona.targetScores}
+          userScores={userScores}
+          animate={animate}
+        />
+        <div className="flex items-center justify-center gap-4 mt-2">
+          <span className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+            <span className="w-3 h-1 rounded-full bg-violet-500/60 inline-block" style={{ border: '1px dashed rgba(139,92,246,0.8)' }} />
+            목표 페르소나
+          </span>
+          <span className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+            <span className="w-3 h-1 rounded-full bg-emerald-500 inline-block" />
+            내 목소리
+          </span>
+        </div>
+      </div>
+
+      {/* Emotion bars */}
+      <div className="space-y-3 mb-4">
+        {gaps.map((g) => {
+          const isBelow = g.gap > 10
+          const isAbove = g.gap < -10
+          const barColor = isBelow ? 'bg-rose-500' : isAbove ? 'bg-emerald-500' : 'bg-violet-500'
+          const label = EMOTION_KO[g.name] ?? g.name
+          return (
+            <div key={g.name}>
+              <div className="flex justify-between items-center mb-1">
+                <span className="text-xs font-semibold text-foreground">{label}</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] text-muted-foreground">
+                    목표 <span className="text-foreground font-bold">{g.target}</span>
+                  </span>
+                  <span className="text-[10px] text-muted-foreground">
+                    내 점수 <span className={`font-bold ${isBelow ? 'text-rose-400' : isAbove ? 'text-emerald-400' : 'text-violet-400'}`}>{g.user}</span>
+                  </span>
+                </div>
+              </div>
+              {/* Target track */}
+              <div className="relative h-2.5 rounded-full bg-border overflow-hidden">
+                {/* Target marker */}
+                <div
+                  className="absolute top-0 bottom-0 w-0.5 bg-violet-400 z-10"
+                  style={{ left: `${g.target}%` }}
+                />
+                {/* User bar */}
+                <div
+                  className={`h-full rounded-full transition-all duration-700 ease-out ${barColor} opacity-80`}
+                  style={{ width: animate ? `${g.user}%` : '0%' }}
+                />
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Gap summary */}
+      {(below.length > 0 || above.length > 0) && (
+        <div className="space-y-2 pt-3 border-t border-border/40">
+          {below.length > 0 && (
+            <div className="rounded-xl bg-rose-500/10 border border-rose-500/20 p-3">
+              <p className="text-[11px] font-bold text-rose-400 mb-1">✦ 더 키워야 할 감정</p>
+              <p className="text-[11px] text-muted-foreground leading-relaxed">
+                {below.map((g) => EMOTION_KO[g.name] ?? g.name).join(', ')} 영역이 목표보다 낮게 나왔어요.
+                이 감정을 더 실어서 말해 보세요.
+              </p>
+            </div>
+          )}
+          {above.length > 0 && (
+            <div className="rounded-xl bg-emerald-500/10 border border-emerald-500/20 p-3">
+              <p className="text-[11px] font-bold text-emerald-400 mb-1">✦ 이미 강한 감정</p>
+              <p className="text-[11px] text-muted-foreground leading-relaxed">
+                {above.map((g) => EMOTION_KO[g.name] ?? g.name).join(', ')} 영역은 목표보다 높게 나왔어요.
+                이 강점을 잘 살려보세요.
+              </p>
+            </div>
+          )}
+          {below.length === 0 && above.length === 0 && (
+            <div className="rounded-xl bg-violet-500/10 border border-violet-500/20 p-3">
+              <p className="text-[11px] font-bold text-violet-400 mb-1">✦ 균형 잡힌 목소리</p>
+              <p className="text-[11px] text-muted-foreground">모든 감정이 목표 범위에 가깝게 나왔어요!</p>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Main Component ────────────────────────────────────────
 export default function ResultClient() {
   const router = useRouter()
   const [emotions, setEmotions] = useState<{ name: string; score: number }[]>([])
+  const [rawEmotionMap, setRawEmotionMap] = useState<Record<string, number>>({})
   const [audioFeatures, setAudioFeatures] = useState<AudioFeatures | null>(null)
   const [animate, setAnimate] = useState(false)
   const [revealed, setRevealed] = useState(false)
+  const [persona, setPersona] = useState<Persona | null>(null)
 
   useEffect(() => {
     try {
@@ -395,17 +525,24 @@ export default function ResultClient() {
         .map(([name, score]) => ({ name, score }))
         .sort((a, b) => b.score - a.score)
       setEmotions(sorted)
+      setRawEmotionMap(raw)
     } catch {
       const raw = getMockEmotions()
       const sorted = Object.entries(raw)
         .map(([name, score]) => ({ name, score }))
         .sort((a, b) => b.score - a.score)
       setEmotions(sorted)
+      setRawEmotionMap(raw)
     }
 
     try {
       const stored = sessionStorage.getItem('audioFeatures')
       if (stored) setAudioFeatures(JSON.parse(stored))
+    } catch { /* ignore */ }
+
+    try {
+      const stored = sessionStorage.getItem('selectedPersona')
+      if (stored) setPersona(JSON.parse(stored))
     } catch { /* ignore */ }
 
     trackEvent('analysis_completed')
@@ -447,6 +584,11 @@ export default function ResultClient() {
             목소리 감정 분석 완료
           </Badge>
           <h1 className="text-2xl font-black text-white mb-1">감정 분석 리포트</h1>
+          {persona && (
+            <p className="text-white/90 text-sm font-semibold mb-1">
+              {persona.emoji} {persona.name} 페르소나 분석
+            </p>
+          )}
           <p className="text-white/70 text-sm">
             Hume AI가 목소리에서 감지한 48가지 감정 지표
           </p>
@@ -465,6 +607,15 @@ export default function ResultClient() {
 
       {/* ── Cards ── */}
       <div className="mt-4 px-4 space-y-4">
+
+        {/* Persona Gap Analysis (shown first if persona selected) */}
+        {persona && (
+          <PersonaGapSection
+            persona={persona}
+            rawEmotions={rawEmotionMap}
+            animate={animate}
+          />
+        )}
 
         {/* Top 5 */}
         <div className="glass rounded-3xl p-5">
