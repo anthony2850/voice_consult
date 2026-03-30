@@ -1,26 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { HumeClient } from 'hume'
-import { spawn } from 'child_process'
-import { writeFile, unlink, readFile } from 'fs/promises'
-import { join } from 'path'
-import { randomUUID } from 'crypto'
-
-async function convertToWav(audioBlob: Blob): Promise<Buffer> {
-  const inputPath = join('/tmp', `hume-in-${randomUUID()}.webm`)
-  const outputPath = join('/tmp', `hume-out-${randomUUID()}.wav`)
-  try {
-    await writeFile(inputPath, Buffer.from(await audioBlob.arrayBuffer()))
-    await new Promise<void>((resolve, reject) => {
-      const proc = spawn('ffmpeg', ['-y', '-i', inputPath, '-ar', '16000', '-ac', '1', outputPath])
-      proc.on('close', (code) => code === 0 ? resolve() : reject(new Error(`ffmpeg exit ${code}`)))
-      proc.on('error', reject)
-    })
-    return await readFile(outputPath)
-  } finally {
-    await unlink(inputPath).catch(() => {})
-    await unlink(outputPath).catch(() => {})
-  }
-}
 
 export const maxDuration = 60
 
@@ -56,8 +35,8 @@ async function callHumeApi(audioBlob: Blob): Promise<Record<string, number> | nu
   if (!apiKey) return null
 
   const client = new HumeClient({ apiKey })
-  const wavBuffer = await convertToWav(audioBlob)
-  const file = new File([new Uint8Array(wavBuffer)], 'voice.wav', { type: 'audio/wav' })
+  const buffer = Buffer.from(await audioBlob.arrayBuffer())
+  const file = new File([new Uint8Array(buffer)], 'voice.webm', { type: 'audio/webm' })
 
   const job = await client.expressionMeasurement.batch.startInferenceJobFromLocalFile({
     file: [file],
