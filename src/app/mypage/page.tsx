@@ -156,7 +156,7 @@ export default function MyPage() {
               </span>
               <div className="flex-1 text-left">
                 <p className="text-sm font-semibold text-foreground">감정 분석 결과 보기</p>
-                <p className="text-[11px] text-muted-foreground">48가지 감정 지표 확인</p>
+                <p className="text-[11px] text-muted-foreground">49가지 감정 지표 확인</p>
               </div>
               <ChevronRight size={16} className="text-muted-foreground" />
             </button>
@@ -186,7 +186,7 @@ export default function MyPage() {
               </span>
               <div className="flex-1 text-left">
                 <p className="text-sm font-semibold text-foreground">상세 리포트 받기</p>
-                <p className="text-[11px] text-muted-foreground">Hume AI 감정 분석 기반 · 990원</p>
+                <p className="text-[11px] text-muted-foreground">AI 감정 분석 기반 · 990원</p>
               </div>
               <Badge className="bg-accent/20 text-accent border-0 text-[10px]">75% 할인</Badge>
             </button>

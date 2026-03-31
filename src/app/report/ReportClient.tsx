@@ -115,7 +115,7 @@ export default function ReportClient() {
             📊 Voice Emotion 리포트
           </Badge>
           <h1 className="text-3xl font-black text-white mb-1">음성 분석 리포트</h1>
-          <p className="text-white/70 text-xs mt-2">Hume AI 감정 분석 기반 맞춤 리포트</p>
+          <p className="text-white/70 text-xs mt-2">AI 감정 분석 기반 맞춤 리포트</p>
         </div>
       </div>
 

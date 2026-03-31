@@ -9,6 +9,7 @@ import { useAudioRecorder } from '@/hooks/useAudioRecorder'
 import { useWaveform } from '@/hooks/useWaveform'
 import { saveVoiceRecord } from '@/lib/voiceDB'
 import { type Persona } from '@/lib/personas'
+import { extractAudioFeatures } from '@/lib/extractAudioFeatures'
 
 const MAX_SECONDS = 30
 const MIN_SECONDS = 3   // minimum recording before allowing proceed
@@ -91,19 +92,16 @@ export default function RecordClient() {
     try {
       const formData1 = new FormData()
       formData1.append('audio', audioBlob, 'voice.webm')
-      const formData2 = new FormData()
-      formData2.append('audio', audioBlob, 'voice.webm')
 
-      const [emotionRes, featuresRes] = await Promise.all([
+      const [emotionRes, audioFeatures] = await Promise.all([
         fetch('/api/analyze-voice', { method: 'POST', body: formData1 }),
-        fetch('/api/analyze-audio-features', { method: 'POST', body: formData2 }),
+        extractAudioFeatures(audioBlob),
       ])
 
       const emotionData = await emotionRes.json()
-      const featuresData = await featuresRes.json()
 
       sessionStorage.setItem('voiceEmotions', JSON.stringify(emotionData.emotions ?? null))
-      sessionStorage.setItem('audioFeatures', JSON.stringify(featuresData.features ?? null))
+      sessionStorage.setItem('audioFeatures', JSON.stringify(audioFeatures))
 
       // IndexedDB에 오디오 + 분석 결과 저장 (비동기, 실패해도 결과 페이지 이동은 계속)
       const rawEmotions: Record<string, number> = emotionData.emotions ?? {}
@@ -114,7 +112,7 @@ export default function RecordClient() {
 
       saveVoiceRecord(audioBlob, {
         emotions: top5,
-        audioFeatures: featuresData.features ?? null,
+        audioFeatures: audioFeatures,
       }).catch((e) => console.warn('[voiceDB] 저장 실패:', e))
 
       setAnalyzeProgress(100)

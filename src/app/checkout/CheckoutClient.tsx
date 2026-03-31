@@ -9,7 +9,7 @@ import type { PaymentWidgetInstance } from '@tosspayments/payment-widget-sdk'
 type Step = 'summary' | 'widget' | 'processing'
 
 const FEATURES = [
-  { icon: '🎙', title: 'Hume AI 감정 분석', desc: '48가지 감정 지표 정밀 측정' },
+  { icon: '🎙', title: 'AI 감정 분석', desc: '49가지 감정 지표 정밀 측정' },
   { icon: '💬', title: '대인관계 스타일 분석', desc: '내 목소리가 주는 인상과 소통 패턴' },
   { icon: '⚡', title: '스트레스 반응 패턴', desc: '감정이 목소리에 미치는 영향' },
   { icon: '💼', title: '커리어 인사이트', desc: '목소리 강점을 살릴 수 있는 분야' },
@@ -151,7 +151,7 @@ export default function CheckoutClient() {
       <div className="mb-6">
         <Badge className="mb-2 bg-primary/20 text-primary border-0 text-[11px]">음성 분석 리포트</Badge>
         <h1 className="text-xl font-bold text-foreground">AI 맞춤 리포트 받기</h1>
-        <p className="text-sm text-muted-foreground mt-1">Hume AI 감정 분석 기반 상세 리포트를 제공합니다</p>
+        <p className="text-sm text-muted-foreground mt-1">AI 감정 분석 기반 상세 리포트를 제공합니다</p>
       </div>
 
       <div className="space-y-3 mb-6">

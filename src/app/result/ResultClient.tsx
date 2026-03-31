@@ -8,8 +8,9 @@ import { Button } from '@/components/ui/button'
 import { trackEvent } from '@/lib/analytics'
 import { type Persona, normalizeHumeScore } from '@/lib/personas'
 import PersonaRadarChart from '@/components/PersonaRadarChart'
+import { type AudioFeatures } from '@/lib/extractAudioFeatures'
 
-// ── Korean labels for 48 emotions ────────────────────────
+// ── Korean labels for 49 emotions ────────────────────────
 const EMOTION_KO: Record<string, string> = {
   'Admiration': '감탄',
   'Adoration': '경애',
@@ -105,20 +106,6 @@ function EmotionBar({
       </div>
     </div>
   )
-}
-
-// ── Audio feature types ───────────────────────────────────
-interface AudioFeatures {
-  duration_sec: number
-  sample_rate: number
-  pitch: { mean_hz: number; min_hz: number; max_hz: number; std_hz: number; voiced_ratio: number }
-  energy: { rms_mean: number; rms_std: number; db_mean: number; db_max: number; db_min: number; db_range: number }
-  spectral: { centroid_mean_hz: number; centroid_std_hz: number; bandwidth_mean_hz: number; rolloff_mean_hz: number; flatness_mean: number; contrast_mean_db: number }
-  mfccs: Record<string, number>
-  zero_crossing: { mean: number; std: number }
-  rhythm: { tempo_bpm: number; onset_count: number; onsets_per_second: number }
-  voice_quality: { jitter_abs_ms: number; jitter_rel_pct: number; shimmer_abs: number; shimmer_rel_pct: number }
-  hnr_db: number
 }
 
 // ── Tooltip ───────────────────────────────────────────────
@@ -636,7 +623,7 @@ export default function ResultClient() {
             </p>
           )}
           <p className="text-white/70 text-sm">
-            Hume AI가 목소리에서 감지한 48가지 감정 지표
+            AI가 목소리에서 감지한 49가지 감정 지표
           </p>
           <div className="flex gap-2 mt-4 flex-wrap">
             {top5.map((e) => (
@@ -713,7 +700,7 @@ export default function ResultClient() {
             <div>
               <p className="text-sm font-bold text-foreground">음성 분석 리포트 받기</p>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Hume AI 감정 분석 기반 · 대인관계·커리어·성장 인사이트
+                AI 감정 분석 기반 · 대인관계·커리어·성장 인사이트
               </p>
             </div>
           </div>

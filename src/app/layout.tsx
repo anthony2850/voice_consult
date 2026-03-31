@@ -8,7 +8,7 @@ const PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID
 
 export const metadata: Metadata = {
   title: 'Voice Emotion — 내 목소리 감정 분석',
-  description: '목소리 하나로 48가지 감정을 분석합니다. AI가 분석한 당신만의 Voice Emotion 리포트를 확인해 보세요.',
+  description: '목소리 하나로 49가지 감정을 분석합니다. AI가 분석한 당신만의 Voice Emotion 리포트를 확인해 보세요.',
   keywords: ['목소리', '감정분석', '음성분석', 'AI분석', 'Voice Emotion'],
   openGraph: {
     title: 'Voice Emotion',
