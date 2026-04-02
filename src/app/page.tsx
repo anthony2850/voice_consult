@@ -40,7 +40,7 @@ export default function HomePage() {
         {/* floating badge */}
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-full glass text-xs text-muted-foreground mb-6">
           <Sparkles size={12} className="text-accent" />
-          <span>AI가 3만 개 목소리를 학습했어요</span>
+          <span>AI가 30만 개 목소리를 학습했어요</span>
         </div>
 
         {/* main headline */}
