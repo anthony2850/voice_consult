@@ -187,3 +187,33 @@ export function normalizeHumeScore(
   // percentile: 0 = lowest emotion, 100 = highest emotion
   return Math.round((rank / (allScores.length - 1)) * 100)
 }
+
+/**
+ * Find the persona that best matches the user's raw emotions.
+ * For each persona, compute the mean absolute distance between
+ * the user's normalized scores and the persona's targetScores.
+ * Returns the persona with the smallest distance, plus the similarity (0–100).
+ */
+export function findBestPersona(
+  allEmotions: Record<string, number>,
+): { persona: Persona; similarity: number } {
+  let bestPersona = PERSONAS[0]
+  let bestDistance = Infinity
+
+  for (const persona of PERSONAS) {
+    const distances = persona.emotions.map((e) => {
+      const userScore = normalizeHumeScore(e, allEmotions)
+      const target = persona.targetScores[e] ?? 0
+      return Math.abs(userScore - target)
+    })
+    const avgDistance = distances.reduce((a, b) => a + b, 0) / distances.length
+    if (avgDistance < bestDistance) {
+      bestDistance = avgDistance
+      bestPersona = persona
+    }
+  }
+
+  // Convert distance (0–100) to similarity (0–100)
+  const similarity = Math.round(Math.max(0, 100 - bestDistance))
+  return { persona: bestPersona, similarity }
+}

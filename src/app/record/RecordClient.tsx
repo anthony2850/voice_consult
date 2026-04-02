@@ -2,13 +2,12 @@
 
 import { useRef, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Mic, Square, RotateCcw, Play, Pause, ChevronRight, AlertCircle, Sparkles, ArrowLeft } from 'lucide-react'
+import { Mic, Square, RotateCcw, Play, Pause, ChevronRight, AlertCircle, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { useAudioRecorder } from '@/hooks/useAudioRecorder'
 import { useWaveform } from '@/hooks/useWaveform'
 import { saveVoiceRecord } from '@/lib/voiceDB'
-import { type Persona } from '@/lib/personas'
 import { extractAudioFeatures } from '@/lib/extractAudioFeatures'
 
 const MAX_SECONDS = 30
@@ -29,15 +28,6 @@ export default function RecordClient() {
 
   const [analyzing, setAnalyzing] = useState(false)
   const [analyzeProgress, setAnalyzeProgress] = useState(0)
-
-  const [persona, setPersona] = useState<Persona | null>(null)
-
-  useEffect(() => {
-    try {
-      const stored = sessionStorage.getItem('selectedPersona')
-      if (stored) setPersona(JSON.parse(stored))
-    } catch { /* ignore */ }
-  }, [])
 
   const { state, duration, audioBlob, audioUrl, analyserNode, start, stop, reset, error } =
     useAudioRecorder(MAX_SECONDS)
@@ -156,23 +146,8 @@ export default function RecordClient() {
 
       {/* Header */}
       <div className="mb-6">
-        <div className="flex items-center gap-2 mb-1">
-          <button
-            onClick={() => router.push('/persona')}
-            className="text-muted-foreground hover:text-foreground transition-colors"
-            aria-label="페르소나 선택으로 돌아가기"
-          >
-            <ArrowLeft size={18} />
-          </button>
-          <p className="text-xs font-semibold text-primary">STEP 2</p>
-        </div>
-        <h1 className="text-xl font-bold text-foreground">
-          {persona ? (
-            <span>{persona.emoji} {persona.name}</span>
-          ) : (
-            '목소리 녹음'
-          )}
-        </h1>
+        <p className="text-xs font-semibold text-primary mb-1">STEP 1</p>
+        <h1 className="text-xl font-bold text-foreground">목소리 녹음</h1>
         <p className="text-sm text-muted-foreground mt-1">
           {state === 'idle'    && '평소 자신의 원래 목소리대로 편하게 읽어 주세요'}
           {state === 'recording' && '자연스럽게 말씀해 주세요 — 30초까지 녹음됩니다'}
@@ -251,27 +226,13 @@ export default function RecordClient() {
 
       {/* Script (prompt text) */}
       <div className="glass rounded-2xl p-4 mb-6">
-        {persona ? (
-          <>
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-[11px] text-muted-foreground font-semibold">페르소나 스크립트</p>
-              <span className="text-[10px] text-primary/70 bg-primary/10 px-2 py-0.5 rounded-full">{persona.category}</span>
-            </div>
-            <p className="text-sm text-foreground leading-relaxed">
-              &ldquo;{persona.script}&rdquo;
-            </p>
-            <p className="text-[10px] text-muted-foreground mt-2">
-              ✦ 평소 자신의 목소리 그대로 자연스럽게 읽어 주세요
-            </p>
-          </>
-        ) : (
-          <>
-            <p className="text-[11px] text-muted-foreground mb-2 font-semibold">읽어 주세요</p>
-            <p className="text-sm text-foreground leading-relaxed">
-              &ldquo;안녕하세요. 저는 오늘 제 목소리를 분석하러 왔습니다. 저는 평소에 친구들과 이야기하는 것을 좋아하고, 새로운 것을 배우는 것도 즐깁니다. 잘 부탁드립니다.&rdquo;
-            </p>
-          </>
-        )}
+        <p className="text-[11px] text-muted-foreground mb-2 font-semibold">읽어 주세요</p>
+        <p className="text-sm text-foreground leading-relaxed">
+          &ldquo;안녕하세요. 저는 오늘 제 목소리를 분석하러 왔습니다. 저는 평소에 친구들과 이야기하는 것을 좋아하고, 새로운 것을 배우는 것도 즐깁니다. 잘 부탁드립니다.&rdquo;
+        </p>
+        <p className="text-[10px] text-muted-foreground mt-2">
+          ✦ 평소 자신의 목소리 그대로 자연스럽게 읽어 주세요
+        </p>
       </div>
 
       {/* Spacer */}

@@ -6,7 +6,7 @@ import { Share2, RotateCcw, FileText, Sparkles, Dumbbell } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { trackEvent } from '@/lib/analytics'
-import { type Persona, normalizeHumeScore } from '@/lib/personas'
+import { type Persona, normalizeHumeScore, findBestPersona } from '@/lib/personas'
 import PersonaRadarChart from '@/components/PersonaRadarChart'
 import { type AudioFeatures } from '@/lib/extractAudioFeatures'
 
@@ -409,10 +409,12 @@ function TrainingButton({
 // ── Persona Gap Analysis Section ─────────────────────────
 function PersonaGapSection({
   persona,
+  similarity,
   rawEmotions,
   animate,
 }: {
   persona: Persona
+  similarity: number
   rawEmotions: Record<string, number>
   animate: boolean
 }) {
@@ -435,10 +437,11 @@ function PersonaGapSection({
     <div className="glass rounded-3xl p-5">
       <div className="flex items-center gap-2 mb-1">
         <span className="text-base">{persona.emoji}</span>
-        <h2 className="text-sm font-bold text-foreground">페르소나 갭 분석</h2>
+        <h2 className="text-sm font-bold text-foreground">페르소나 매칭 결과</h2>
+        <span className="ml-auto text-lg font-black text-primary tabular-nums">{similarity}%</span>
       </div>
       <p className="text-[11px] text-muted-foreground mb-4">
-        목표 페르소나 <strong className="text-foreground">{persona.name}</strong>와 내 목소리의 차이예요
+        내 목소리는 <strong className="text-foreground">{persona.name}</strong> 페르소나와 가장 잘 맞아요
       </p>
 
       {/* Radar Chart */}
@@ -504,26 +507,24 @@ function PersonaGapSection({
         <div className="space-y-2 pt-3 border-t border-border/40">
           {below.length > 0 && (
             <div className="rounded-xl bg-rose-500/10 border border-rose-500/20 p-3">
-              <p className="text-[11px] font-bold text-rose-400 mb-1">✦ 더 키워야 할 감정</p>
+              <p className="text-[11px] font-bold text-rose-400 mb-1">✦ 이 페르소나와 다른 점</p>
               <p className="text-[11px] text-muted-foreground leading-relaxed">
-                {below.map((g) => EMOTION_KO[g.name] ?? g.name).join(', ')} 영역이 목표보다 낮게 나왔어요.
-                이 감정을 더 실어서 말해 보세요.
+                {below.map((g) => EMOTION_KO[g.name] ?? g.name).join(', ')} 영역이 이 페르소나보다 낮게 나왔어요.
               </p>
             </div>
           )}
           {above.length > 0 && (
             <div className="rounded-xl bg-emerald-500/10 border border-emerald-500/20 p-3">
-              <p className="text-[11px] font-bold text-emerald-400 mb-1">✦ 이미 강한 감정</p>
+              <p className="text-[11px] font-bold text-emerald-400 mb-1">✦ 이 페르소나보다 강한 점</p>
               <p className="text-[11px] text-muted-foreground leading-relaxed">
-                {above.map((g) => EMOTION_KO[g.name] ?? g.name).join(', ')} 영역은 목표보다 높게 나왔어요.
-                이 강점을 잘 살려보세요.
+                {above.map((g) => EMOTION_KO[g.name] ?? g.name).join(', ')} 영역은 페르소나 기준보다 더 높게 나왔어요.
               </p>
             </div>
           )}
           {below.length === 0 && above.length === 0 && (
             <div className="rounded-xl bg-violet-500/10 border border-violet-500/20 p-3">
-              <p className="text-[11px] font-bold text-violet-400 mb-1">✦ 균형 잡힌 목소리</p>
-              <p className="text-[11px] text-muted-foreground">모든 감정이 목표 범위에 가깝게 나왔어요!</p>
+              <p className="text-[11px] font-bold text-violet-400 mb-1">✦ 완벽한 매칭</p>
+              <p className="text-[11px] text-muted-foreground">모든 감정이 이 페르소나와 아주 가깝게 나왔어요!</p>
             </div>
           )}
 
@@ -549,33 +550,29 @@ export default function ResultClient() {
   const [animate, setAnimate] = useState(false)
   const [revealed, setRevealed] = useState(false)
   const [persona, setPersona] = useState<Persona | null>(null)
+  const [similarity, setSimilarity] = useState(0)
 
   useEffect(() => {
+    let raw: Record<string, number>
     try {
       const stored = sessionStorage.getItem('voiceEmotions')
-      const raw: Record<string, number> = stored ? JSON.parse(stored) : getMockEmotions()
-      const sorted = Object.entries(raw)
-        .map(([name, score]) => ({ name, score }))
-        .sort((a, b) => b.score - a.score)
-      setEmotions(sorted)
-      setRawEmotionMap(raw)
+      raw = stored ? JSON.parse(stored) : getMockEmotions()
     } catch {
-      const raw = getMockEmotions()
-      const sorted = Object.entries(raw)
-        .map(([name, score]) => ({ name, score }))
-        .sort((a, b) => b.score - a.score)
-      setEmotions(sorted)
-      setRawEmotionMap(raw)
+      raw = getMockEmotions()
     }
+    const sorted = Object.entries(raw)
+      .map(([name, score]) => ({ name, score }))
+      .sort((a, b) => b.score - a.score)
+    setEmotions(sorted)
+    setRawEmotionMap(raw)
+
+    const { persona: matched, similarity: sim } = findBestPersona(raw)
+    setPersona(matched)
+    setSimilarity(sim)
 
     try {
       const stored = sessionStorage.getItem('audioFeatures')
       if (stored) setAudioFeatures(JSON.parse(stored))
-    } catch { /* ignore */ }
-
-    try {
-      const stored = sessionStorage.getItem('selectedPersona')
-      if (stored) setPersona(JSON.parse(stored))
     } catch { /* ignore */ }
 
     trackEvent('analysis_completed')
@@ -614,12 +611,14 @@ export default function ResultClient() {
         <div className="absolute -bottom-10 -left-10 w-48 h-48 rounded-full bg-white/10 blur-3xl" />
         <div className="relative z-10">
           <Badge className="mb-3 bg-white/20 text-white border-0 text-xs backdrop-blur">
-            목소리 감정 분석 완료
+            목소리 페르소나 분석 완료
           </Badge>
-          <h1 className="text-2xl font-black text-white mb-1">감정 분석 리포트</h1>
+          <h1 className="text-2xl font-black text-white mb-1">
+            {persona ? `${persona.emoji} ${persona.name}` : '감정 분석 리포트'}
+          </h1>
           {persona && (
             <p className="text-white/90 text-sm font-semibold mb-1">
-              {persona.emoji} {persona.name} 페르소나 분석
+              일치율 {similarity}% · {persona.category}
             </p>
           )}
           <p className="text-white/70 text-sm">
@@ -641,10 +640,11 @@ export default function ResultClient() {
       {/* ── Cards ── */}
       <div className="mt-4 px-4 space-y-4">
 
-        {/* Persona Gap Analysis (shown first if persona selected) */}
+        {/* Persona Match (always shown) */}
         {persona && (
           <PersonaGapSection
             persona={persona}
+            similarity={similarity}
             rawEmotions={rawEmotionMap}
             animate={animate}
           />

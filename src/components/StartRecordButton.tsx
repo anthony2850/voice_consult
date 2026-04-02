@@ -8,7 +8,7 @@ import { trackEvent } from '@/lib/analytics'
 export default function StartRecordButton() {
   return (
     <Link
-      href="/persona"
+      href="/record"
       className="w-full max-w-[360px]"
       onClick={() => trackEvent('click_start_record')}
     >
