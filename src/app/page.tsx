@@ -3,6 +3,7 @@ import { Mic, Sparkles, Star } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import StartRecordButton from '@/components/StartRecordButton'
+import HomeHero from '@/components/HomeHero'
 
 const SOCIAL_PROOF = [
   { emoji: '🎯', text: '98% 정확도' },
@@ -44,17 +45,7 @@ export default function HomePage() {
         </div>
 
         {/* main headline */}
-        <h1 className="text-[2rem] font-black leading-tight tracking-tight mb-3">
-          <span className="text-foreground">내 목소리엔</span>
-          <br />
-          <span className="gradient-text">숨겨진 감정</span>
-          <span className="text-foreground">이 있다</span>
-        </h1>
-
-        <p className="text-sm text-muted-foreground leading-relaxed mb-8 max-w-[280px]">
-          목소리 톤·리듬·에너지를 AI가 분석해<br />
-          당신만의 <strong className="text-foreground">Voice Emotion</strong>을 알려드려요
-        </p>
+        <HomeHero />
 
         {/* microphone animation */}
         <div className="relative flex items-center justify-center mb-8">
