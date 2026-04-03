@@ -620,8 +620,12 @@ export default function ResultClient() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ emotions: rawEmotionMap }),
       })
-      const { id } = await res.json()
-      shareUrl = `${window.location.origin}/r/${id}`
+      const json = await res.json()
+      if (res.ok && json.id) {
+        shareUrl = `${window.location.origin}/r/${json.id}`
+      } else {
+        throw new Error(json.error ?? 'no id')
+      }
     } catch {
       // 저장 실패 시 URL 인코딩 방식으로 fallback
       const encoded = encodeEmotions(rawEmotionMap)
