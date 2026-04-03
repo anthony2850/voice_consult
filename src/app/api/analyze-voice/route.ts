@@ -73,7 +73,12 @@ function getMockEmotions(): Record<string, number> {
 }
 
 export async function POST(req: NextRequest) {
-  const formData = await req.formData()
+  let formData: FormData
+  try {
+    formData = await req.formData()
+  } catch {
+    return NextResponse.json({ error: 'audio file required' }, { status: 400 })
+  }
   const audioFile = formData.get('audio') as Blob | null
 
   let emotions: Record<string, number> | null = null

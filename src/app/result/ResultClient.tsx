@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Share2, RotateCcw, FileText, Sparkles, Dumbbell } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -542,8 +542,25 @@ function PersonaGapSection({
 }
 
 // ── Main Component ────────────────────────────────────────
+function encodeEmotions(emotions: Record<string, number>): string {
+  // 소수점 3자리로 압축해서 URL param에 담음
+  const compact = Object.fromEntries(
+    Object.entries(emotions).map(([k, v]) => [k, Math.round(v * 1000) / 1000])
+  )
+  return btoa(encodeURIComponent(JSON.stringify(compact)))
+}
+
+function decodeEmotions(encoded: string): Record<string, number> | null {
+  try {
+    return JSON.parse(decodeURIComponent(atob(encoded)))
+  } catch {
+    return null
+  }
+}
+
 export default function ResultClient() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [emotions, setEmotions] = useState<{ name: string; score: number }[]>([])
   const [rawEmotionMap, setRawEmotionMap] = useState<Record<string, number>>({})
   const [audioFeatures, setAudioFeatures] = useState<AudioFeatures | null>(null)
@@ -554,11 +571,17 @@ export default function ResultClient() {
 
   useEffect(() => {
     let raw: Record<string, number>
-    try {
-      const stored = sessionStorage.getItem('voiceEmotions')
-      raw = stored ? JSON.parse(stored) : getMockEmotions()
-    } catch {
-      raw = getMockEmotions()
+    // URL param이 있으면 공유 링크 → param 우선 사용
+    const sharedData = searchParams.get('d')
+    if (sharedData) {
+      raw = decodeEmotions(sharedData) ?? getMockEmotions()
+    } else {
+      try {
+        const stored = sessionStorage.getItem('voiceEmotions')
+        raw = stored ? JSON.parse(stored) : getMockEmotions()
+      } catch {
+        raw = getMockEmotions()
+      }
     }
     const sorted = Object.entries(raw)
       .map(([name, score]) => ({ name, score }))
@@ -584,14 +607,16 @@ export default function ResultClient() {
 
   const handleShare = async () => {
     const top3 = emotions.slice(0, 3).map((e) => EMOTION_KO[e.name] ?? e.name).join(', ')
+    const encoded = encodeEmotions(rawEmotionMap)
+    const shareUrl = `${window.location.origin}/result?d=${encoded}`
     try {
       await navigator.share({
         title: '내 목소리 감정 분석 결과',
         text: `내 목소리에서 가장 많이 감지된 감정: ${top3}`,
-        url: window.location.href,
+        url: shareUrl,
       })
     } catch {
-      await navigator.clipboard.writeText(window.location.href).catch(() => {})
+      await navigator.clipboard.writeText(shareUrl).catch(() => {})
       alert('링크가 복사됐어요!')
     }
   }

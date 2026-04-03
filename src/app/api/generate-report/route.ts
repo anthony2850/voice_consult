@@ -14,9 +14,13 @@ function topEmotions(emotions: Record<string, number>, n = 10) {
 }
 
 export async function POST(req: NextRequest) {
-  const { emotions } = await req.json() as {
-    emotions: Record<string, number> | null
+  let body: { emotions?: Record<string, number> | null }
+  try {
+    body = await req.json()
+  } catch {
+    return NextResponse.json({ error: 'invalid request body' }, { status: 400 })
   }
+  const { emotions } = body
 
   if (!process.env.ANTHROPIC_API_KEY) {
     return NextResponse.json({ report: getMockReport() })
@@ -49,14 +53,18 @@ export async function POST(req: NextRequest) {
 
 JSON이나 마크다운 코드블록 없이, 섹션 제목과 내용만 작성해주세요.`
 
-  const message = await client.messages.create({
-    model: 'claude-haiku-4-5-20251001',
-    max_tokens: 1200,
-    messages: [{ role: 'user', content: prompt }],
-  })
-
-  const report = message.content[0].type === 'text' ? message.content[0].text : getMockReport()
-  return NextResponse.json({ report })
+  try {
+    const message = await client.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 1200,
+      messages: [{ role: 'user', content: prompt }],
+    })
+    const report = message.content[0].type === 'text' ? message.content[0].text : getMockReport()
+    return NextResponse.json({ report })
+  } catch (err) {
+    console.error('[generate-report] Anthropic API error:', err)
+    return NextResponse.json({ report: getMockReport() })
+  }
 }
 
 function getMockReport(): string {
