@@ -1,5 +1,10 @@
+import { Suspense } from 'react'
 import ResultClient from './ResultClient'
 
 export default function ResultPage() {
-  return <ResultClient />
+  return (
+    <Suspense>
+      <ResultClient />
+    </Suspense>
+  )
 }
