@@ -611,8 +611,23 @@ export default function ResultClient() {
 
   const handleShare = async () => {
     const top3 = emotions.slice(0, 3).map((e) => EMOTION_KO[e.name] ?? e.name).join(', ')
-    const encoded = encodeEmotions(rawEmotionMap)
-    const shareUrl = `${window.location.origin}/result?d=${encoded}`
+
+    // Supabase에 저장 후 짧은 공유 URL 생성
+    let shareUrl: string
+    try {
+      const res = await fetch('/api/share', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ emotions: rawEmotionMap }),
+      })
+      const { id } = await res.json()
+      shareUrl = `${window.location.origin}/r/${id}`
+    } catch {
+      // 저장 실패 시 URL 인코딩 방식으로 fallback
+      const encoded = encodeEmotions(rawEmotionMap)
+      shareUrl = `${window.location.origin}/result?d=${encoded}`
+    }
+
     try {
       await navigator.share({
         title: '내 목소리 감정 분석 결과',
