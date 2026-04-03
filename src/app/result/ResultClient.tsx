@@ -543,16 +543,20 @@ function PersonaGapSection({
 
 // ── Main Component ────────────────────────────────────────
 function encodeEmotions(emotions: Record<string, number>): string {
-  // 소수점 3자리로 압축해서 URL param에 담음
   const compact = Object.fromEntries(
     Object.entries(emotions).map(([k, v]) => [k, Math.round(v * 1000) / 1000])
   )
+  // URL-safe base64: +→-, /→_, 패딩 = 제거
   return btoa(encodeURIComponent(JSON.stringify(compact)))
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '')
 }
 
 function decodeEmotions(encoded: string): Record<string, number> | null {
   try {
-    return JSON.parse(decodeURIComponent(atob(encoded)))
+    // URL-safe base64 복원
+    const base64 = encoded.replace(/-/g, '+').replace(/_/g, '/')
+    const padded = base64 + '=='.slice(0, (4 - base64.length % 4) % 4)
+    return JSON.parse(decodeURIComponent(atob(padded)))
   } catch {
     return null
   }
