@@ -13,6 +13,19 @@ import { extractAudioFeatures } from '@/lib/extractAudioFeatures'
 const MAX_SECONDS = 30
 const MIN_SECONDS = 3   // minimum recording before allowing proceed
 
+const VOCAL_TIPS = [
+  { emoji: '🎯', tip: '복식호흡을 하면 목소리에 깊이가 생겨요. 배에서 소리를 밀어올리듯 발성해보세요.' },
+  { emoji: '💧', tip: '녹음 전 미지근한 물 한 모금이 성대를 풀어줘요. 차가운 음료는 피하세요.' },
+  { emoji: '📐', tip: '턱을 약간 당기고 시선을 정면보다 살짝 위로 향하면 공명이 잘 돼요.' },
+  { emoji: '🐢', tip: '말 속도를 평소보다 10% 느리게 해보세요. 듣는 사람이 신뢰감을 더 느껴요.' },
+  { emoji: '🌊', tip: '문장 끝을 내려서 마무리하면 자신감 있는 인상을 줘요.' },
+  { emoji: '🎵', tip: '중요한 단어를 강조할 때 살짝 높은 음으로 올리면 집중도가 높아져요.' },
+  { emoji: '🧘', tip: '발성 전 "음~" 허밍 5초로 성대를 워밍업하면 목이 덜 쉬어요.' },
+  { emoji: '😊', tip: '살짝 미소를 지으면서 말하면 목소리 톤이 자연스럽게 밝아져요.' },
+  { emoji: '🔊', tip: '가슴에 손을 얹고 말할 때 진동이 느껴지면 흉성 공명이 잘 되는 거예요.' },
+  { emoji: '⏸️', tip: '말 중간 0.5초 간격을 두면 듣는 사람에게 흡인력 있는 목소리로 느껴져요.' },
+]
+
 function formatTime(s: number) {
   const m = Math.floor(s / 60).toString().padStart(2, '0')
   const sec = (s % 60).toString().padStart(2, '0')
@@ -28,6 +41,7 @@ export default function RecordClient() {
 
   const [analyzing, setAnalyzing] = useState(false)
   const [analyzeProgress, setAnalyzeProgress] = useState(0)
+  const [currentTip] = useState(() => VOCAL_TIPS[Math.floor(Math.random() * VOCAL_TIPS.length)])
 
   const { state, duration, audioBlob, audioUrl, analyserNode, start, stop, reset, error } =
     useAudioRecorder(MAX_SECONDS)
@@ -129,7 +143,11 @@ export default function RecordClient() {
           </div>
         </div>
         <h2 className="text-xl font-bold text-foreground mb-2">AI가 분석 중이에요</h2>
-        <p className="text-sm text-muted-foreground mb-8">목소리의 감정·톤·에너지 패턴을 읽고 있어요</p>
+        <p className="text-sm text-muted-foreground mb-6">목소리의 감정·톤·에너지 패턴을 읽고 있어요</p>
+        <div className="w-full max-w-[300px] bg-muted rounded-2xl px-4 py-3 mb-6 text-left">
+          <p className="text-xs font-semibold text-primary mb-1">발성 꿀팁 {currentTip.emoji}</p>
+          <p className="text-sm text-foreground leading-relaxed">{currentTip.tip}</p>
+        </div>
         <div className="w-full max-w-[280px]">
           <div className="h-2 rounded-full bg-border overflow-hidden">
             <div className="h-full gradient-primary rounded-full transition-all duration-300" style={{ width: `${analyzeProgress}%` }} />
