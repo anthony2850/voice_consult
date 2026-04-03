@@ -41,7 +41,11 @@ export default function RecordClient() {
 
   const [analyzing, setAnalyzing] = useState(false)
   const [analyzeProgress, setAnalyzeProgress] = useState(0)
-  const [currentTip] = useState(() => VOCAL_TIPS[Math.floor(Math.random() * VOCAL_TIPS.length)])
+  const [currentTip, setCurrentTip] = useState(VOCAL_TIPS[0])
+
+  useEffect(() => {
+    setCurrentTip(VOCAL_TIPS[Math.floor(Math.random() * VOCAL_TIPS.length)])
+  }, [])
 
   const { state, duration, audioBlob, audioUrl, analyserNode, start, stop, reset, error } =
     useAudioRecorder(MAX_SECONDS)
@@ -144,7 +148,7 @@ export default function RecordClient() {
         </div>
         <h2 className="text-xl font-bold text-foreground mb-2">AI가 분석 중이에요</h2>
         <p className="text-sm text-muted-foreground mb-6">목소리의 감정·톤·에너지 패턴을 읽고 있어요</p>
-        <div className="w-full max-w-[300px] bg-muted rounded-2xl px-4 py-3 mb-6 text-left">
+        <div className="w-full max-w-[300px] bg-muted rounded-2xl px-4 py-3 mb-6 text-center">
           <p className="text-xs font-semibold text-primary mb-1">발성 꿀팁 {currentTip.emoji}</p>
           <p className="text-sm text-foreground leading-relaxed">{currentTip.tip}</p>
         </div>
