@@ -1,5 +1,10 @@
+import LoginRequired from '@/components/LoginRequired'
 import TrainingClient from './TrainingClient'
 
 export default function TrainingPage() {
-  return <TrainingClient />
+  return (
+    <LoginRequired>
+      <TrainingClient />
+    </LoginRequired>
+  )
 }
