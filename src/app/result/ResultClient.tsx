@@ -271,7 +271,7 @@ function PreRegisterForm() {
   const [emailError, setEmailError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const isValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
     if (!isValid) {
