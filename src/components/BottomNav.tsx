@@ -2,11 +2,13 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Mic, User } from 'lucide-react'
+import { Mic, Dumbbell, Archive, User } from 'lucide-react'
 
 const NAV_ITEMS = [
-  { href: '/record', label: '목소리 분석', icon: Mic },
-  { href: '/mypage', label: '마이페이지',  icon: User },
+  { href: '/record',   label: '목소리 분석', icon: Mic,      activeOn: ['/record', '/result', '/training'] },
+  { href: '/training', label: '훈련하기',    icon: Dumbbell, activeOn: ['/training'] },
+  { href: '/archive',  label: '아카이브',    icon: Archive,  activeOn: ['/archive'] },
+  { href: '/mypage',   label: '마이페이지',  icon: User,     activeOn: ['/mypage'] },
 ]
 
 export default function BottomNav() {
@@ -17,8 +19,8 @@ export default function BottomNav() {
       {/* glassmorphism bar */}
       <div className="glass border-t border-border/60 pb-[env(safe-area-inset-bottom,0px)]">
         <ul className="flex items-center justify-around h-16">
-          {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
-            const active = pathname === href || pathname.startsWith(href + '/')
+          {NAV_ITEMS.map(({ href, label, icon: Icon, activeOn }) => {
+            const active = activeOn.some((p) => pathname === p || pathname.startsWith(p + '/'))
             return (
               <li key={href} className="flex-1">
                 <Link
