@@ -64,51 +64,6 @@ const EMOTION_KO: Record<string, string> = {
   'Triumph': '승리감',
 }
 
-// ── Emotion Bar ───────────────────────────────────────────
-function EmotionBar({
-  name,
-  score,
-  maxScore,
-  rank,
-  animate,
-}: {
-  name: string
-  score: number
-  maxScore: number
-  rank: number
-  animate: boolean
-}) {
-  const pct = Math.round((score / maxScore) * 100)
-  const isTop5 = rank <= 5
-
-  return (
-    <div className={`flex items-center gap-3 ${isTop5 ? 'py-1' : 'py-0.5'}`}>
-      {isTop5 && (
-        <span className="text-[10px] font-black text-primary w-4 shrink-0 text-center">
-          {rank}
-        </span>
-      )}
-      {!isTop5 && <span className="w-4 shrink-0" />}
-      <div className="flex-1 min-w-0">
-        <div className="flex justify-between items-center mb-1">
-          <span className={`truncate ${isTop5 ? 'text-xs font-bold text-foreground' : 'text-[11px] text-muted-foreground'}`}>
-            {EMOTION_KO[name] ?? name}
-          </span>
-          <span className={`ml-2 shrink-0 tabular-nums ${isTop5 ? 'text-xs font-bold text-primary' : 'text-[10px] text-muted-foreground'}`}>
-            {(score * 100).toFixed(1)}%
-          </span>
-        </div>
-        <div className={`rounded-full bg-border overflow-hidden ${isTop5 ? 'h-2.5' : 'h-1.5'}`}>
-          <div
-            className={`h-full rounded-full transition-all duration-700 ease-out ${isTop5 ? 'gradient-primary' : 'bg-muted-foreground/40'}`}
-            style={{ width: animate ? `${pct}%` : '0%' }}
-          />
-        </div>
-      </div>
-    </div>
-  )
-}
-
 // ── Tooltip ───────────────────────────────────────────────
 function Tooltip({ text }: { text: string }) {
   return (
@@ -647,7 +602,6 @@ export default function ResultClient() {
 
   if (emotions.length === 0) return null
 
-  const maxScore = emotions[0].score
   const top5 = emotions.slice(0, 5)
 
   return (
