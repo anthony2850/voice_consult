@@ -21,20 +21,39 @@ function CallbackHandler() {
         // PKCE flow: ?code=xxx
         const { data, error } = await supabase.auth.exchangeCodeForSession(code)
         if (error || !data.session) {
-          console.error('[auth callback] PKCE exchange failed:', error)
           setStatus('error')
           setTimeout(() => router.replace('/result'), 1500)
           return
         }
         setStatus('migrating')
         await migrateGuestData(data.session.user.id)
+
       } else {
-        // Implicit flow: #access_token=xxx (hash in URL)
-        // Supabase client auto-parses the hash on getSession()
-        const { data } = await supabase.auth.getSession()
-        if (data.session) {
+        // Implicit flow: #access_token=xxx — 직접 hash 파싱 후 setSession 호출
+        const hash = window.location.hash
+        const params = new URLSearchParams(hash.slice(1))
+        const accessToken = params.get('access_token')
+        const refreshToken = params.get('refresh_token')
+
+        if (accessToken && refreshToken) {
+          const { data, error } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          })
+          if (error || !data.session) {
+            setStatus('error')
+            setTimeout(() => router.replace('/result'), 1500)
+            return
+          }
           setStatus('migrating')
           await migrateGuestData(data.session.user.id)
+        } else {
+          // 이미 세션이 있는 경우 fallback
+          const { data } = await supabase.auth.getSession()
+          if (data.session) {
+            setStatus('migrating')
+            await migrateGuestData(data.session.user.id)
+          }
         }
       }
 

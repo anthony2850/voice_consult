@@ -16,9 +16,19 @@ export default function LoginRequired({ children }: { children: React.ReactNode 
   const [status, setStatus] = useState<'loading' | 'guest' | 'authed'>('loading')
 
   useEffect(() => {
-    getSupabase().auth.getSession().then(({ data }) => {
+    const supabase = getSupabase()
+
+    // 현재 세션 즉시 확인
+    supabase.auth.getSession().then(({ data }) => {
       setStatus(data.session ? 'authed' : 'guest')
     })
+
+    // 세션 변화 실시간 감지 (로그인/로그아웃 즉시 반영)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
+      setStatus(session ? 'authed' : 'guest')
+    })
+
+    return () => subscription.unsubscribe()
   }, [])
 
   if (status === 'loading') {
