@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Share2, RotateCcw, FileText, Sparkles, Dumbbell } from 'lucide-react'
+import { Share2, RotateCcw, Sparkles, Dumbbell } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { trackEvent } from '@/lib/analytics'
@@ -10,6 +10,7 @@ import { type Persona, normalizeHumeScore, findBestPersona } from '@/lib/persona
 import PersonaRadarChart from '@/components/PersonaRadarChart'
 import { type AudioFeatures } from '@/lib/extractAudioFeatures'
 import LoginCTA from '@/components/LoginCTA'
+import { getSupabase } from '@/lib/supabase'
 
 // ── Korean labels for 49 emotions ────────────────────────
 const EMOTION_KO: Record<string, string> = {
@@ -263,8 +264,9 @@ function PreRegisterForm() {
   const [email, setEmail] = useState('')
   const [submitted, setSubmitted] = useState(false)
   const [emailError, setEmailError] = useState('')
+  const [loading, setLoading] = useState(false)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     const isValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
     if (!isValid) {
@@ -272,9 +274,20 @@ function PreRegisterForm() {
       return
     }
     setEmailError('')
+    setLoading(true)
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (getSupabase().from('pre_registrations') as any).insert({ email })
+    setLoading(false)
+
+    if (error && error.code !== '23505') {
+      // 23505 = unique_violation (이미 등록된 이메일)
+      setEmailError('저장 중 오류가 발생했어요. 다시 시도해 주세요.')
+      return
+    }
+
     trackEvent('submit_pre_register', { email_domain: email.split('@')[1] })
     setSubmitted(true)
-    alert('사전 예약이 완료되었습니다!')
   }
 
   if (submitted) {
@@ -315,9 +328,10 @@ function PreRegisterForm() {
         <Button
           type="submit"
           size="lg"
-          className="w-full h-12 text-sm font-bold rounded-2xl gradient-primary border-0 shadow-lg shadow-primary/20 active:scale-95 transition-transform"
+          disabled={loading}
+          className="w-full h-12 text-sm font-bold rounded-2xl gradient-primary border-0 shadow-lg shadow-primary/20 active:scale-95 transition-transform disabled:opacity-60"
         >
-          사전 예약하기
+          {loading ? '저장 중...' : '사전 예약하기'}
         </Button>
       </form>
     </div>
@@ -679,36 +693,6 @@ export default function ResultClient() {
           </Button>
         </div>
 
-        {/* Report upsell CTA */}
-        <div className="glass rounded-3xl p-5 border border-primary/20">
-          <div className="flex items-start gap-3 mb-4">
-            <span className="text-2xl">📊</span>
-            <div>
-              <p className="text-sm font-bold text-foreground">음성 분석 리포트 받기</p>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                AI 감정 분석 기반 · 대인관계·커리어·성장 인사이트
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <span className="text-xl font-black text-foreground">
-                990<span className="text-sm font-normal text-muted-foreground">원</span>
-              </span>
-              <span className="text-xs text-muted-foreground line-through">3,900원</span>
-              <Badge className="bg-accent/20 text-accent border-0 text-[10px]">75% 할인</Badge>
-            </div>
-          </div>
-          <Button
-            size="lg"
-            onClick={() => router.push('/checkout')}
-            className="w-full h-13 text-base font-bold rounded-2xl gradient-primary border-0 shadow-xl shadow-primary/30 active:scale-95 transition-transform gap-2"
-          >
-            <FileText size={18} />
-            990원으로 상세 리포트 받기
-          </Button>
-          <p className="text-center text-[11px] text-muted-foreground mt-2">결제 후 즉시 AI 리포트를 확인할 수 있어요</p>
-        </div>
 
         {/* Fake Door — 사전 예약 수요 검증 */}
         <PreRegisterForm />
