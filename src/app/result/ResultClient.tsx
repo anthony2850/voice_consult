@@ -107,16 +107,21 @@ function getPitchToneColor(hz: number): string {
 }
 
 // ── Score calculations ─────────────────────────────────────
+function remapTo60(raw: number): number {
+  return Math.round(60 + (Math.max(0, Math.min(100, raw)) / 100) * 40)
+}
+
 function calcStabilityScore(jitter: number, shimmer: number): number {
   const j = Math.max(0, 1 - jitter / 1.0) * 100
   const s = Math.max(0, 1 - shimmer / 3.0) * 100
-  return Math.round(j * 0.5 + s * 0.5)
+  return remapTo60(j * 0.5 + s * 0.5)
 }
 
 function calcPaceScore(opsec: number): number {
   const optimal = 4.5
   const sigma = 1.8
-  return Math.round(100 * Math.exp(-0.5 * Math.pow((opsec - optimal) / sigma, 2)))
+  const raw = 100 * Math.exp(-0.5 * Math.pow((opsec - optimal) / sigma, 2))
+  return remapTo60(raw)
 }
 
 function calcExpressivenessScore(stdHz: number, dbMean: number): number {
