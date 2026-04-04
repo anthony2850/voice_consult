@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Mic, FileText, ChevronRight, LogIn, Clock, RotateCcw } from 'lucide-react'
+import { Mic, FileText, ChevronRight, Clock, RotateCcw } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import VoiceCompare from '@/components/VoiceCompare'
@@ -75,21 +75,17 @@ export default function ArchivePage() {
   const router = useRouter()
   const [topEmotions, setTopEmotions] = useState<string[]>([])
   const [history, setHistory] = useState<HistoryEntry[]>([])
-  const [hasPaidReport, setHasPaidReport] = useState(false)
   const [hasAnalysis, setHasAnalysis] = useState(false)
 
   useEffect(() => {
     try {
       const stored = sessionStorage.getItem('voiceEmotions')
       const emotions: Record<string, number> | null = stored ? JSON.parse(stored) : null
-      const paid = sessionStorage.getItem('paidReport') === '1'
-      setHasPaidReport(paid)
-
       if (emotions) {
         const top = Object.entries(emotions).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([name]) => name)
         setTopEmotions(top)
         setHasAnalysis(true)
-        saveToHistory(emotions, paid)
+        saveToHistory(emotions, false)
       }
       setHistory(loadHistory())
     } catch {
@@ -124,9 +120,8 @@ export default function ArchivePage() {
 
       <div className="mt-4 px-4 space-y-4">
         {/* Stats */}
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-1 gap-2">
           <StatCard value={history.length} label="분석 횟수" />
-          <StatCard value={hasPaidReport ? '1' : '0'} label="리포트 구매" />
         </div>
 
         {/* Quick actions */}
@@ -162,35 +157,6 @@ export default function ArchivePage() {
             </button>
           )}
 
-          {hasPaidReport ? (
-            <button
-              onClick={() => router.push('/report')}
-              className="w-full flex items-center gap-3 p-3 rounded-2xl bg-secondary/60 hover:bg-secondary active:scale-95 transition-all"
-            >
-              <span className="w-9 h-9 rounded-xl bg-emerald-500 flex items-center justify-center shadow-md shrink-0">
-                <FileText size={16} className="text-white" />
-              </span>
-              <div className="flex-1 text-left">
-                <p className="text-sm font-semibold text-foreground">상세 리포트 보기</p>
-                <p className="text-[11px] text-muted-foreground">구매한 AI 리포트를 확인해요</p>
-              </div>
-              <ChevronRight size={16} className="text-muted-foreground" />
-            </button>
-          ) : (
-            <button
-              onClick={() => router.push('/checkout')}
-              className="w-full flex items-center gap-3 p-3 rounded-2xl bg-primary/10 border border-primary/20 active:scale-95 transition-all"
-            >
-              <span className="w-9 h-9 rounded-xl gradient-primary flex items-center justify-center shadow-md shrink-0">
-                <FileText size={16} className="text-white" />
-              </span>
-              <div className="flex-1 text-left">
-                <p className="text-sm font-semibold text-foreground">상세 리포트 받기</p>
-                <p className="text-[11px] text-muted-foreground">AI 감정 분석 기반 · 990원</p>
-              </div>
-              <Badge className="bg-accent/20 text-accent border-0 text-[10px]">75% 할인</Badge>
-            </button>
-          )}
         </div>
 
         {/* Before / After 목소리 비교 대시보드 */}
@@ -223,27 +189,6 @@ export default function ArchivePage() {
             </div>
           </div>
         )}
-
-        {/* Login prompt */}
-        <div className="glass rounded-3xl p-5 border border-border/60">
-          <div className="flex items-start gap-3 mb-4">
-            <span className="text-2xl">🔐</span>
-            <div>
-              <p className="text-sm font-bold text-foreground">카카오 로그인으로 저장하기</p>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                분석 결과와 리포트를 클라우드에 저장하고 어디서든 확인하세요
-              </p>
-            </div>
-          </div>
-          <Button
-            size="lg"
-            onClick={() => router.push('/api/auth/signin')}
-            className="w-full h-12 rounded-2xl bg-[#FEE500] hover:bg-[#FDD800] text-[#191919] border-0 font-bold active:scale-95 transition-transform gap-2"
-          >
-            <LogIn size={16} />
-            카카오로 시작하기
-          </Button>
-        </div>
 
         <Button
           variant="outline"
