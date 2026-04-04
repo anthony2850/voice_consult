@@ -86,7 +86,7 @@ function toDateStr(d: Date): string {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-type PageState = 'idle' | 'recording' | 'transcribing' | 'scored'
+type PageState = 'idle' | 'recording' | 'transcribing' | 'scored' | 'error'
 const DAY_LABELS = ['월', '화', '수', '목', '금', '토', '일']
 const PASS_THRESHOLD = 60
 
@@ -164,9 +164,9 @@ export default function TrainingClient() {
       setScoreResult(result)
       setPageState('scored')
       await saveStamp(result.score)
-    } catch {
-      setPageState('idle')
-      recorder.reset()
+    } catch (err) {
+      console.error('[transcribe] error:', err)
+      setPageState('error')
     }
   }
 
@@ -272,6 +272,23 @@ export default function TrainingClient() {
               className="w-16 h-16 rounded-full bg-red-500 flex items-center justify-center shadow-xl shadow-red-500/30 active:scale-95 transition-transform"
             >
               <Square size={24} className="text-white fill-white" />
+            </button>
+          </div>
+        )}
+
+        {pageState === 'error' && (
+          <div className="glass rounded-3xl p-6 flex flex-col items-center gap-3 text-center">
+            <span className="text-3xl">⚠️</span>
+            <p className="text-sm font-semibold text-foreground">음성 분석에 실패했어요</p>
+            <p className="text-xs text-muted-foreground">
+              네트워크 오류이거나 서버 설정 문제일 수 있어요.<br />잠시 후 다시 시도해주세요.
+            </p>
+            <button
+              onClick={handleRetry}
+              className="flex items-center gap-1.5 text-sm text-primary font-medium mt-1"
+            >
+              <RotateCcw size={14} />
+              다시 시도하기
             </button>
           </div>
         )}
