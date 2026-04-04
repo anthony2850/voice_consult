@@ -12,27 +12,37 @@ function CallbackHandler() {
   const [status, setStatus] = useState<'loading' | 'migrating' | 'done' | 'error'>('loading')
 
   useEffect(() => {
-    const code = searchParams.get('code')
-    if (!code) {
-      router.replace('/result')
-      return
-    }
-
     const supabase = getSupabase()
-    supabase.auth.exchangeCodeForSession(code).then(async ({ data, error }) => {
-      if (error || !data.session) {
-        console.error('[auth callback] session exchange failed:', error)
-        setStatus('error')
-        setTimeout(() => router.replace('/result'), 1500)
-        return
-      }
 
-      setStatus('migrating')
-      await migrateGuestData(data.session.user.id)
+    async function handleCallback() {
+      const code = searchParams.get('code')
+
+      if (code) {
+        // PKCE flow: ?code=xxx
+        const { data, error } = await supabase.auth.exchangeCodeForSession(code)
+        if (error || !data.session) {
+          console.error('[auth callback] PKCE exchange failed:', error)
+          setStatus('error')
+          setTimeout(() => router.replace('/result'), 1500)
+          return
+        }
+        setStatus('migrating')
+        await migrateGuestData(data.session.user.id)
+      } else {
+        // Implicit flow: #access_token=xxx (hash in URL)
+        // Supabase client auto-parses the hash on getSession()
+        const { data } = await supabase.auth.getSession()
+        if (data.session) {
+          setStatus('migrating')
+          await migrateGuestData(data.session.user.id)
+        }
+      }
 
       setStatus('done')
       router.replace('/result')
-    })
+    }
+
+    handleCallback()
   }, [])
 
   return (
