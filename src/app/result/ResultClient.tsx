@@ -699,23 +699,6 @@ export default function ResultClient() {
           />
         )}
 
-        {/* Top 5 */}
-        <div className="glass rounded-3xl p-5">
-          <h2 className="text-sm font-bold text-foreground mb-1">상위 5개 감정</h2>
-          <p className="text-[11px] text-muted-foreground mb-4">목소리에서 가장 강하게 감지된 감정이에요</p>
-          <div className="space-y-3">
-            {top5.map((e, i) => (
-              <EmotionBar
-                key={e.name}
-                name={e.name}
-                score={e.score}
-                maxScore={maxScore}
-                rank={i + 1}
-                animate={animate}
-              />
-            ))}
-          </div>
-        </div>
 
         {/* Audio features */}
         {audioFeatures && <AudioFeaturesSection features={audioFeatures} animate={animate} />}
