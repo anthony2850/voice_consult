@@ -9,6 +9,7 @@ import { trackEvent } from '@/lib/analytics'
 import { type Persona, normalizeHumeScore, findBestPersona } from '@/lib/personas'
 import PersonaRadarChart from '@/components/PersonaRadarChart'
 import { type AudioFeatures } from '@/lib/extractAudioFeatures'
+import LoginCTA from '@/components/LoginCTA'
 
 // ── Korean labels for 49 emotions ────────────────────────
 const EMOTION_KO: Record<string, string> = {
@@ -776,6 +777,10 @@ export default function ResultClient() {
         <PreRegisterForm />
 
       </div>
+
+      {/* 지연된 회원가입 CTA */}
+      <LoginCTA />
+
     </div>
   )
 }
