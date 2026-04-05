@@ -43,6 +43,21 @@ export const THEME_INFO: Record<Theme, { label: string; emoji: string; descripti
   },
 }
 
+export const THEME_TIPS: Record<Theme, { tip: string; exercise: string }[]> = {
+  accuracy: [
+    { tip: '입을 크게 벌리고 각 음절을 또렷하게 끊어 읽어보세요.', exercise: '거울을 보며 입 모양을 확인하면서 읽으면 더 효과적이에요.' },
+    { tip: '천천히 읽어도 괜찮아요. 정확함이 속도보다 중요합니다.', exercise: '어려운 부분을 3회 반복 후 전체를 이어 읽어보세요.' },
+  ],
+  speed: [
+    { tip: '말하기 전 숨을 충분히 들이쉬고 시작하세요.', exercise: '메트로놈 앱을 켜고 박자에 맞춰 읽으면 속도 감각이 생겨요.' },
+    { tip: '단어 사이의 끊음을 자연스럽게 유지하며 읽어보세요.', exercise: '뉴스를 보며 아나운서의 속도를 따라 읽는 섀도잉을 해보세요.' },
+  ],
+  emotion: [
+    { tip: '그 상황에 실제로 있다고 상상하며 읽어보세요.', exercise: '읽기 전 5초간 눈을 감고 장면을 머릿속에 그려보세요.' },
+    { tip: '감정이 목소리 톤, 속도, 볼륨에 자연스럽게 배어나오도록 해보세요.', exercise: '같은 문장을 전혀 다른 감정으로 읽어보며 차이를 느껴보세요.' },
+  ],
+}
+
 export const ACCURACY_SCRIPTS: Script[] = [
   {
     id: 'acc-1',
@@ -97,7 +112,7 @@ export const EMOTION_SCRIPTS: Script[] = [
   },
 ]
 
-const SCRIPTS_BY_THEME: Record<Theme, Script[]> = {
+export const SCRIPTS_BY_THEME: Record<Theme, Script[]> = {
   accuracy: ACCURACY_SCRIPTS,
   speed: SPEED_SCRIPTS,
   emotion: EMOTION_SCRIPTS,
