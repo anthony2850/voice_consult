@@ -6,7 +6,6 @@ import { Mic, FileText, ChevronRight, ChevronLeft, Play, Loader2 } from 'lucide-
 import { Badge } from '@/components/ui/badge'
 import { getSupabase } from '@/lib/supabase'
 import { getTrainingAudioUrl } from '@/lib/uploadTrainingAudio'
-import VoiceCompare from '@/components/VoiceCompare'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface TrainingLog {
@@ -15,46 +14,12 @@ interface TrainingLog {
   audio_url: string | null
 }
 
-interface HistoryEntry {
-  topEmotions: string[]
-  analyzedAt: string
-}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function toDateStr(d: Date) {
   return d.toISOString().split('T')[0]
 }
 
-function loadHistory(): HistoryEntry[] {
-  try {
-    const raw = localStorage.getItem('voiceEmotionHistory')
-    return raw ? JSON.parse(raw) : []
-  } catch {
-    return []
-  }
-}
-
-function saveToHistory(emotions: Record<string, number> | null) {
-  try {
-    const top3 = emotions
-      ? Object.entries(emotions).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([name]) => name)
-      : []
-    const history = loadHistory()
-    const entry: HistoryEntry = { topEmotions: top3, analyzedAt: new Date().toISOString() }
-    const today = new Date().toDateString()
-    const filtered = history.filter((h) => new Date(h.analyzedAt).toDateString() !== today)
-    localStorage.setItem('voiceEmotionHistory', JSON.stringify([entry, ...filtered].slice(0, 10)))
-  } catch { /* noop */ }
-}
-
-function formatDate(iso: string) {
-  const d = new Date(iso)
-  const diffDays = Math.floor((Date.now() - d.getTime()) / 86400000)
-  if (diffDays === 0) return '오늘'
-  if (diffDays === 1) return '어제'
-  if (diffDays < 7) return `${diffDays}일 전`
-  return `${d.getMonth() + 1}/${d.getDate()}`
-}
 
 const STAGE_INFO: Record<number, { name: string; emoji: string }> = {
   1: { name: '호흡 훈련', emoji: '🫁' },
@@ -228,7 +193,6 @@ export default function ArchivePage() {
   const [trainingLogs, setTrainingLogs] = useState<TrainingLog[]>([])
   const [currentMonth, setCurrentMonth] = useState(new Date())
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
-  const [history, setHistory] = useState<HistoryEntry[]>([])
   const [hasAnalysis, setHasAnalysis] = useState(false)
   const [topEmotions, setTopEmotions] = useState<string[]>([])
 
@@ -249,7 +213,7 @@ export default function ArchivePage() {
     loadLogs()
   }, [])
 
-  // Load voice analysis history from localStorage
+  // Load voice analysis from sessionStorage for header emotions
   useEffect(() => {
     try {
       const stored = sessionStorage.getItem('voiceEmotions')
@@ -258,12 +222,8 @@ export default function ArchivePage() {
         const top = Object.entries(emotions).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([name]) => name)
         setTopEmotions(top)
         setHasAnalysis(true)
-        saveToHistory(emotions)
       }
-      setHistory(loadHistory())
-    } catch {
-      setHistory(loadHistory())
-    }
+    } catch { /* noop */ }
   }, [])
 
   // Unique training dates for calendar
@@ -387,28 +347,6 @@ export default function ArchivePage() {
           )}
         </div>
 
-        {/* Voice compare */}
-        <VoiceCompare />
-
-        {/* Voice analysis history */}
-        {history.length > 0 && (
-          <div className="glass rounded-3xl p-5">
-            <p className="text-sm font-bold text-foreground mb-3">감정 분석 기록</p>
-            <div className="space-y-2">
-              {history.slice(0, 5).map((entry, i) => (
-                <div key={i} className="flex items-center gap-3 py-2 border-b border-border/50 last:border-0">
-                  <span className="text-xl">🎤</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs text-foreground truncate">
-                      {entry.topEmotions.map((e) => EMOTION_KO[e] ?? e).join(' · ')}
-                    </p>
-                  </div>
-                  <p className="text-[11px] text-muted-foreground shrink-0">{formatDate(entry.analyzedAt)}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   )
