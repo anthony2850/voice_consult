@@ -208,7 +208,14 @@ export default function ArchivePage() {
         .select('stage_num, log_date, audio_url')
         .eq('user_id', user.id)
         .order('log_date', { ascending: false })
-      if (data) setTrainingLogs(data)
+      if (data) {
+        setTrainingLogs(data)
+        // default to most recent training date
+        if (data.length > 0) {
+          setSelectedDate(data[0].log_date)
+          setCurrentMonth(new Date(data[0].log_date))
+        }
+      }
     }
     loadLogs()
   }, [])
