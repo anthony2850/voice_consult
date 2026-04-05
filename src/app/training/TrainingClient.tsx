@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { Lock, Flame } from 'lucide-react'
+
 import { getSupabase } from '@/lib/supabase'
 import { THEME_BY_DOW, THEME_INFO } from '@/lib/curriculum'
 import { Badge } from '@/components/ui/badge'
@@ -11,16 +12,6 @@ import { Badge } from '@/components/ui/badge'
 const INDEX_TO_DOW = [1, 2, 3, 4, 5, 6, 0]
 const DAY_KO = ['월', '화', '수', '목', '금', '토', '일']
 
-// Duolingo-style zigzag: left/center/right offsets
-const ZIGZAG: React.CSSProperties[] = [
-  { alignSelf: 'center' },
-  { alignSelf: 'flex-start', marginLeft: '2.5rem' },
-  { alignSelf: 'center' },
-  { alignSelf: 'flex-end', marginRight: '2.5rem' },
-  { alignSelf: 'center' },
-  { alignSelf: 'flex-start', marginLeft: '2.5rem' },
-  { alignSelf: 'center' },
-]
 
 function getWeekDates(): Date[] {
   const today = new Date()
@@ -79,62 +70,50 @@ export default function TrainingClient() {
         </div>
       </div>
 
-      {/* Map path */}
-      <div className="flex flex-col gap-5 px-4 pt-8 pb-4">
-        {weekDates.map((date, i) => {
-          const dateStr = toDateStr(date)
-          const theme = THEME_BY_DOW[INDEX_TO_DOW[i]]
-          const info = THEME_INFO[theme]
-          const isCompleted = stampedDates.includes(dateStr)
-          const isToday = dateStr === todayStr
-          const isFuture = dateStr > todayStr
+      {/* Map: 4 + 3 grid */}
+      <div className="px-4 pt-8 pb-4 space-y-6">
+        {[weekDates.slice(0, 4), weekDates.slice(4)].map((row, rowIdx) => (
+          <div key={rowIdx} className={`grid gap-3 ${rowIdx === 0 ? 'grid-cols-4' : 'grid-cols-3'}`}>
+            {row.map((date, colIdx) => {
+              const i = rowIdx === 0 ? colIdx : 4 + colIdx
+              const dateStr = toDateStr(date)
+              const theme = THEME_BY_DOW[INDEX_TO_DOW[i]]
+              const info = THEME_INFO[theme]
+              const isCompleted = stampedDates.includes(dateStr)
+              const isToday = dateStr === todayStr
+              const isFuture = dateStr > todayStr
 
-          const size = isToday ? 96 : 80
-          const nodeClass = [
-            'relative flex items-center justify-center rounded-full transition-all',
-            isCompleted || isToday ? 'gradient-primary shadow-lg shadow-primary/40' : '',
-            isToday ? 'ring-4 ring-white/30' : '',
-            isFuture ? 'bg-secondary/50 opacity-50' : !isCompleted ? 'bg-secondary/80' : '',
-            isFuture ? 'cursor-not-allowed' : 'cursor-pointer active:scale-95',
-          ].filter(Boolean).join(' ')
+              const nodeClass = [
+                'relative flex flex-col items-center justify-center rounded-2xl py-3 gap-1.5 transition-all w-full',
+                isCompleted || isToday ? 'gradient-primary shadow-md shadow-primary/40' : '',
+                isToday ? 'ring-2 ring-white/40' : '',
+                isFuture ? 'bg-secondary/50 opacity-50' : !isCompleted ? 'bg-secondary/80' : '',
+                isFuture ? 'cursor-not-allowed' : 'cursor-pointer active:scale-95',
+              ].filter(Boolean).join(' ')
 
-          return (
-            <div
-              key={dateStr}
-              style={ZIGZAG[i]}
-              className="flex flex-col items-center gap-2"
-            >
-              <button
-                onClick={() => { if (!isFuture) router.push(`/training/${i + 1}`) }}
-                disabled={isFuture}
-                className={nodeClass}
-                style={{ width: size, height: size }}
-              >
-                {isFuture ? (
-                  <Lock size={22} className="text-muted-foreground" />
-                ) : isCompleted ? (
-                  <Flame size={isToday ? 36 : 28} className="text-white" />
-                ) : (
-                  <span className="text-3xl">{info.emoji}</span>
-                )}
-
-                {/* Today badge */}
-                {isToday && (
-                  <span className="absolute -bottom-1.5 text-[9px] font-bold text-primary bg-background px-2 py-0.5 rounded-full border border-primary/30 whitespace-nowrap">
-                    오늘
+              return (
+                <button
+                  key={dateStr}
+                  onClick={() => { if (!isFuture) router.push(`/training/${i + 1}`) }}
+                  disabled={isFuture}
+                  className={nodeClass}
+                >
+                  {isFuture ? (
+                    <Lock size={20} className="text-muted-foreground" />
+                  ) : isCompleted ? (
+                    <Flame size={22} className="text-white" />
+                  ) : (
+                    <span className="text-xl">{info.emoji}</span>
+                  )}
+                  <span className={`text-[10px] font-bold ${isCompleted || isToday ? 'text-white' : 'text-muted-foreground'}`}>
+                    {DAY_KO[i]}
+                    {isToday ? ' ★' : ''}
                   </span>
-                )}
-              </button>
-
-              <div className="text-center">
-                <p className={`text-[11px] font-bold ${isToday ? 'text-primary' : 'text-muted-foreground'}`}>
-                  {DAY_KO[i]}요일
-                </p>
-                <p className="text-[10px] text-muted-foreground">{info.label}</p>
-              </div>
-            </div>
-          )
-        })}
+                </button>
+              )
+            })}
+          </div>
+        ))}
       </div>
     </div>
   )
