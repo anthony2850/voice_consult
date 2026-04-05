@@ -17,15 +17,13 @@ const ENERGY_CV_THRESHOLD = 0.5
 
 // Script split into segments; highlighted = must be stressed
 const SCRIPT_PARTS: { text: string; highlight: boolean }[] = [
-  { text: '저는 ', highlight: false },
-  { text: '절대로', highlight: true },
-  { text: ' 포기하지 않습니다. ', highlight: false },
+  { text: '이 시장은 ', highlight: false },
   { text: '지금', highlight: true },
-  { text: ' 이 순간, ', highlight: false },
-  { text: '우리가', highlight: false },
-  { text: ' 함께 만들어가는 ', highlight: false },
-  { text: '변화가', highlight: true },
-  { text: ' 세상을 바꿀 거예요.', highlight: false },
+  { text: ' 움직이고 있습니다. 우리에게 필요한 건 더 많은 준비가 아니라, ', highlight: false },
+  { text: '실행', highlight: true },
+  { text: '입니다. 그리고 저희는 ', highlight: false },
+  { text: '오늘', highlight: true },
+  { text: ' 시작합니다.', highlight: false },
 ]
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
