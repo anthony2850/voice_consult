@@ -22,7 +22,7 @@ const SCRIPT_PARTS: { text: string; highlight: boolean }[] = [
   { text: ' 포기하지 않습니다. ', highlight: false },
   { text: '지금', highlight: true },
   { text: ' 이 순간, ', highlight: false },
-  { text: '우리가', highlight: true },
+  { text: '우리가', highlight: false },
   { text: ' 함께 만들어가는 ', highlight: false },
   { text: '변화가', highlight: true },
   { text: ' 세상을 바꿀 거예요.', highlight: false },
