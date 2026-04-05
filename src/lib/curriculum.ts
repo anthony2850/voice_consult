@@ -149,10 +149,10 @@ export const STAGES: Stage[] = [
   },
   {
     stageNum: 3,
-    name: '감정 입문',
+    name: '강세 훈련',
     theme: 'emotion',
-    emoji: '🎭',
-    description: '목소리에 감정을 담는 연습을 해보아요',
+    emoji: '🎯',
+    description: '강조 단어를 짚어가며 밋밋한 말투에서 벗어나보아요',
     script: EMOTION_SCRIPTS[0],
     tip: THEME_TIPS.emotion[0],
   },
