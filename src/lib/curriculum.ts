@@ -131,10 +131,10 @@ export interface Stage {
 export const STAGES: Stage[] = [
   {
     stageNum: 1,
-    name: '발음 기초',
+    name: '호흡 훈련',
     theme: 'accuracy',
-    emoji: '🎯',
-    description: '또렷한 발음의 기초를 다져보아요',
+    emoji: '🫁',
+    description: '아- 소리를 흔들림 없이 5초 이상 유지해보세요',
     script: ACCURACY_SCRIPTS[0],
     tip: THEME_TIPS.accuracy[0],
   },
