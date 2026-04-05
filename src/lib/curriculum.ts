@@ -140,10 +140,10 @@ export const STAGES: Stage[] = [
   },
   {
     stageNum: 2,
-    name: '속도 기초',
+    name: '볼륨 훈련',
     theme: 'speed',
-    emoji: '⚡',
-    description: '자연스러운 말하기 속도를 익혀보아요',
+    emoji: '📢',
+    description: '평소보다 1.5배 더 크게 말하는 연습을 해보아요',
     script: SPEED_SCRIPTS[0],
     tip: THEME_TIPS.speed[0],
   },
