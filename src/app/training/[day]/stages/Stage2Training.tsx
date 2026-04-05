@@ -7,6 +7,7 @@ import { useAudioRecorder } from '@/hooks/useAudioRecorder'
 import { useWaveform } from '@/hooks/useWaveform'
 import { extractAudioFeatures } from '@/lib/extractAudioFeatures'
 import { getSupabase } from '@/lib/supabase'
+import { uploadTrainingAudio } from '@/lib/uploadTrainingAudio'
 import StreakPopup from '@/components/StreakPopup'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -65,6 +66,7 @@ export default function Stage2Training() {
 
   const analyzingRef = useRef(false)
   const stepRef = useRef<1 | 2>(1)
+  const audioBlobRef = useRef<Blob | null>(null)
 
   useEffect(() => {
     async function checkDone() {
@@ -108,6 +110,7 @@ export default function Stage2Training() {
   }
 
   async function analyzeStep2(blob: Blob) {
+    audioBlobRef.current = blob  // save loud-voice recording
     setPageState('step2_analyzing')
     const features = await extractAudioFeatures(blob)
     const rms = features?.energy.rms_mean ?? 0
@@ -145,9 +148,12 @@ export default function Stage2Training() {
       const supabase = getSupabase()
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
+      const audioPath = audioBlobRef.current
+        ? await uploadTrainingAudio(user.id, 2, todayStr, audioBlobRef.current)
+        : null
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await (supabase as any).from('user_training_logs').upsert(
-        { user_id: user.id, log_date: todayStr, theme: 'speed', score: 100, stage_num: 2 },
+        { user_id: user.id, log_date: todayStr, theme: 'speed', score: 100, stage_num: 2, audio_url: audioPath },
         { onConflict: 'user_id,stage_num' },
       )
       // eslint-disable-next-line @typescript-eslint/no-explicit-any

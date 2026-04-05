@@ -7,6 +7,7 @@ import { useAudioRecorder } from '@/hooks/useAudioRecorder'
 import { useWaveform } from '@/hooks/useWaveform'
 import { extractAudioFeatures } from '@/lib/extractAudioFeatures'
 import { getSupabase } from '@/lib/supabase'
+import { uploadTrainingAudio } from '@/lib/uploadTrainingAudio'
 import StreakPopup from '@/components/StreakPopup'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -75,6 +76,7 @@ export default function Stage3Training() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   useWaveform({ analyser: recorder.analyserNode, canvasRef, active: recorder.state === 'recording' })
   const analyzingRef = useRef(false)
+  const audioBlobRef = useRef<Blob | null>(null)
 
   useEffect(() => {
     async function checkDone() {
@@ -105,6 +107,7 @@ export default function Stage3Training() {
   }, [recorder.state, recorder.audioBlob]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function runAnalysis(blob: Blob) {
+    audioBlobRef.current = blob
     setPageState('analyzing')
     const features = await extractAudioFeatures(blob)
     if (!features) {
@@ -135,9 +138,12 @@ export default function Stage3Training() {
       const supabase = getSupabase()
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
+      const audioPath = audioBlobRef.current
+        ? await uploadTrainingAudio(user.id, 3, todayStr, audioBlobRef.current)
+        : null
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await (supabase as any).from('user_training_logs').upsert(
-        { user_id: user.id, log_date: todayStr, theme: 'emotion', score: 100, stage_num: 3 },
+        { user_id: user.id, log_date: todayStr, theme: 'emotion', score: 100, stage_num: 3, audio_url: audioPath },
         { onConflict: 'user_id,stage_num' },
       )
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
