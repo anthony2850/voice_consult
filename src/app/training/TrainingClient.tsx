@@ -69,7 +69,7 @@ export default function TrainingClient() {
             </div>
             <div className="flex items-center gap-1.5 bg-white/15 rounded-full px-3 py-1">
               <CheckCircle size={14} className="text-emerald-300" />
-              <span className="text-white text-xs font-bold">{completedStages.size}/7 완료</span>
+              <span className="text-white text-xs font-bold">{completedStages.size}/{STAGES.length} 완료</span>
             </div>
           </div>
         </div>
