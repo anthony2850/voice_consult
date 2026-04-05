@@ -39,6 +39,7 @@ export default function DayTrainingClient({ dayIndex }: { dayIndex: number }) {
   const [isCompleted, setIsCompleted] = useState(false)
   const [saving, setSaving] = useState(false)
   const [recordState, setRecordState] = useState<RecordState>('idle')
+  const [showRecordGuide, setShowRecordGuide] = useState(false)
   const [showStreak, setShowStreak] = useState(false)
   const [streakCount, setStreakCount] = useState(0)
   const [allLogDates, setAllLogDates] = useState<string[]>([])
@@ -72,6 +73,10 @@ export default function DayTrainingClient({ dayIndex }: { dayIndex: number }) {
   }, [recorder.state])
 
   async function handleComplete() {
+    if (recordState !== 'review') {
+      setShowRecordGuide(true)
+      return
+    }
     setSaving(true)
     try {
       const supabase = getSupabase()
@@ -173,7 +178,7 @@ export default function DayTrainingClient({ dayIndex }: { dayIndex: number }) {
               <div className="flex flex-col items-center gap-3">
                 <p className="text-xs text-muted-foreground text-center">스크립트를 읽고 내 목소리를 들어보세요</p>
                 <button
-                  onClick={() => { setRecordState('recording'); recorder.start() }}
+                  onClick={() => { setRecordState('recording'); setShowRecordGuide(false); recorder.start() }}
                   className="w-14 h-14 rounded-full gradient-primary flex items-center justify-center shadow-lg shadow-primary/30 active:scale-95 transition-transform"
                 >
                   <Mic size={22} className="text-white" />
@@ -208,6 +213,16 @@ export default function DayTrainingClient({ dayIndex }: { dayIndex: number }) {
               </div>
             )}
           </div>
+
+          {/* Record guide */}
+          {showRecordGuide && recordState !== 'review' && (
+            <div className="flex items-start gap-3 bg-amber-400/10 border border-amber-400/30 rounded-2xl px-4 py-3">
+              <span className="text-lg shrink-0">🎙</span>
+              <p className="text-sm text-amber-400 font-medium leading-relaxed">
+                위 스크립트를 먼저 녹음해주세요. 녹음을 완료한 후에 훈련을 마칠 수 있어요.
+              </p>
+            </div>
+          )}
 
           {/* Complete button */}
           {!isCompleted ? (
