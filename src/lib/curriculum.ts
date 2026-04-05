@@ -118,8 +118,83 @@ export const SCRIPTS_BY_THEME: Record<Theme, Script[]> = {
   emotion: EMOTION_SCRIPTS,
 }
 
+export interface Stage {
+  stageNum: number   // 1–7
+  name: string
+  theme: Theme
+  emoji: string
+  description: string
+  script: Script
+  tip: { tip: string; exercise: string }
+}
+
+export const STAGES: Stage[] = [
+  {
+    stageNum: 1,
+    name: '발음 기초',
+    theme: 'accuracy',
+    emoji: '🎯',
+    description: '또렷한 발음의 기초를 다져보아요',
+    script: ACCURACY_SCRIPTS[0],
+    tip: THEME_TIPS.accuracy[0],
+  },
+  {
+    stageNum: 2,
+    name: '속도 기초',
+    theme: 'speed',
+    emoji: '⚡',
+    description: '자연스러운 말하기 속도를 익혀보아요',
+    script: SPEED_SCRIPTS[0],
+    tip: THEME_TIPS.speed[0],
+  },
+  {
+    stageNum: 3,
+    name: '감정 입문',
+    theme: 'emotion',
+    emoji: '🎭',
+    description: '목소리에 감정을 담는 연습을 해보아요',
+    script: EMOTION_SCRIPTS[0],
+    tip: THEME_TIPS.emotion[0],
+  },
+  {
+    stageNum: 4,
+    name: '발음 심화',
+    theme: 'accuracy',
+    emoji: '🎯',
+    description: '더 어려운 발음 패턴에 도전해보아요',
+    script: ACCURACY_SCRIPTS[1],
+    tip: THEME_TIPS.accuracy[1],
+  },
+  {
+    stageNum: 5,
+    name: '속도 심화',
+    theme: 'speed',
+    emoji: '⚡',
+    description: '뉴스 앵커 수준의 속도를 목표로 해보아요',
+    script: SPEED_SCRIPTS[1],
+    tip: THEME_TIPS.speed[1],
+  },
+  {
+    stageNum: 6,
+    name: '감정 심화',
+    theme: 'emotion',
+    emoji: '🎭',
+    description: '다양한 감정 표현으로 목소리 폭을 넓혀보아요',
+    script: EMOTION_SCRIPTS[1],
+    tip: THEME_TIPS.emotion[1],
+  },
+  {
+    stageNum: 7,
+    name: '종합 도전',
+    theme: 'accuracy',
+    emoji: '🏆',
+    description: '최고 난이도 문장으로 종합 실력을 점검해보아요',
+    script: ACCURACY_SCRIPTS[2],
+    tip: THEME_TIPS.accuracy[0],
+  },
+]
+
 function pickScript(scripts: Script[]): Script {
-  // rotate daily so users don't always see the same script
   const dayOfYear = Math.floor(
     (Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000,
   )
