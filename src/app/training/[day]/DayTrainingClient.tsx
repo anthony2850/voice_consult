@@ -11,6 +11,7 @@ import StreakPopup from '@/components/StreakPopup'
 import Stage1Training from './stages/Stage1Training'
 import Stage2Training from './stages/Stage2Training'
 import Stage3Training from './stages/Stage3Training'
+import Stage4Training from './stages/Stage4Training'
 
 function toDateStr(d: Date) {
   return d.toISOString().split('T')[0]
@@ -108,6 +109,28 @@ export default function DayTrainingClient({ dayIndex }: { dayIndex: number }) {
     } finally {
       setSaving(false)
     }
+  }
+
+  if (stage.stageNum === 4) {
+    return (
+      <div className="flex flex-col min-h-[calc(100vh-84px)]">
+        <div className="relative bg-gradient-to-br from-violet-600 to-indigo-600 px-5 pt-10 pb-6 overflow-hidden">
+          <div className="absolute -top-10 -right-10 w-48 h-48 rounded-full bg-white/10 blur-3xl" />
+          <div className="absolute -bottom-10 -left-10 w-48 h-48 rounded-full bg-white/10 blur-3xl" />
+          <div className="relative z-10">
+            <button onClick={() => router.back()} className="flex items-center gap-1.5 text-white/70 hover:text-white mb-4 transition-colors">
+              <ArrowLeft size={16} /><span className="text-xs">훈련 목록</span>
+            </button>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-2xl">⚡</span>
+              <h1 className="text-xl font-black text-white">4단계 · 속도 훈련</h1>
+            </div>
+            <p className="text-white/70 text-sm">뉴스 앵커처럼 일정한 속도로 읽어보세요</p>
+          </div>
+        </div>
+        <Stage4Training />
+      </div>
+    )
   }
 
   if (!stage) return null

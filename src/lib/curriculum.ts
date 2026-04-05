@@ -158,12 +158,12 @@ export const STAGES: Stage[] = [
   },
   {
     stageNum: 4,
-    name: '발음 심화',
-    theme: 'accuracy',
-    emoji: '🎯',
-    description: '더 어려운 발음 패턴에 도전해보아요',
-    script: ACCURACY_SCRIPTS[1],
-    tip: THEME_TIPS.accuracy[1],
+    name: '속도 훈련',
+    theme: 'speed',
+    emoji: '⚡',
+    description: '뉴스 앵커처럼 일정한 속도로 읽어보아요',
+    script: SPEED_SCRIPTS[0],
+    tip: THEME_TIPS.speed[0],
   },
   {
     stageNum: 5,
