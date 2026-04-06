@@ -28,7 +28,7 @@ export const PERSONAS: Persona[] = [
       Realization: 60,
     },
     script:
-      '안녕하십니까. 오늘 논의하실 핵심 안건을 간략히 말씀드리겠습니다. 첫째, 3분기 실적 검토. 둘째, 신규 프로젝트 방향 수립입니다. 명확하고 효율적인 논의 부탁드립니다.',
+      '시청자 여러분의 제보로 들어온 현장 소식, 오늘의 첫 소식으로 전해드립니다.',
     sampleAudio: '/personas/persona-1.wav',
   },
   {
