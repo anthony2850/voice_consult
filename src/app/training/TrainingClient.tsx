@@ -8,7 +8,10 @@ import { STAGES } from '@/lib/curriculum'
 import { Badge } from '@/components/ui/badge'
 
 function toDateStr(d: Date) {
-  return d.toISOString().split('T')[0]
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
 }
 
 export default function TrainingClient() {
@@ -38,11 +41,21 @@ export default function TrainingClient() {
     load()
   }, [])
 
-  // Streak = consecutive days up to today
+  // Streak = consecutive days ending today or yesterday
   const streak = useMemo(() => {
     const unique = [...new Set(streakDates)].sort((a, b) => b.localeCompare(a))
+    if (unique.length === 0) return 0
+
+    const yesterday = new Date(todayStr)
+    yesterday.setDate(yesterday.getDate() - 1)
+    const yesterdayStr = toDateStr(yesterday)
+
+    // Start from today if trained today, yesterday if trained yesterday, else 0
+    const mostRecent = unique[0]
+    if (mostRecent !== todayStr && mostRecent !== yesterdayStr) return 0
+
     let count = 0
-    let expected = todayStr
+    let expected = mostRecent
     for (const date of unique) {
       if (date === expected) {
         count++
