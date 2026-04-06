@@ -112,8 +112,9 @@ function remapTo60(raw: number): number {
 }
 
 function calcStabilityScore(jitter: number, shimmer: number): number {
-  const j = Math.max(0, 1 - jitter / 1.0) * 100
-  const s = Math.max(0, 1 - shimmer / 3.0) * 100
+  // 실제 발화 jitter 분포: 0.2~3%, shimmer: 0.5~6%
+  const j = Math.max(0, 1 - jitter / 3.0) * 100
+  const s = Math.max(0, 1 - shimmer / 6.0) * 100
   return remapTo60(j * 0.5 + s * 0.5)
 }
 
@@ -125,9 +126,10 @@ function calcPaceScore(opsec: number): number {
 }
 
 function calcExpressivenessScore(stdHz: number, dbMean: number): number {
-  const pitchVar = Math.min(100, (stdHz / 70) * 100)
-  const dbScore = Math.min(100, Math.max(0, ((dbMean + 50) / 45) * 100))
-  return Math.round(pitchVar * 0.6 + dbScore * 0.4)
+  // 실제 발화 pitch std 분포: 10~60Hz, dbMean: -40~-10dB
+  const pitchVar = Math.min(100, (stdHz / 50) * 100)
+  const dbScore = Math.min(100, Math.max(0, ((dbMean + 40) / 30) * 100))
+  return remapTo60(pitchVar * 0.6 + dbScore * 0.4)
 }
 
 function getScoreColor(score: number): string {
@@ -193,11 +195,8 @@ function ScoreCard({
   )
 }
 
-// ── Audio feature section ─────────────────────────────────
-function AudioFeaturesSection({ features, animate }: { features: AudioFeatures; animate: boolean }) {
-  const toneLabel = getPitchToneLabel(features.pitch.mean_hz)
-  const toneColor = getPitchToneColor(features.pitch.mean_hz)
-
+// ── Voice Quality Radar + Pitch section ──────────────────
+function VoiceRadarSection({ features, animate }: { features: AudioFeatures; animate: boolean }) {
   const stabilityScore = calcStabilityScore(
     features.voice_quality.jitter_rel_pct,
     features.voice_quality.shimmer_rel_pct,
@@ -205,8 +204,31 @@ function AudioFeaturesSection({ features, animate }: { features: AudioFeatures; 
   const paceScore = calcPaceScore(features.rhythm.onsets_per_second)
   const expressivenessScore = calcExpressivenessScore(features.pitch.std_hz, features.energy.db_mean)
 
+  const axes = ['목소리 안정감', '말하기 여유 및 전달력', '생동감 및 표현력']
+  const userScores: Record<string, number> = {
+    '목소리 안정감': stabilityScore,
+    '말하기 여유 및 전달력': paceScore,
+    '생동감 및 표현력': expressivenessScore,
+  }
+
+  const toneLabel = getPitchToneLabel(features.pitch.mean_hz)
+  const toneColor = getPitchToneColor(features.pitch.mean_hz)
+
   return (
     <div className="space-y-4">
+      {/* Voice Quality Radar */}
+      <div className="glass rounded-3xl p-5">
+        <div className="flex items-center gap-2 mb-4">
+          <span className="text-base">📊</span>
+          <h2 className="text-sm font-bold text-foreground">목소리 품질 분석</h2>
+        </div>
+        <PersonaRadarChart
+          axes={axes}
+          userScores={userScores}
+          animate={animate}
+        />
+      </div>
+
       {/* Pitch */}
       <div className="glass rounded-3xl p-5">
         <div className="flex items-center gap-2 mb-3">
@@ -224,7 +246,21 @@ function AudioFeaturesSection({ features, animate }: { features: AudioFeatures; 
           tooltip="전체 발화 중 실제로 성대가 떨려 소리가 난 구간의 비율이에요. 높을수록 목소리가 끊기지 않고 안정적으로 이어졌다는 의미예요."
         />
       </div>
+    </div>
+  )
+}
 
+// ── Audio feature section (score cards only) ──────────────
+function AudioFeaturesSection({ features, animate }: { features: AudioFeatures; animate: boolean }) {
+  const stabilityScore = calcStabilityScore(
+    features.voice_quality.jitter_rel_pct,
+    features.voice_quality.shimmer_rel_pct,
+  )
+  const paceScore = calcPaceScore(features.rhythm.onsets_per_second)
+  const expressivenessScore = calcExpressivenessScore(features.pitch.std_hz, features.energy.db_mean)
+
+  return (
+    <div className="space-y-4">
       {/* 목소리 안정감 */}
       <ScoreCard
         emoji="🎤"
@@ -418,26 +454,6 @@ function PersonaGapSection({
       <p className="text-[11px] text-muted-foreground mb-4">
         내 목소리는 <strong className="text-foreground">{persona.name}</strong> 페르소나와 가장 잘 맞아요
       </p>
-
-      {/* Radar Chart */}
-      <div className="mb-5">
-        <PersonaRadarChart
-          axes={persona.emotions}
-          targetScores={persona.targetScores}
-          userScores={userScores}
-          animate={animate}
-        />
-        <div className="flex items-center justify-center gap-4 mt-2">
-          <span className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-            <span className="w-3 h-1 rounded-full bg-violet-500/60 inline-block" style={{ border: '1px dashed rgba(139,92,246,0.8)' }} />
-            목표 페르소나
-          </span>
-          <span className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-            <span className="w-3 h-1 rounded-full bg-emerald-500 inline-block" />
-            내 목소리
-          </span>
-        </div>
-      </div>
 
       {/* Emotion bars */}
       <div className="space-y-3 mb-4">
@@ -673,7 +689,10 @@ export default function ResultClient() {
         )}
 
 
-        {/* Audio features */}
+        {/* Voice quality radar + pitch */}
+        {audioFeatures && <VoiceRadarSection features={audioFeatures} animate={animate} />}
+
+        {/* Score cards */}
         {audioFeatures && <AudioFeaturesSection features={audioFeatures} animate={animate} />}
 
         {/* Share + retry */}

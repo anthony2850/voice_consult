@@ -26,7 +26,10 @@ function CallbackHandler() {
           return
         }
         setStatus('migrating')
-        await migrateGuestData(data.session.user.id)
+        const hasMigrated = await migrateGuestData(data.session.user.id)
+        setStatus('done')
+        router.replace(hasMigrated ? '/result' : '/record')
+        return
 
       } else {
         // Implicit flow: #access_token=xxx — 직접 hash 파싱 후 setSession 호출
@@ -42,23 +45,29 @@ function CallbackHandler() {
           })
           if (error || !data.session) {
             setStatus('error')
-            setTimeout(() => router.replace('/result'), 1500)
+            setTimeout(() => router.replace('/record'), 1500)
             return
           }
           setStatus('migrating')
-          await migrateGuestData(data.session.user.id)
+          const hasMigrated = await migrateGuestData(data.session.user.id)
+          setStatus('done')
+          router.replace(hasMigrated ? '/result' : '/record')
+          return
         } else {
           // 이미 세션이 있는 경우 fallback
           const { data } = await supabase.auth.getSession()
           if (data.session) {
             setStatus('migrating')
-            await migrateGuestData(data.session.user.id)
+            const hasMigrated = await migrateGuestData(data.session.user.id)
+            setStatus('done')
+            router.replace(hasMigrated ? '/result' : '/record')
+            return
           }
         }
       }
 
       setStatus('done')
-      router.replace('/result')
+      router.replace('/record')
     }
 
     handleCallback()

@@ -36,10 +36,10 @@ const EMOTION_KO: Record<string, string> = {
 }
 
 interface RadarChartProps {
-  /** Ordered list of emotion axis names (Hume AI keys) */
+  /** Ordered list of axis names */
   axes: string[]
-  /** Target scores 0–100 */
-  targetScores: Record<string, number>
+  /** Target scores 0–100 (optional — omit to hide target polygon) */
+  targetScores?: Record<string, number>
   /** User actual scores 0–100 */
   userScores: Record<string, number>
   /** Whether to animate (mount trigger) */
@@ -117,23 +117,25 @@ export default function PersonaRadarChart({
         ctx.stroke()
       }
 
-      // ── Target polygon ──────────────────────────────────
-      ctx.beginPath()
-      for (let i = 0; i < n; i++) {
-        const angle = (2 * Math.PI * i) / n - Math.PI / 2
-        const val = targetScores[axes[i]] ?? 0
-        const p = getPoint(angle, val, 100)
-        if (i === 0) ctx.moveTo(p.x, p.y)
-        else ctx.lineTo(p.x, p.y)
+      // ── Target polygon (only when targetScores provided) ──
+      if (targetScores && Object.keys(targetScores).length > 0) {
+        ctx.beginPath()
+        for (let i = 0; i < n; i++) {
+          const angle = (2 * Math.PI * i) / n - Math.PI / 2
+          const val = targetScores[axes[i]] ?? 0
+          const p = getPoint(angle, val, 100)
+          if (i === 0) ctx.moveTo(p.x, p.y)
+          else ctx.lineTo(p.x, p.y)
+        }
+        ctx.closePath()
+        ctx.fillStyle = 'rgba(139,92,246,0.12)'
+        ctx.fill()
+        ctx.strokeStyle = 'rgba(139,92,246,0.50)'
+        ctx.lineWidth = 1.5
+        ctx.setLineDash([4, 3])
+        ctx.stroke()
+        ctx.setLineDash([])
       }
-      ctx.closePath()
-      ctx.fillStyle = 'rgba(139,92,246,0.12)'
-      ctx.fill()
-      ctx.strokeStyle = 'rgba(139,92,246,0.50)'
-      ctx.lineWidth = 1.5
-      ctx.setLineDash([4, 3])
-      ctx.stroke()
-      ctx.setLineDash([])
 
       // ── User polygon (animated) ─────────────────────────
       ctx.beginPath()
