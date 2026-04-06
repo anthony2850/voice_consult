@@ -28,7 +28,10 @@ export default function TrainingClient() {
         .select('stage_num, log_date')
         .eq('user_id', user.id)
       if (data) {
-        setCompletedStages(new Set(data.map((r: { stage_num: number }) => r.stage_num)))
+        const todayCompleted = data
+          .filter((r: { log_date: string }) => r.log_date === todayStr)
+          .map((r: { stage_num: number }) => r.stage_num)
+        setCompletedStages(new Set(todayCompleted))
         setStreakDates(data.map((r: { log_date: string }) => r.log_date))
       }
     }
