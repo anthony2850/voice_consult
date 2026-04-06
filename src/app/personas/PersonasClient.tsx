@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, Play, Square, Dumbbell } from 'lucide-react'
 import { PERSONAS, type Persona } from '@/lib/personas'
@@ -19,28 +19,49 @@ const EMOTION_KO: Record<string, string> = {
   'Triumph': '승리감', 'Surprise (positive)': '기분 좋은 놀람',
 }
 
-// ── TTS hook ─────────────────────────────────────────────
-function useTTS() {
+// ── Audio playback hook ───────────────────────────────────
+// sampleAudio 있으면 <audio> 재생, 없으면 TTS 폴백
+function usePersonaAudio() {
   const [speakingId, setSpeakingId] = useState<number | null>(null)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
 
   const toggle = (persona: Persona) => {
-    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return
-
+    // 이미 재생 중이면 정지
     if (speakingId === persona.id) {
-      window.speechSynthesis.cancel()
+      audioRef.current?.pause()
+      audioRef.current = null
+      window.speechSynthesis?.cancel()
       setSpeakingId(null)
       return
     }
 
-    window.speechSynthesis.cancel()
-    const utterance = new SpeechSynthesisUtterance(persona.script)
-    utterance.lang = 'ko-KR'
-    utterance.rate = 0.88
-    utterance.pitch = 1.0
-    utterance.onend = () => setSpeakingId(null)
-    utterance.onerror = () => setSpeakingId(null)
+    // 다른 페르소나 재생 중이면 먼저 정지
+    audioRef.current?.pause()
+    audioRef.current = null
+    window.speechSynthesis?.cancel()
+
     setSpeakingId(persona.id)
-    window.speechSynthesis.speak(utterance)
+
+    if (persona.sampleAudio) {
+      // 실제 오디오 파일 재생
+      const audio = new Audio(persona.sampleAudio)
+      audioRef.current = audio
+      audio.onended = () => setSpeakingId(null)
+      audio.onerror = () => setSpeakingId(null)
+      audio.play().catch(() => setSpeakingId(null))
+    } else {
+      // TTS 폴백
+      if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
+        setSpeakingId(null)
+        return
+      }
+      const utterance = new SpeechSynthesisUtterance(persona.script)
+      utterance.lang = 'ko-KR'
+      utterance.rate = 0.88
+      utterance.onend = () => setSpeakingId(null)
+      utterance.onerror = () => setSpeakingId(null)
+      window.speechSynthesis.speak(utterance)
+    }
   }
 
   return { speakingId, toggle }
@@ -117,10 +138,11 @@ function PersonaCard({
 // ── Main ──────────────────────────────────────────────────
 export default function PersonasClient() {
   const router = useRouter()
-  const { speakingId, toggle } = useTTS()
+  const { speakingId, toggle } = usePersonaAudio()
 
   const handleStartTraining = (persona: Persona) => {
     window.speechSynthesis?.cancel()
+    // audio 정지는 usePersonaAudio 내부에서 처리되므로 여기선 생략
     sessionStorage.setItem(
       'trainingTarget',
       JSON.stringify({ emotions: persona.emotions, personaId: persona.id }),

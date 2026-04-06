@@ -9,6 +9,8 @@ export interface Persona {
   /** Target score per emotion, 0–100 scale */
   targetScores: Record<string, number>
   script: string
+  /** Path to sample audio file under /public (optional) */
+  sampleAudio?: string
 }
 
 export const PERSONAS: Persona[] = [
@@ -27,6 +29,7 @@ export const PERSONAS: Persona[] = [
     },
     script:
       '안녕하십니까. 오늘 논의하실 핵심 안건을 간략히 말씀드리겠습니다. 첫째, 3분기 실적 검토. 둘째, 신규 프로젝트 방향 수립입니다. 명확하고 효율적인 논의 부탁드립니다.',
+    sampleAudio: '/personas/persona-1.wav',
   },
   {
     id: 2,
