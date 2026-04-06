@@ -379,44 +379,6 @@ function PreRegisterForm() {
   )
 }
 
-// ── Training CTA Button ───────────────────────────────────
-function TrainingButton({
-  belowEmotions,
-  personaId,
-}: {
-  belowEmotions: string[]
-  personaId: number
-}) {
-  const router = useRouter()
-  const koNames = belowEmotions.map((e) => EMOTION_KO[e] ?? e)
-  const label =
-    koNames.length <= 3
-      ? koNames.join(', ')
-      : `${koNames.slice(0, 3).join(', ')} 외 ${koNames.length - 3}가지`
-
-  const handleClick = () => {
-    sessionStorage.setItem(
-      'trainingTarget',
-      JSON.stringify({ emotions: belowEmotions, personaId }),
-    )
-    router.push('/training')
-  }
-
-  return (
-    <button
-      onClick={handleClick}
-      className="w-full mt-1 h-13 px-4 py-3.5 rounded-2xl bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-sm font-bold flex items-center justify-center gap-2 shadow-lg shadow-violet-900/30 active:scale-[0.98] transition-transform"
-    >
-      <Dumbbell size={16} className="shrink-0" />
-      <span className="text-center leading-snug">
-        <span className="opacity-80 font-normal text-[12px]">{label}</span>
-        <br />
-        속성 높이는 발성 훈련 하러가기
-      </span>
-    </button>
-  )
-}
-
 // ── Persona Action CTAs ───────────────────────────────────
 function PersonaActionSection({
   persona,
@@ -563,13 +525,6 @@ function PersonaGapSection({
             </div>
           )}
 
-          {/* Training CTA */}
-          {below.length > 0 && (
-            <TrainingButton
-              belowEmotions={below.map((g) => g.name)}
-              personaId={persona.id}
-            />
-          )}
         </div>
       )}
     </div>
