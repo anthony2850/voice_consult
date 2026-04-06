@@ -162,10 +162,9 @@ function TrainingCalendar({
           return (
             <button
               key={i}
-              onClick={() => hasTraining && onSelectDate(isSelected ? '' : dateStr)}
-              disabled={!hasTraining}
-              className={`relative flex flex-col items-center justify-center h-9 rounded-xl transition-all
-                ${isSelected ? 'bg-primary shadow-md shadow-primary/30' : hasTraining ? 'bg-orange-400/15 active:scale-95' : ''}
+              onClick={() => onSelectDate(isSelected ? '' : dateStr)}
+              className={`relative flex flex-col items-center justify-center h-9 rounded-xl transition-all active:scale-95
+                ${isSelected ? 'bg-primary shadow-md shadow-primary/30' : hasTraining ? 'bg-orange-400/15' : ''}
               `}
             >
               <span className={`text-xs font-semibold leading-none
@@ -210,11 +209,8 @@ export default function ArchivePage() {
         .order('log_date', { ascending: false })
       if (data) {
         setTrainingLogs(data)
-        // default to most recent training date
-        if (data.length > 0) {
-          setSelectedDate(data[0].log_date)
-          setCurrentMonth(new Date(data[0].log_date))
-        }
+        // default to today
+        setSelectedDate(toDateStr(new Date()))
       }
     }
     loadLogs()
@@ -256,6 +252,10 @@ export default function ArchivePage() {
     setSelectedDate(null)
   }
 
+  function handleSelectDate(d: string) {
+    setSelectedDate(d || null)
+  }
+
   return (
     <div className="flex flex-col min-h-[calc(100vh-84px)] pb-8">
       {/* Header */}
@@ -286,7 +286,7 @@ export default function ArchivePage() {
           <TrainingCalendar
             trainingDates={trainingDates}
             selectedDate={selectedDate}
-            onSelectDate={setSelectedDate}
+            onSelectDate={handleSelectDate}
             currentMonth={currentMonth}
             onPrevMonth={prevMonth}
             onNextMonth={nextMonth}
@@ -294,6 +294,13 @@ export default function ArchivePage() {
         </div>
 
         {/* Selected date training list */}
+        {selectedDate && selectedLogs.length === 0 && (
+          <div className="glass rounded-3xl p-5 flex flex-col items-center justify-center gap-2 py-8">
+            <p className="text-2xl">📭</p>
+            <p className="text-sm font-semibold text-foreground">{selectedDate.replace(/-/g, '.')} 훈련 기록 없음</p>
+            <p className="text-xs text-muted-foreground">이 날은 훈련 기록이 없어요</p>
+          </div>
+        )}
         {selectedDate && selectedLogs.length > 0 && (
           <div className="glass rounded-3xl p-5 space-y-3">
             <p className="text-xs font-bold text-foreground">
