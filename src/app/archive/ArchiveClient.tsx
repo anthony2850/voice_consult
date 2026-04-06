@@ -164,7 +164,7 @@ function TrainingCalendar({
               key={i}
               onClick={() => onSelectDate(isSelected ? '' : dateStr)}
               className={`relative flex flex-col items-center justify-center h-9 rounded-xl transition-all active:scale-95
-                ${isSelected ? 'bg-primary shadow-md shadow-primary/30' : hasTraining ? 'bg-orange-400/15' : ''}
+                ${isSelected ? 'bg-primary shadow-md shadow-primary/30' : ''}
               `}
             >
               <span className={`text-xs font-semibold leading-none
