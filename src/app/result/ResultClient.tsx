@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Share2, RotateCcw, Sparkles, Dumbbell } from 'lucide-react'
+import { Share2, RotateCcw, Sparkles, Dumbbell, Compass } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { trackEvent } from '@/lib/analytics'
@@ -417,6 +417,50 @@ function TrainingButton({
   )
 }
 
+// ── Persona Action CTAs ───────────────────────────────────
+function PersonaActionSection({
+  persona,
+  rawEmotions,
+}: {
+  persona: Persona
+  rawEmotions: Record<string, number>
+}) {
+  const router = useRouter()
+
+  const belowEmotions = persona.emotions.filter((e) => {
+    const userScore = normalizeHumeScore(e, rawEmotions)
+    const target = persona.targetScores[e] ?? 0
+    return target - userScore > 10
+  })
+
+  const handleTrain = () => {
+    sessionStorage.setItem(
+      'trainingTarget',
+      JSON.stringify({ emotions: belowEmotions.length > 0 ? belowEmotions : persona.emotions, personaId: persona.id }),
+    )
+    router.push('/training')
+  }
+
+  return (
+    <div className="space-y-2.5">
+      <button
+        onClick={handleTrain}
+        className="w-full h-13 px-4 py-3.5 rounded-2xl bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-sm font-bold flex items-center justify-center gap-2 shadow-lg shadow-violet-900/30 active:scale-[0.98] transition-transform"
+      >
+        <Dumbbell size={16} className="shrink-0" />
+        <span>{persona.emoji} {persona.name}에 가까워지는 훈련 시작</span>
+      </button>
+      <button
+        onClick={() => router.push('/personas')}
+        className="w-full h-12 px-4 rounded-2xl border border-border bg-secondary text-foreground text-sm font-semibold flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
+      >
+        <Compass size={16} className="shrink-0" />
+        다른 페르소나 알아보기
+      </button>
+    </div>
+  )
+}
+
 // ── Persona Gap Analysis Section ─────────────────────────
 function PersonaGapSection({
   persona,
@@ -688,6 +732,13 @@ export default function ResultClient() {
           />
         )}
 
+        {/* Persona CTAs */}
+        {persona && (
+          <PersonaActionSection
+            persona={persona}
+            rawEmotions={rawEmotionMap}
+          />
+        )}
 
         {/* Voice quality radar + pitch */}
         {audioFeatures && <VoiceRadarSection features={audioFeatures} animate={animate} />}
