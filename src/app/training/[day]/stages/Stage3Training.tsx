@@ -11,10 +11,9 @@ import { uploadTrainingAudio } from '@/lib/uploadTrainingAudio'
 import StreakPopup from '@/components/StreakPopup'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-// Pitch std dev threshold for "good emphasis"
-const PITCH_STD_THRESHOLD = 25   // Hz
 // Energy coefficient of variation threshold (rms_std / rms_mean)
-const ENERGY_CV_THRESHOLD = 0.5
+// Higher CV = bigger volume contrast between emphasized and normal words
+const ENERGY_CV_THRESHOLD = 0.6
 
 // Script split into segments; highlighted = must be stressed
 const SCRIPT_PARTS: { text: string; highlight: boolean }[] = [
@@ -53,11 +52,9 @@ function calcStreak(dates: string[]): number {
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface AnalysisResult {
-  pitchStdHz: number
   energyCV: number       // rms_std / rms_mean
-  pitchPassed: boolean
   energyPassed: boolean
-  passed: boolean        // both checks
+  passed: boolean
 }
 
 type PageState = 'instruction' | 'recording' | 'analyzing' | 'result'
@@ -117,18 +114,14 @@ export default function Stage3Training() {
       recorder.reset()
       return
     }
-    const pitchStdHz = features.pitch.std_hz
     const energyCV = features.energy.rms_mean > 0
       ? features.energy.rms_std / features.energy.rms_mean
       : 0
-    const pitchPassed = pitchStdHz >= PITCH_STD_THRESHOLD
     const energyPassed = energyCV >= ENERGY_CV_THRESHOLD
     setResult({
-      pitchStdHz,
       energyCV,
-      pitchPassed,
       energyPassed,
-      passed: pitchPassed && energyPassed,
+      passed: energyPassed,
     })
     setPageState('result')
   }
@@ -213,7 +206,7 @@ export default function Stage3Training() {
           <div className="flex items-center gap-2 pt-1 border-t border-border/40">
             <span className="w-3 h-3 rounded-sm bg-primary shrink-0" />
             <p className="text-[11px] text-muted-foreground">
-              강조 단어에 힘을 주고, 살짝 더 높은 톤으로 짚어주세요
+              강조 단어에서 볼륨을 확 키워 나머지 단어와 대비를 만들어보세요
             </p>
           </div>
         </div>
@@ -222,10 +215,10 @@ export default function Stage3Training() {
         {pageState === 'instruction' && (
           <div className="glass rounded-3xl p-6 flex flex-col items-center gap-5 text-center">
             <div className="space-y-2">
-              <p className="text-sm font-semibold text-foreground">강조 단어를 짚어가며 읽기</p>
+              <p className="text-sm font-semibold text-foreground">강조 단어를 볼륨으로 강조하기</p>
               <p className="text-xs text-muted-foreground leading-relaxed">
-                밑줄 친 단어를 읽을 때 목소리를 <span className="text-primary font-semibold">살짝 높이고</span> 힘을 주어<br />
-                나머지 단어와 확실한 차이가 느껴지도록 읽어보세요.
+                밑줄 친 단어를 읽을 때 <span className="text-primary font-semibold">볼륨을 확 키워</span> 읽어보세요.<br />
+                일반 단어와 확실한 볼륨 차이가 느껴지도록 강하게 짚어주세요.
               </p>
             </div>
 
@@ -233,13 +226,12 @@ export default function Stage3Training() {
             <div className="w-full rounded-2xl bg-secondary/60 p-4 space-y-2 text-left">
               <p className="text-[11px] font-semibold text-muted-foreground mb-1">측정 항목</p>
               <div className="flex items-center justify-between text-xs">
-                <span className="text-foreground">음정 변화량 (Pitch std)</span>
-                <span className="text-primary font-bold">{PITCH_STD_THRESHOLD}Hz 이상 → 통과</span>
-              </div>
-              <div className="flex items-center justify-between text-xs">
                 <span className="text-foreground">볼륨 변동률 (Energy CV)</span>
                 <span className="text-primary font-bold">{ENERGY_CV_THRESHOLD} 이상 → 통과</span>
               </div>
+              <p className="text-[11px] text-muted-foreground pt-1">
+                전체 녹음에서 볼륨 편차가 클수록 강조가 잘 된 것이에요
+              </p>
             </div>
 
             <button
@@ -282,39 +274,10 @@ export default function Stage3Training() {
           <div className="space-y-4">
             {/* Metrics */}
             <div className="glass rounded-3xl p-5 space-y-4">
-              <p className="text-sm font-bold text-foreground">강세 분석 결과</p>
-
-              {/* Pitch std gauge */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-semibold text-foreground">음정 변화량 (Pitch std)</p>
-                    <p className="text-[11px] text-muted-foreground">기준: {PITCH_STD_THRESHOLD}Hz 이상</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-black tabular-nums">{result.pitchStdHz.toFixed(1)}Hz</p>
-                    <span className={`text-[10px] font-bold ${result.pitchPassed ? 'text-emerald-400' : 'text-orange-400'}`}>
-                      {result.pitchPassed ? '통과' : '개선 필요'}
-                    </span>
-                  </div>
-                </div>
-                <div className="relative h-3 bg-secondary/60 rounded-full overflow-hidden">
-                  <div
-                    className={`h-full rounded-full transition-all ${result.pitchPassed ? 'bg-emerald-400' : 'bg-orange-400'}`}
-                    style={{ width: `${Math.min(100, (result.pitchStdHz / 50) * 100)}%` }}
-                  />
-                  {/* threshold marker */}
-                  <div className="absolute top-0 bottom-0 w-0.5 bg-white/60" style={{ left: `${(PITCH_STD_THRESHOLD / 50) * 100}%` }} />
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-[10px] text-muted-foreground">0Hz</span>
-                  <span className="text-[10px] text-primary font-bold">목표 {PITCH_STD_THRESHOLD}Hz</span>
-                  <span className="text-[10px] text-muted-foreground">50Hz</span>
-                </div>
-              </div>
+              <p className="text-sm font-bold text-foreground">볼륨 강조 분석 결과</p>
 
               {/* Energy CV gauge */}
-              <div className="space-y-2 pt-3 border-t border-border/40">
+              <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs font-semibold text-foreground">볼륨 변동률 (Energy CV)</p>
@@ -330,14 +293,14 @@ export default function Stage3Training() {
                 <div className="relative h-3 bg-secondary/60 rounded-full overflow-hidden">
                   <div
                     className={`h-full rounded-full transition-all ${result.energyPassed ? 'bg-emerald-400' : 'bg-orange-400'}`}
-                    style={{ width: `${Math.min(100, (result.energyCV / 1.0) * 100)}%` }}
+                    style={{ width: `${Math.min(100, (result.energyCV / 1.2) * 100)}%` }}
                   />
-                  <div className="absolute top-0 bottom-0 w-0.5 bg-white/60" style={{ left: `${(ENERGY_CV_THRESHOLD / 1.0) * 100}%` }} />
+                  <div className="absolute top-0 bottom-0 w-0.5 bg-white/60" style={{ left: `${(ENERGY_CV_THRESHOLD / 1.2) * 100}%` }} />
                 </div>
                 <div className="flex justify-between">
                   <span className="text-[10px] text-muted-foreground">0</span>
                   <span className="text-[10px] text-primary font-bold">목표 {ENERGY_CV_THRESHOLD}</span>
-                  <span className="text-[10px] text-muted-foreground">1.0</span>
+                  <span className="text-[10px] text-muted-foreground">1.2</span>
                 </div>
               </div>
 
@@ -345,21 +308,14 @@ export default function Stage3Training() {
               {result.passed ? (
                 <div className="rounded-xl bg-emerald-400/10 border border-emerald-400/30 px-3 py-2">
                   <p className="text-xs text-emerald-400 font-semibold">
-                    🎉 강조 단어가 확실히 돋보이는 목소리예요!
+                    🎉 강조 단어가 볼륨으로 확실히 돋보여요!
                   </p>
                 </div>
               ) : (
-                <div className="rounded-xl bg-secondary/60 px-3 py-2 space-y-1">
-                  {!result.pitchPassed && (
-                    <p className="text-xs text-muted-foreground">
-                      • 강조 단어에서 음정을 조금 더 높여보세요
-                    </p>
-                  )}
-                  {!result.energyPassed && (
-                    <p className="text-xs text-muted-foreground">
-                      • 강조 단어와 일반 단어의 볼륨 차이를 더 크게 내보세요
-                    </p>
-                  )}
+                <div className="rounded-xl bg-secondary/60 px-3 py-2">
+                  <p className="text-xs text-muted-foreground">
+                    • 강조 단어를 읽을 때 볼륨을 훨씬 크게 높여보세요. 일반 단어는 평소대로, 강조 단어만 확 키우는 게 포인트예요.
+                  </p>
                 </div>
               )}
             </div>
