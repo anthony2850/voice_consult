@@ -88,7 +88,7 @@ export default function Stage3Training() {
         .select('stage_num, log_date')
         .eq('user_id', user.id)
       if (data) {
-        setAlreadyDone(data.some((r: { stage_num: number }) => r.stage_num === 3))
+        setAlreadyDone(data.some((r: { stage_num: number; log_date: string }) => r.stage_num === 3 && r.log_date === todayStr))
         setAllLogDates(data.map((r: { log_date: string }) => r.log_date))
       }
     }

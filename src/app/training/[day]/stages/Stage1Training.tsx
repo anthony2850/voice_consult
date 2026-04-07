@@ -77,11 +77,10 @@ export default function Stage1Training() {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data } = await (supabase as any)
         .from('user_training_logs')
-        .select('log_date')
+        .select('stage_num, log_date')
         .eq('user_id', user.id)
       if (data) {
-        const hasDone = data.some((r: { log_date: string; stage_num?: number }) => r.stage_num === 1)
-        if (hasDone) setAlreadyDone(true)
+        setAlreadyDone(data.some((r: { stage_num: number; log_date: string }) => r.stage_num === 1 && r.log_date === todayStr))
         setAllLogDates(data.map((r: { log_date: string }) => r.log_date))
       }
     }
