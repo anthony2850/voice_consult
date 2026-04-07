@@ -204,7 +204,7 @@ export default function VoiceCheckClient() {
                 <div className="relative h-2.5 bg-secondary/60 rounded-full overflow-hidden">
                   <div
                     className="h-full rounded-full gradient-primary transition-all duration-700"
-                    style={{ width: `${((score - 60) / 40) * 100}%` }}
+                    style={{ width: `${score}%` }}
                   />
                 </div>
               </div>
