@@ -31,30 +31,55 @@ function downsample(data: Float32Array, factor: number): Float32Array {
 }
 
 // Autocorrelation-based pitch detection for a single frame.
+// Uses proper normalized autocorrelation (bounded [-1,1]) to avoid
+// bias toward short lags that caused spurious high-pitch detections.
 // Returns f0 in Hz, or null if unvoiced.
 function detectPitchFrame(frame: Float32Array, sr: number): number | null {
   const n = frame.length
-  const minLag = Math.floor(sr / 800) // 800 Hz upper limit
-  const maxLag = Math.min(Math.floor(sr / 65), n - 1) // 65 Hz lower limit
+  const minLag = Math.floor(sr / 500) // 500 Hz upper limit (conservative)
+  const maxLag = Math.min(Math.floor(sr / 60), n - 1) // 60 Hz lower limit
 
-  let energy = 0
-  for (let i = 0; i < n; i++) energy += frame[i] * frame[i]
-  if (energy < 1e-8) return null
+  // Silence gate
+  let r0 = 0
+  for (let i = 0; i < n; i++) r0 += frame[i] * frame[i]
+  if (r0 < 1e-7) return null
 
-  let bestVal = 0.25 // voiced threshold
+  let bestNorm = 0.45 // raised voiced threshold (was 0.25)
   let bestLag = -1
 
   for (let lag = minLag; lag <= maxLag; lag++) {
-    let ac = 0
-    for (let i = 0; i < n - lag; i++) ac += frame[i] * frame[i + lag]
-    const norm = ac / energy
-    if (norm > bestVal) {
-      bestVal = norm
+    let ac = 0, ex = 0, es = 0
+    for (let i = 0; i < n - lag; i++) {
+      ac += frame[i] * frame[i + lag]
+      ex += frame[i] * frame[i]
+      es += frame[i + lag] * frame[i + lag]
+    }
+    // Normalized autocorrelation: bounded [-1, 1], no lag-length bias
+    const denom = Math.sqrt(ex * es)
+    if (denom < 1e-10) continue
+    const norm = ac / denom
+    if (norm > bestNorm) {
+      bestNorm = norm
       bestLag = lag
     }
   }
 
   return bestLag > 0 ? sr / bestLag : null
+}
+
+// Remove outliers via IQR before computing pitch statistics
+function filterPitchOutliers(f0s: number[]): number[] {
+  if (f0s.length < 8) return f0s
+  const sorted = [...f0s].sort((a, b) => a - b)
+  const q1 = sorted[Math.floor(sorted.length * 0.25)]
+  const q3 = sorted[Math.floor(sorted.length * 0.75)]
+  const iqr = q3 - q1
+  return f0s.filter(v => v >= q1 - 1.5 * iqr && v <= q3 + 1.5 * iqr)
+}
+
+function percentile(sorted: number[], p: number): number {
+  const idx = Math.min(Math.floor(sorted.length * p), sorted.length - 1)
+  return sorted[idx]
 }
 
 export async function extractAudioFeatures(audioBlob: Blob): Promise<AudioFeatures | null> {
@@ -76,8 +101,8 @@ export async function extractAudioFeatures(audioBlob: Blob): Promise<AudioFeatur
     const dsSr = origSr / dsf
 
     // ── Pitch + voice quality per frame ──────────────────
-    const FRAME = 512
-    const HOP = 256
+    const FRAME = 1024  // larger frame → better low-frequency resolution
+    const HOP = 512
 
     const f0s: number[] = []
     const voicedRms: number[] = []
@@ -101,17 +126,23 @@ export async function extractAudioFeatures(audioBlob: Blob): Promise<AudioFeatur
     }
 
     const voicedRatio = totalFrames > 0 ? f0s.length / totalFrames : 0
-    const pitchMean = arrMean(f0s)
-    const pitchStd = arrStd(f0s, pitchMean)
 
-    const pitch = f0s.length > 0
-      ? {
-          mean_hz: pitchMean,
-          min_hz: Math.min(...f0s),
-          max_hz: Math.max(...f0s),
-          std_hz: pitchStd,
-          voiced_ratio: voicedRatio,
-        }
+    // Filter outliers before computing statistics
+    const cleanF0s = filterPitchOutliers(f0s)
+    const pitchMean = arrMean(cleanF0s)
+    const pitchStd = arrStd(cleanF0s, pitchMean)
+
+    const pitch = cleanF0s.length > 0
+      ? (() => {
+          const sorted = [...cleanF0s].sort((a, b) => a - b)
+          return {
+            mean_hz: pitchMean,
+            min_hz: percentile(sorted, 0.05), // 5th percentile — avoids single-frame floor
+            max_hz: percentile(sorted, 0.95), // 95th percentile — avoids single-frame spike
+            std_hz: pitchStd,
+            voiced_ratio: voicedRatio,
+          }
+        })()
       : { mean_hz: 150, min_hz: 100, max_hz: 280, std_hz: 25, voiced_ratio: 0.5 }
 
     // ── Energy stats (20 ms frames on original resolution) ─
