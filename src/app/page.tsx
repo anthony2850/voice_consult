@@ -71,10 +71,6 @@ export default function HomePage() {
 
         {/* CTA button */}
         <StartRecordButton />
-
-        <p className="mt-3 text-[11px] text-muted-foreground">
-          감정 분석 <span className="text-foreground font-semibold">무료</span> · 상세 리포트 990원
-        </p>
       </section>
 
       {/* ── Stats insight ──────────────────────────── */}
