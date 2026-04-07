@@ -31,9 +31,11 @@ export default function TrainingClient() {
         .select('stage_num, log_date')
         .eq('user_id', user.id)
       if (data) {
-        // Unlock은 날짜 무관 — 언제든 완료한 단계면 열림
-        const allCompleted = data.map((r: { stage_num: number }) => r.stage_num)
-        setCompletedStages(new Set(allCompleted))
+        // 오늘 완료한 단계만 unlock (일일 리셋)
+        const todayCompleted = data
+          .filter((r: { log_date: string }) => r.log_date === todayStr)
+          .map((r: { stage_num: number }) => r.stage_num)
+        setCompletedStages(new Set(todayCompleted))
         setStreakDates(data.map((r: { log_date: string }) => r.log_date))
       }
     }
