@@ -8,6 +8,7 @@ import { useWaveform } from '@/hooks/useWaveform'
 import { extractAudioFeatures } from '@/lib/extractAudioFeatures'
 import { getSupabase } from '@/lib/supabase'
 import { uploadTrainingAudio } from '@/lib/uploadTrainingAudio'
+import { markStageComplete } from '@/lib/trainingProgress'
 import StreakPopup from '@/components/StreakPopup'
 
 // ─── Thresholds ───────────────────────────────────────────────────────────────
@@ -125,6 +126,8 @@ export default function Stage1Training() {
 
   async function handleComplete() {
     if (!result?.passed) return
+    // localStorage에 즉시 저장 → unlock이 DB와 무관하게 동작
+    markStageComplete(1)
     setSaving(true)
     try {
       const supabase = getSupabase()

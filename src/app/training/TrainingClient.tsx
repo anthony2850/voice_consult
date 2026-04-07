@@ -6,6 +6,7 @@ import { Lock, Flame, CheckCircle } from 'lucide-react'
 import { getSupabase } from '@/lib/supabase'
 import { STAGES } from '@/lib/curriculum'
 import { Badge } from '@/components/ui/badge'
+import { getTodayCompleted } from '@/lib/trainingProgress'
 
 function toDateStr(d: Date) {
   const y = d.getFullYear()
@@ -17,29 +18,31 @@ function toDateStr(d: Date) {
 export default function TrainingClient() {
   const router = useRouter()
   const todayStr = useMemo(() => toDateStr(new Date()), [])
-  const [completedStages, setCompletedStages] = useState<Set<number>>(new Set())
+  // localStorage에서 즉시 초기화 → DB/네트워크와 무관하게 unlock 즉시 반영
+  const [completedStages, setCompletedStages] = useState<Set<number>>(
+    () => new Set(typeof window !== 'undefined' ? getTodayCompleted() : [])
+  )
   const [streakDates, setStreakDates] = useState<string[]>([])
 
   useEffect(() => {
-    async function load() {
+    // localStorage로 unlock 상태 최신화
+    setCompletedStages(new Set(getTodayCompleted()))
+
+    // DB는 스트릭 기록 표시용으로만 조회
+    async function loadStreak() {
       const supabase = getSupabase()
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data } = await (supabase as any)
         .from('user_training_logs')
-        .select('stage_num, log_date')
+        .select('log_date')
         .eq('user_id', user.id)
       if (data) {
-        // 오늘 완료한 단계만 unlock (일일 리셋)
-        const todayCompleted = data
-          .filter((r: { log_date: string }) => r.log_date === todayStr)
-          .map((r: { stage_num: number }) => r.stage_num)
-        setCompletedStages(new Set(todayCompleted))
         setStreakDates(data.map((r: { log_date: string }) => r.log_date))
       }
     }
-    load()
+    loadStreak()
   }, [])
 
   // Streak = consecutive days ending today or yesterday

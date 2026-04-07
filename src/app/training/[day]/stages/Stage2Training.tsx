@@ -7,6 +7,7 @@ import { useAudioRecorder } from '@/hooks/useAudioRecorder'
 import { useWaveform } from '@/hooks/useWaveform'
 import { extractAudioFeatures } from '@/lib/extractAudioFeatures'
 import { getSupabase } from '@/lib/supabase'
+import { markStageComplete } from '@/lib/trainingProgress'
 import { uploadTrainingAudio } from '@/lib/uploadTrainingAudio'
 import StreakPopup from '@/components/StreakPopup'
 
@@ -146,6 +147,7 @@ export default function Stage2Training() {
   const passed = ratio >= TARGET_RATIO
 
   async function handleComplete() {
+    markStageComplete(2)
     setSaving(true)
     try {
       const supabase = getSupabase()
