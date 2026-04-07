@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Mic, Sparkles, Star } from 'lucide-react'
+import { Mic, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import StartRecordButton from '@/components/StartRecordButton'
@@ -77,19 +77,15 @@ export default function HomePage() {
         </p>
       </section>
 
-      {/* ── Recent reviews ─────────────────────────── */}
+      {/* ── Stats insight ──────────────────────────── */}
       <section className="px-5 pb-6">
-        <div className="glass rounded-2xl p-4">
-          <div className="flex items-center gap-1 mb-2">
-            {[...Array(5)].map((_, i) => (
-              <Star key={i} size={12} className="fill-accent text-accent" />
-            ))}
-            <span className="text-[11px] text-muted-foreground ml-1">4.9 · 2,847개 리뷰</span>
-          </div>
+        <div className="glass rounded-2xl p-4 flex items-center gap-4">
+          <span className="text-4xl font-black gradient-text shrink-0">38%</span>
           <p className="text-xs text-foreground/80 leading-relaxed">
-            &ldquo;목소리에서 열정이 1위로 나왔는데 진짜 공감돼서 소름 돋았어요. AI가 저를 저보다 잘 아는 것 같아요&rdquo;
+            상대방에 대한 인상이나 호감을 결정할 때
+            <br />
+            <span className="text-foreground font-semibold">목소리가 영향을 미치는 비율</span>이에요
           </p>
-          <p className="text-[10px] text-muted-foreground mt-1.5">— 카카오 사용자 @k****</p>
         </div>
       </section>
     </div>
