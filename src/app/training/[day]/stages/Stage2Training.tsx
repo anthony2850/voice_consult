@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { Mic, Square, RotateCcw, ChevronRight, CheckCircle } from 'lucide-react'
 import { useAudioRecorder } from '@/hooks/useAudioRecorder'
 import { useWaveform } from '@/hooks/useWaveform'
@@ -52,7 +51,6 @@ type PageState =
 
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function Stage2Training() {
-  const router = useRouter()
   const todayStr = toDateStr(new Date())
 
   const [pageState, setPageState] = useState<PageState>('step1_ready')
@@ -371,7 +369,7 @@ export default function Stage2Training() {
 
             {/* Actions */}
             <div className="space-y-3">
-              {passed && !alreadyDone && (
+              {passed && (
                 <button
                   onClick={handleComplete}
                   disabled={saving}
@@ -380,14 +378,6 @@ export default function Stage2Training() {
                   {saving
                     ? <div className="w-5 h-5 rounded-full border-2 border-white border-t-transparent animate-spin" />
                     : <><CheckCircle size={20} />훈련 완료하기</>}
-                </button>
-              )}
-              {alreadyDone && passed && (
-                <button
-                  onClick={() => router.back()}
-                  className="w-full h-14 rounded-2xl bg-secondary text-foreground font-bold text-base active:scale-95 transition-transform"
-                >
-                  훈련 목록으로
                 </button>
               )}
               <button
