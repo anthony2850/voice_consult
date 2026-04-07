@@ -71,8 +71,6 @@ export default function TrainingClient() {
     return count
   }, [streakDates, todayStr])
 
-  const trainedToday = streakDates.includes(todayStr)
-
   return (
     <div className="flex flex-col min-h-[calc(100vh-84px)] pb-8">
       {/* Header */}
