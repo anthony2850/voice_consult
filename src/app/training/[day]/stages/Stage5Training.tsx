@@ -32,9 +32,8 @@ const SCRIPT_CHAR_COUNT = countKorean(SCRIPT_TEXT) // 42
 const MIN_SPEED = 4.5
 const MAX_SPEED = 6.5
 
-// Emphasis thresholds
-const PITCH_STD_THRESHOLD = 25   // Hz
-const ENERGY_CV_THRESHOLD = 0.5
+// Emphasis threshold — volume-based only
+const ENERGY_CV_THRESHOLD = 0.6
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function toDateStr(d: Date) {
@@ -63,7 +62,6 @@ function calcStreak(dates: string[]): number {
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface AnalysisResult {
   speed: number
-  pitchStdHz: number
   energyCV: number
   speedPassed: boolean
   emphasisPassed: boolean
@@ -128,15 +126,13 @@ export default function Stage5Training() {
       return
     }
     const speed = features.duration_sec > 0 ? SCRIPT_CHAR_COUNT / features.duration_sec : 0
-    const pitchStdHz = features.pitch.std_hz
     const energyCV = features.energy.rms_mean > 0
       ? features.energy.rms_std / features.energy.rms_mean
       : 0
     const speedPassed = speed >= MIN_SPEED && speed <= MAX_SPEED
-    const emphasisPassed = pitchStdHz >= PITCH_STD_THRESHOLD && energyCV >= ENERGY_CV_THRESHOLD
+    const emphasisPassed = energyCV >= ENERGY_CV_THRESHOLD
     setResult({
       speed,
-      pitchStdHz,
       energyCV,
       speedPassed,
       emphasisPassed,
@@ -365,21 +361,12 @@ export default function Stage5Training() {
                     {result.emphasisPassed ? '통과' : '개선 필요'}
                   </span>
                 </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="rounded-xl bg-secondary/60 p-2.5 text-center">
-                    <p className="text-[10px] text-muted-foreground">음정 변화</p>
-                    <p className="text-sm font-black tabular-nums">{result.pitchStdHz.toFixed(1)}Hz</p>
-                    <p className={`text-[10px] font-bold ${result.pitchStdHz >= PITCH_STD_THRESHOLD ? 'text-emerald-400' : 'text-orange-400'}`}>
-                      기준 {PITCH_STD_THRESHOLD}Hz
-                    </p>
-                  </div>
-                  <div className="rounded-xl bg-secondary/60 p-2.5 text-center">
-                    <p className="text-[10px] text-muted-foreground">볼륨 변동</p>
-                    <p className="text-sm font-black tabular-nums">{result.energyCV.toFixed(2)}</p>
-                    <p className={`text-[10px] font-bold ${result.energyCV >= ENERGY_CV_THRESHOLD ? 'text-emerald-400' : 'text-orange-400'}`}>
-                      기준 {ENERGY_CV_THRESHOLD}
-                    </p>
-                  </div>
+                <div className="rounded-xl bg-secondary/60 p-2.5 text-center">
+                  <p className="text-[10px] text-muted-foreground">볼륨 변동률 (Energy CV)</p>
+                  <p className="text-sm font-black tabular-nums">{result.energyCV.toFixed(2)}</p>
+                  <p className={`text-[10px] font-bold ${result.energyCV >= ENERGY_CV_THRESHOLD ? 'text-emerald-400' : 'text-orange-400'}`}>
+                    기준 {ENERGY_CV_THRESHOLD}
+                  </p>
                 </div>
               </div>
             </div>
