@@ -79,11 +79,11 @@ export default function HomePage() {
 
       {/* ── Stats insight ──────────────────────────── */}
       <section className="px-5 pb-6">
-        <div className="glass rounded-2xl p-4 flex items-center gap-4">
-          <span className="text-4xl font-black gradient-text shrink-0">38%</span>
+        <div className="glass rounded-2xl px-5 py-5 text-center">
+          <p className="text-[11px] text-muted-foreground mb-1.5">알고 계셨나요?</p>
+          <p className="text-5xl font-black gradient-text mb-2">38%</p>
           <p className="text-xs text-foreground/80 leading-relaxed">
-            상대방에 대한 인상이나 호감을 결정할 때
-            <br />
+            상대방의 인상과 호감을 결정할 때<br />
             <span className="text-foreground font-semibold">목소리가 영향을 미치는 비율</span>이에요
           </p>
         </div>
