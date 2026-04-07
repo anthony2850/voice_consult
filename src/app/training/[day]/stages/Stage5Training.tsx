@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { Mic, Square, RotateCcw, CheckCircle } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { Mic, Square, RotateCcw, CheckCircle, ChevronRight } from 'lucide-react'
 import { useAudioRecorder } from '@/hooks/useAudioRecorder'
 import { useWaveform } from '@/hooks/useWaveform'
 import { extractAudioFeatures } from '@/lib/extractAudioFeatures'
@@ -72,6 +73,7 @@ type PageState = 'instruction' | 'recording' | 'analyzing' | 'result'
 
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function Stage5Training() {
+  const router = useRouter()
   const todayStr = toDateStr(new Date())
 
   const [pageState, setPageState] = useState<PageState>('instruction')
@@ -382,6 +384,15 @@ export default function Stage5Training() {
                   {saving
                     ? <div className="w-5 h-5 rounded-full border-2 border-white border-t-transparent animate-spin" />
                     : <><CheckCircle size={20} />훈련 완료하기</>}
+                </button>
+              )}
+              {result.passed && (
+                <button
+                  onClick={() => router.push('/training/voice-check')}
+                  className="w-full h-13 rounded-2xl border border-primary/40 bg-primary/10 text-primary font-semibold text-sm flex items-center justify-center gap-2 active:scale-95 transition-transform py-3.5"
+                >
+                  훈련 후 목소리가 얼마나 달라졌는지 분석하러 가기
+                  <ChevronRight size={16} />
                 </button>
               )}
               <button
