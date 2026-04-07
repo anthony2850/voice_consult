@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { Lock, Flame, CheckCircle } from 'lucide-react'
+import { Lock, Flame, CheckCircle, ChevronRight } from 'lucide-react'
 import { getSupabase } from '@/lib/supabase'
 import { STAGES } from '@/lib/curriculum'
 import { Badge } from '@/components/ui/badge'
@@ -161,6 +161,25 @@ export default function TrainingClient() {
           )
         })}
       </div>
+
+      {/* Post-training voice check CTA */}
+      {completedStages.size === STAGES.length && (
+        <div className="mx-4 mt-4">
+          <button
+            onClick={() => router.push('/training/voice-check')}
+            className="w-full flex items-center gap-3 p-4 rounded-2xl border border-primary/40 bg-primary/10 active:scale-[0.98] transition-all"
+          >
+            <span className="w-9 h-9 rounded-xl gradient-primary flex items-center justify-center shrink-0 text-base">
+              🎤
+            </span>
+            <div className="flex-1 text-left">
+              <p className="text-sm font-bold text-primary">훈련 후 목소리 변화 분석하기</p>
+              <p className="text-[11px] text-muted-foreground">5단계 훈련 전후 목소리가 얼마나 달라졌는지 확인해요</p>
+            </div>
+            <ChevronRight size={16} className="text-primary shrink-0" />
+          </button>
+        </div>
+      )}
 
       {/* Today nudge */}
       {!trainedToday && (
