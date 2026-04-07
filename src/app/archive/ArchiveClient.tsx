@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { Mic, FileText, ChevronRight, ChevronLeft, Play, Loader2 } from 'lucide-react'
+import { Mic, ChevronRight, ChevronLeft, Play, Loader2, TrendingUp, Flame } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { getSupabase } from '@/lib/supabase'
 import { getTrainingAudioUrl } from '@/lib/uploadTrainingAudio'
@@ -14,12 +14,55 @@ interface TrainingLog {
   audio_url: string | null
 }
 
+interface VoiceQualityLog {
+  stability_score: number
+  pace_score: number
+  expressiveness_score: number
+  logged_at: string
+}
+
+interface MetricStats {
+  min: number
+  max: number
+  diff: number
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function toDateStr(d: Date) {
-  return d.toISOString().split('T')[0]
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
 }
 
+/** Returns [월~일] date strings for the week containing referenceDate */
+function getWeekDates(referenceDate: Date): string[] {
+  const dow = referenceDate.getDay() // 0=Sun
+  const mondayOffset = dow === 0 ? -6 : 1 - dow
+  const monday = new Date(referenceDate)
+  monday.setDate(referenceDate.getDate() + mondayOffset)
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(monday)
+    d.setDate(monday.getDate() + i)
+    return toDateStr(d)
+  })
+}
+
+function calcMetricStats(logs: VoiceQualityLog[], key: keyof Pick<VoiceQualityLog, 'stability_score' | 'pace_score' | 'expressiveness_score'>): MetricStats | null {
+  if (logs.length === 0) return null
+  const vals = logs.map((l) => l[key] as number)
+  const min = Math.min(...vals)
+  const max = Math.max(...vals)
+  return { min, max, diff: max - min }
+}
+
+const METRIC_CONFIG = [
+  { key: 'stability_score' as const,     label: '목소리 안정감',       emoji: '🫁', desc: 'Jitter·Shimmer 기반' },
+  { key: 'pace_score' as const,          label: '말하기 여유 및 전달력', emoji: '🎙', desc: '발화 속도 기반' },
+  { key: 'expressiveness_score' as const, label: '생동감·표현력',       emoji: '✨', desc: '피치 변화·볼륨 기반' },
+]
+
+const DOW_LABELS = ['월', '화', '수', '목', '금', '토', '일']
 
 const STAGE_INFO: Record<number, { name: string; emoji: string }> = {
   1: { name: '호흡 훈련', emoji: '🫁' },
@@ -27,24 +70,6 @@ const STAGE_INFO: Record<number, { name: string; emoji: string }> = {
   3: { name: '강세 훈련', emoji: '🎯' },
   4: { name: '속도 훈련', emoji: '⚡' },
   5: { name: '종합 훈련', emoji: '🏆' },
-}
-
-const EMOTION_KO: Record<string, string> = {
-  Admiration: '감탄', Adoration: '경애', 'Aesthetic Appreciation': '미적 감상',
-  Amusement: '즐거움', Anger: '분노', Anxiety: '불안', Awe: '경외감',
-  Awkwardness: '어색함', Boredom: '지루함', Calmness: '차분함',
-  Concentration: '집중', Confusion: '혼란', Contemplation: '사색',
-  Contempt: '경멸', Contentment: '만족감', Craving: '갈망', Desire: '욕망',
-  Determination: '결단력', Disappointment: '실망', Disgust: '혐오',
-  Distress: '고통', Doubt: '의심', Ecstasy: '황홀감', Embarrassment: '당혹감',
-  'Empathic Pain': '공감적 아픔', Enthusiasm: '열정', Entrancement: '매혹',
-  Envy: '질투', Excitement: '흥분', Fear: '두려움', Guilt: '죄책감',
-  Horror: '공포', Interest: '호기심', Joy: '기쁨', Love: '사랑',
-  Nostalgia: '향수', Pain: '통증', Pride: '자부심', Realization: '깨달음',
-  Relief: '안도', Romance: '낭만', Sadness: '슬픔', Satisfaction: '성취감',
-  Shame: '수치심', 'Surprise (negative)': '놀람 (부정)',
-  'Surprise (positive)': '놀람 (긍정)', Sympathy: '공감',
-  Tiredness: '피로감', Triumph: '승리감',
 }
 
 // ─── AudioPlayer ──────────────────────────────────────────────────────────────
@@ -70,26 +95,15 @@ function AudioPlayer({ storagePath }: { storagePath: string }) {
         onClick={handlePlay}
         className="flex items-center gap-1 text-[11px] text-primary font-semibold px-2.5 py-1 rounded-full bg-primary/10 active:scale-95 transition-transform"
       >
-        {loading
-          ? <Loader2 size={11} className="animate-spin" />
-          : <Play size={11} className="fill-primary" />}
+        {loading ? <Loader2 size={11} className="animate-spin" /> : <Play size={11} className="fill-primary" />}
         {open ? '닫기' : '듣기'}
       </button>
-      {open && url && (
-        <audio
-          controls
-          autoPlay
-          src={url}
-          className="w-full h-9 mt-2 rounded-xl"
-        />
-      )}
+      {open && url && <audio controls autoPlay src={url} className="w-full h-9 mt-2 rounded-xl" />}
     </div>
   )
 }
 
 // ─── TrainingCalendar ─────────────────────────────────────────────────────────
-const DOW_LABELS = ['일', '월', '화', '수', '목', '금', '토']
-
 interface CalendarProps {
   trainingDates: Set<string>
   selectedDate: string | null
@@ -99,56 +113,30 @@ interface CalendarProps {
   onNextMonth: () => void
 }
 
-function TrainingCalendar({
-  trainingDates,
-  selectedDate,
-  onSelectDate,
-  currentMonth,
-  onPrevMonth,
-  onNextMonth,
-}: CalendarProps) {
+function TrainingCalendar({ trainingDates, selectedDate, onSelectDate, currentMonth, onPrevMonth, onNextMonth }: CalendarProps) {
   const todayStr = toDateStr(new Date())
   const year = currentMonth.getFullYear()
   const month = currentMonth.getMonth()
   const firstDow = new Date(year, month, 1).getDay()
   const daysInMonth = new Date(year, month + 1, 0).getDate()
-
-  const cells: (number | null)[] = [
-    ...Array(firstDow).fill(null),
-    ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
-  ]
+  const cells: (number | null)[] = [...Array(firstDow).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)]
 
   return (
     <div className="glass rounded-3xl p-5">
-      {/* Month navigation */}
       <div className="flex items-center justify-between mb-4">
-        <button
-          onClick={onPrevMonth}
-          className="w-8 h-8 rounded-full bg-secondary/60 flex items-center justify-center active:scale-90 transition-transform"
-        >
+        <button onClick={onPrevMonth} className="w-8 h-8 rounded-full bg-secondary/60 flex items-center justify-center active:scale-90 transition-transform">
           <ChevronLeft size={16} className="text-muted-foreground" />
         </button>
-        <p className="text-sm font-bold text-foreground">
-          {year}년 {month + 1}월
-        </p>
-        <button
-          onClick={onNextMonth}
-          className="w-8 h-8 rounded-full bg-secondary/60 flex items-center justify-center active:scale-90 transition-transform"
-        >
+        <p className="text-sm font-bold text-foreground">{year}년 {month + 1}월</p>
+        <button onClick={onNextMonth} className="w-8 h-8 rounded-full bg-secondary/60 flex items-center justify-center active:scale-90 transition-transform">
           <ChevronRight size={16} className="text-muted-foreground" />
         </button>
       </div>
-
-      {/* Day labels */}
       <div className="grid grid-cols-7 mb-1">
-        {DOW_LABELS.map((d, i) => (
-          <p key={d} className={`text-center text-[10px] font-semibold ${i === 0 ? 'text-red-400' : i === 6 ? 'text-blue-400' : 'text-muted-foreground'}`}>
-            {d}
-          </p>
+        {['일', '월', '화', '수', '목', '금', '토'].map((d, i) => (
+          <p key={d} className={`text-center text-[10px] font-semibold ${i === 0 ? 'text-red-400' : i === 6 ? 'text-blue-400' : 'text-muted-foreground'}`}>{d}</p>
         ))}
       </div>
-
-      {/* Cells */}
       <div className="grid grid-cols-7 gap-y-1">
         {cells.map((day, i) => {
           if (!day) return <div key={i} />
@@ -158,26 +146,14 @@ function TrainingCalendar({
           const isToday = dateStr === todayStr
           const isSun = i % 7 === 0
           const isSat = i % 7 === 6
-
           return (
-            <button
-              key={i}
-              onClick={() => onSelectDate(isSelected ? '' : dateStr)}
-              className={`relative flex flex-col items-center justify-center h-9 rounded-xl transition-all active:scale-95
-                ${isSelected ? 'bg-primary shadow-md shadow-primary/30' : ''}
-              `}
-            >
-              <span className={`text-xs font-semibold leading-none
-                ${isSelected ? 'text-white' : isToday ? 'text-primary' : isSun ? 'text-red-400' : isSat ? 'text-blue-400' : hasTraining ? 'text-foreground' : 'text-muted-foreground/50'}
-              `}>
+            <button key={i} onClick={() => onSelectDate(isSelected ? '' : dateStr)}
+              className={`relative flex flex-col items-center justify-center h-9 rounded-xl transition-all active:scale-95 ${isSelected ? 'bg-primary shadow-md shadow-primary/30' : ''}`}>
+              <span className={`text-xs font-semibold leading-none ${isSelected ? 'text-white' : isToday ? 'text-primary' : isSun ? 'text-red-400' : isSat ? 'text-blue-400' : hasTraining ? 'text-foreground' : 'text-muted-foreground/50'}`}>
                 {day}
               </span>
-              {hasTraining && !isSelected && (
-                <span className="w-1 h-1 rounded-full bg-orange-400 mt-0.5" />
-              )}
-              {isToday && !isSelected && (
-                <span className="absolute top-1 right-1 w-1 h-1 rounded-full bg-primary" />
-              )}
+              {hasTraining && !isSelected && <span className="w-1 h-1 rounded-full bg-orange-400 mt-0.5" />}
+              {isToday && !isSelected && <span className="absolute top-1 right-1 w-1 h-1 rounded-full bg-primary" />}
             </button>
           )
         })}
@@ -187,106 +163,259 @@ function TrainingCalendar({
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
-export default function ArchivePage() {
+export default function ArchiveClient() {
   const router = useRouter()
+  const today = useMemo(() => new Date(), [])
+  const todayStr = useMemo(() => toDateStr(today), [today])
+
   const [trainingLogs, setTrainingLogs] = useState<TrainingLog[]>([])
+  const [qualityLogs, setQualityLogs] = useState<VoiceQualityLog[]>([])
   const [currentMonth, setCurrentMonth] = useState(new Date())
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
-  const [hasAnalysis, setHasAnalysis] = useState(false)
-  const [topEmotions, setTopEmotions] = useState<string[]>([])
 
-  // Load training logs from Supabase
   useEffect(() => {
-    async function loadLogs() {
+    async function loadData() {
       const supabase = getSupabase()
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
+
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data } = await (supabase as any)
+      const { data: trainingData } = await (supabase as any)
         .from('user_training_logs')
         .select('stage_num, log_date, audio_url')
         .eq('user_id', user.id)
         .order('log_date', { ascending: false })
-      if (data) {
-        setTrainingLogs(data)
-        // default to today
-        setSelectedDate(toDateStr(new Date()))
+      if (trainingData) {
+        setTrainingLogs(trainingData)
+        setSelectedDate(todayStr)
       }
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: qualityData } = await (supabase as any)
+        .from('voice_quality_logs')
+        .select('stability_score, pace_score, expressiveness_score, logged_at')
+        .eq('user_id', user.id)
+        .order('logged_at', { ascending: true })
+      if (qualityData) setQualityLogs(qualityData)
     }
-    loadLogs()
-  }, [])
+    loadData()
+  }, [todayStr])
 
-  // Load voice analysis from sessionStorage for header emotions
-  useEffect(() => {
-    try {
-      const stored = sessionStorage.getItem('voiceEmotions')
-      const emotions: Record<string, number> | null = stored ? JSON.parse(stored) : null
-      if (emotions) {
-        const top = Object.entries(emotions).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([name]) => name)
-        setTopEmotions(top)
-        setHasAnalysis(true)
-      }
-    } catch { /* noop */ }
-  }, [])
+  // ── Derived data ────────────────────────────────────────────────────────────
+  const trainingDates = useMemo(() => new Set(trainingLogs.map((l) => l.log_date)), [trainingLogs])
 
-  // Unique training dates for calendar
-  const trainingDates = useMemo(
-    () => new Set(trainingLogs.map((l) => l.log_date)),
-    [trainingLogs],
+  const weekDates = useMemo(() => getWeekDates(today), [today])
+  const weekTrainedCount = useMemo(
+    () => weekDates.filter((d) => trainingDates.has(d)).length,
+    [weekDates, trainingDates],
   )
 
-  // Logs for selected date
+  // This month's quality logs
+  const monthPrefix = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`
+  const monthQualityLogs = useMemo(
+    () => qualityLogs.filter((l) => l.logged_at.startsWith(monthPrefix)),
+    [qualityLogs, monthPrefix],
+  )
+
+  // Monthly training count (distinct dates)
+  const monthTrainingCount = useMemo(() => {
+    const dates = new Set(trainingLogs.filter((l) => l.log_date.startsWith(monthPrefix)).map((l) => l.log_date))
+    return dates.size
+  }, [trainingLogs, monthPrefix])
+
+  // Average score this month
+  const avgScore = useMemo(() => {
+    if (monthQualityLogs.length === 0) return null
+    const sum = monthQualityLogs.reduce((acc, l) => acc + (l.stability_score + l.pace_score + l.expressiveness_score) / 3, 0)
+    return Math.round(sum / monthQualityLogs.length)
+  }, [monthQualityLogs])
+
+  // Per-metric stats this month
+  const metricStats = useMemo(() => {
+    return METRIC_CONFIG.map((m) => ({
+      ...m,
+      stats: calcMetricStats(monthQualityLogs, m.key),
+    }))
+  }, [monthQualityLogs])
+
+  // Best improvement metric
+  const bestMetric = useMemo(() => {
+    return metricStats
+      .filter((m) => m.stats !== null && m.stats.diff > 0)
+      .sort((a, b) => (b.stats!.diff) - (a.stats!.diff))[0] ?? null
+  }, [metricStats])
+
+  // Calendar
   const selectedLogs = useMemo(() => {
     if (!selectedDate) return []
-    return trainingLogs
-      .filter((l) => l.log_date === selectedDate)
-      .sort((a, b) => a.stage_num - b.stage_num)
+    return trainingLogs.filter((l) => l.log_date === selectedDate).sort((a, b) => a.stage_num - b.stage_num)
   }, [trainingLogs, selectedDate])
 
-  function prevMonth() {
-    setCurrentMonth((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1))
-    setSelectedDate(null)
-  }
-  function nextMonth() {
-    setCurrentMonth((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1))
-    setSelectedDate(null)
-  }
+  function prevMonth() { setCurrentMonth((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1)); setSelectedDate(null) }
+  function nextMonth() { setCurrentMonth((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1)); setSelectedDate(null) }
 
-  function handleSelectDate(d: string) {
-    setSelectedDate(d || null)
-  }
+  const monthLabel = `${today.getFullYear()}년 ${today.getMonth() + 1}월`
 
+  // ── Render ──────────────────────────────────────────────────────────────────
   return (
     <div className="flex flex-col min-h-[calc(100vh-84px)] pb-8">
-      {/* Header */}
-      <div className="relative bg-gradient-to-br from-violet-600 to-indigo-600 px-5 pt-10 pb-6 overflow-hidden">
-        <div className="absolute -top-10 -right-10 w-48 h-48 rounded-full bg-white/10 blur-3xl" />
-        <div className="absolute -bottom-10 -left-10 w-48 h-48 rounded-full bg-white/10 blur-3xl" />
+
+      {/* ── Header ─────────────────────────────────────────────────────────── */}
+      <div className="relative bg-gradient-to-br from-violet-700 to-indigo-700 px-5 pt-10 pb-6 overflow-hidden">
+        <div className="absolute -top-10 -right-10 w-56 h-56 rounded-full bg-white/10 blur-3xl" />
+        <div className="absolute -bottom-10 -left-10 w-56 h-56 rounded-full bg-white/10 blur-3xl" />
+
         <div className="relative z-10">
-          <Badge className="mb-3 bg-white/20 text-white border-0 text-xs backdrop-blur">내 목소리 아카이브</Badge>
-          <h1 className="text-3xl font-black text-white mb-1">Voice Archive</h1>
-          {hasAnalysis && topEmotions.length > 0 ? (
-            <div className="flex gap-2 flex-wrap mt-2">
-              {topEmotions.map((e) => (
-                <span key={e} className="bg-white/20 backdrop-blur text-white text-[11px] font-semibold px-2.5 py-1 rounded-full">
-                  {EMOTION_KO[e] ?? e}
-                </span>
-              ))}
+          <Badge className="mb-3 bg-white/20 text-white border-0 text-xs backdrop-blur">
+            {monthLabel} · 아카이브
+          </Badge>
+
+          <h1 className="text-2xl font-black text-white leading-tight mb-1">
+            목소리가 달라지고 있어요 ✨
+          </h1>
+
+          <p className="text-white/70 text-xs mb-5">
+            이번 달 {monthTrainingCount}회 훈련
+            {avgScore !== null ? ` · 평균 점수 ${avgScore}pt` : ''}
+          </p>
+
+          {/* Week day row */}
+          <div className="flex items-center gap-1.5">
+            {weekDates.map((dateStr, i) => {
+              const isToday = dateStr === todayStr
+              const isTrained = trainingDates.has(dateStr)
+              return (
+                <div key={dateStr} className="flex flex-col items-center gap-1">
+                  <span className={`text-[10px] font-semibold ${isToday ? 'text-white' : isTrained ? 'text-white/90' : 'text-white/40'}`}>
+                    {DOW_LABELS[i]}
+                  </span>
+                  <div className={`w-7 h-7 rounded-full flex items-center justify-center transition-all
+                    ${isToday
+                      ? 'gradient-primary shadow-md shadow-primary/40 ring-2 ring-white/60'
+                      : isTrained
+                        ? 'bg-orange-400/80'
+                        : 'bg-white/10'
+                    }`}>
+                    {isTrained && !isToday && <span className="text-[10px]">🔥</span>}
+                    {isToday && <span className="text-[10px] font-black text-white">★</span>}
+                  </div>
+                </div>
+              )
+            })}
+            <div className="ml-auto flex items-center gap-1 bg-white/15 rounded-full px-2.5 py-1">
+              <Flame size={12} className="text-orange-300" />
+              <span className="text-white text-[11px] font-bold">이번 주 {weekTrainedCount}일</span>
             </div>
-          ) : (
-            <p className="text-white/70 text-sm">훈련 기록과 분석 결과를 확인해요</p>
-          )}
+          </div>
         </div>
       </div>
 
-      <div className="mt-4 px-4 space-y-4">
+      {/* ── Content ────────────────────────────────────────────────────────── */}
+      <div className="px-4 mt-4 space-y-4">
+
+        {/* Best improvement card */}
+        {bestMetric ? (
+          <div>
+            <p className="text-[11px] font-semibold text-muted-foreground mb-2 px-1">📊 지표 요약</p>
+            <div className="rounded-3xl bg-[#1e1b4b] p-5 space-y-3">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-[11px] text-indigo-300 font-semibold">
+                    {bestMetric.label} — 이번 달 최고 성장
+                  </p>
+                  <p className="text-4xl font-black text-white mt-1">
+                    +{bestMetric.stats!.diff}pt
+                  </p>
+                  <p className="text-[11px] text-indigo-200/70 mt-1">
+                    {bestMetric.stats!.min}pt → {bestMetric.stats!.max}pt
+                  </p>
+                </div>
+                <span className="text-3xl mt-1">{bestMetric.emoji}</span>
+              </div>
+              <div className="relative h-2 bg-white/10 rounded-full overflow-hidden">
+                <div
+                  className="h-full rounded-full gradient-primary transition-all duration-700"
+                  style={{ width: `${bestMetric.stats!.max}%` }}
+                />
+              </div>
+              <div className="flex justify-between text-[10px] text-indigo-200/60">
+                <span>최저 {bestMetric.stats!.min}pt</span>
+                <span>최고 {bestMetric.stats!.max}pt</span>
+              </div>
+            </div>
+          </div>
+        ) : monthQualityLogs.length === 0 ? (
+          <div>
+            <p className="text-[11px] font-semibold text-muted-foreground mb-2 px-1">📊 지표 요약</p>
+            <div className="glass rounded-3xl p-6 flex flex-col items-center gap-2 text-center">
+              <span className="text-2xl">🎤</span>
+              <p className="text-sm font-semibold text-foreground">아직 분석 기록이 없어요</p>
+              <p className="text-xs text-muted-foreground">5단계 훈련 후 목소리 분석을 완료하면 지표가 쌓여요</p>
+              <button
+                onClick={() => router.push('/training/voice-check')}
+                className="mt-2 flex items-center gap-1 text-xs text-primary font-semibold px-3 py-1.5 rounded-full bg-primary/10 active:scale-95 transition-transform"
+              >
+                지금 분석하러 가기 <ChevronRight size={13} />
+              </button>
+            </div>
+          </div>
+        ) : null}
+
+        {/* Per-metric improvement rows */}
+        {monthQualityLogs.length > 0 && (
+          <div className="space-y-2">
+            <p className="text-[11px] font-semibold text-muted-foreground px-1">📈 개선 추이 (이번 달 최저 → 최고)</p>
+            {metricStats.map(({ key, label, emoji, desc, stats }) => {
+              const s = stats ?? { min: 0, max: 0, diff: 0 }
+              return (
+                <div key={key} className="glass rounded-2xl p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-base">{emoji}</span>
+                      <div>
+                        <p className="text-xs font-bold text-foreground">{label}</p>
+                        <p className="text-[10px] text-muted-foreground">{desc}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className={`text-lg font-black tabular-nums ${s.diff > 0 ? 'text-emerald-400' : 'text-muted-foreground'}`}>
+                        {s.diff > 0 ? `+${s.diff}pt` : `${s.max}pt`}
+                      </span>
+                      {s.diff > 0 && (
+                        <p className="text-[10px] text-muted-foreground">{s.min}pt → {s.max}pt</p>
+                      )}
+                    </div>
+                  </div>
+                  {/* Dual bar: min and max */}
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-muted-foreground w-8 text-right shrink-0">최저</span>
+                      <div className="flex-1 h-2 bg-secondary/60 rounded-full overflow-hidden">
+                        <div className="h-full bg-secondary rounded-full" style={{ width: `${s.min}%` }} />
+                      </div>
+                      <span className="text-[10px] tabular-nums text-muted-foreground w-6 shrink-0">{s.min}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-emerald-400 w-8 text-right shrink-0">최고</span>
+                      <div className="flex-1 h-2 bg-secondary/60 rounded-full overflow-hidden">
+                        <div className="h-full rounded-full gradient-primary" style={{ width: `${s.max}%` }} />
+                      </div>
+                      <span className="text-[10px] tabular-nums text-emerald-400 w-6 shrink-0">{s.max}</span>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+
         {/* Training Calendar */}
         <div>
           <p className="text-[11px] font-semibold text-muted-foreground mb-2 px-1">🗓 훈련 캘린더</p>
           <TrainingCalendar
             trainingDates={trainingDates}
             selectedDate={selectedDate}
-            onSelectDate={handleSelectDate}
+            onSelectDate={(d) => setSelectedDate(d || null)}
             currentMonth={currentMonth}
             onPrevMonth={prevMonth}
             onNextMonth={nextMonth}
@@ -295,7 +424,7 @@ export default function ArchivePage() {
 
         {/* Selected date training list */}
         {selectedDate && selectedLogs.length === 0 && (
-          <div className="glass rounded-3xl p-5 flex flex-col items-center justify-center gap-2 py-8">
+          <div className="glass rounded-3xl p-5 flex flex-col items-center gap-2 py-8">
             <p className="text-2xl">📭</p>
             <p className="text-sm font-semibold text-foreground">{selectedDate.replace(/-/g, '.')} 훈련 기록 없음</p>
             <p className="text-xs text-muted-foreground">이 날은 훈련 기록이 없어요</p>
@@ -303,33 +432,29 @@ export default function ArchivePage() {
         )}
         {selectedDate && selectedLogs.length > 0 && (
           <div className="glass rounded-3xl p-5 space-y-3">
-            <p className="text-xs font-bold text-foreground">
-              {selectedDate.replace(/-/g, '.')} 훈련 기록
-            </p>
+            <p className="text-xs font-bold text-foreground">{selectedDate.replace(/-/g, '.')} 훈련 기록</p>
             {selectedLogs.map((log) => {
               const info = STAGE_INFO[log.stage_num]
               return (
-                <div key={log.stage_num} className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="w-8 h-8 rounded-xl gradient-primary flex items-center justify-center text-sm shrink-0">
-                        {info?.emoji ?? '🎤'}
-                      </span>
-                      <div>
-                        <p className="text-xs font-semibold text-foreground">{log.stage_num}단계 · {info?.name ?? '훈련'}</p>
-                        <p className="text-[10px] text-emerald-400 font-semibold">완료 ✓</p>
-                      </div>
+                <div key={log.stage_num} className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="w-8 h-8 rounded-xl gradient-primary flex items-center justify-center text-sm shrink-0">
+                      {info?.emoji ?? '🎤'}
+                    </span>
+                    <div>
+                      <p className="text-xs font-semibold text-foreground">{log.stage_num}단계 · {info?.name ?? '훈련'}</p>
+                      <p className="text-[10px] text-emerald-400 font-semibold">완료 ✓</p>
                     </div>
-                    {log.audio_url && <AudioPlayer storagePath={log.audio_url} />}
                   </div>
+                  {log.audio_url && <AudioPlayer storagePath={log.audio_url} />}
                 </div>
               )
             })}
           </div>
         )}
 
-        {/* Quick actions */}
-        <div className="glass rounded-3xl p-4 space-y-2">
+        {/* Quick action */}
+        <div className="glass rounded-3xl p-4">
           <h2 className="text-sm font-bold text-foreground mb-3">바로가기</h2>
           <button
             onClick={() => router.push('/record')}
@@ -344,21 +469,19 @@ export default function ArchivePage() {
             </div>
             <ChevronRight size={16} className="text-muted-foreground" />
           </button>
-          {hasAnalysis && (
-            <button
-              onClick={() => router.push('/result')}
-              className="w-full flex items-center gap-3 p-3 rounded-2xl bg-secondary/60 hover:bg-secondary active:scale-95 transition-all"
-            >
-              <span className="w-9 h-9 rounded-xl bg-indigo-500 flex items-center justify-center shadow-md shrink-0">
-                <FileText size={16} className="text-white" />
-              </span>
-              <div className="flex-1 text-left">
-                <p className="text-sm font-semibold text-foreground">감정 분석 결과 보기</p>
-                <p className="text-[11px] text-muted-foreground">49가지 감정 지표 확인</p>
-              </div>
-              <ChevronRight size={16} className="text-muted-foreground" />
-            </button>
-          )}
+          <button
+            onClick={() => router.push('/training/voice-check')}
+            className="mt-2 w-full flex items-center gap-3 p-3 rounded-2xl bg-secondary/60 hover:bg-secondary active:scale-95 transition-all"
+          >
+            <span className="w-9 h-9 rounded-xl bg-indigo-500 flex items-center justify-center shadow-md shrink-0">
+              <TrendingUp size={16} className="text-white" />
+            </span>
+            <div className="flex-1 text-left">
+              <p className="text-sm font-semibold text-foreground">훈련 후 목소리 측정</p>
+              <p className="text-[11px] text-muted-foreground">목소리 변화를 기록해요</p>
+            </div>
+            <ChevronRight size={16} className="text-muted-foreground" />
+          </button>
         </div>
 
       </div>
