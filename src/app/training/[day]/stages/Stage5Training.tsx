@@ -38,7 +38,10 @@ const ENERGY_CV_THRESHOLD = 0.5
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function toDateStr(d: Date) {
-  return d.toISOString().split('T')[0]
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const dy = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${dy}`
 }
 
 function calcStreak(dates: string[]): number {
@@ -154,10 +157,12 @@ export default function Stage5Training() {
         ? await uploadTrainingAudio(user.id, 5, todayStr, audioBlobRef.current)
         : null
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (supabase as any).from('user_training_logs').upsert(
+      const { error: saveError } = await (supabase as any).from('user_training_logs').insert(
         { user_id: user.id, log_date: todayStr, theme: 'accuracy', score: 100, stage_num: 5, audio_url: audioPath },
-        { onConflict: 'user_id,stage_num' },
       )
+      if (saveError && saveError.code !== '23505') {
+        console.error('[stage5] save failed:', saveError)
+      }
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data } = await (supabase as any)
         .from('user_training_logs')

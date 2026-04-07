@@ -15,7 +15,10 @@ import Stage4Training from './stages/Stage4Training'
 import Stage5Training from './stages/Stage5Training'
 
 function toDateStr(d: Date) {
-  return d.toISOString().split('T')[0]
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const dy = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${dy}`
 }
 
 function calcStreak(dates: string[]): number {
@@ -89,10 +92,12 @@ export default function DayTrainingClient({ dayIndex }: { dayIndex: number }) {
       if (!user) return
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (supabase as any).from('user_training_logs').upsert(
+      const { error: saveError } = await (supabase as any).from('user_training_logs').insert(
         { user_id: user.id, log_date: todayStr, theme: stage.theme, score: 100, stage_num: stage.stageNum },
-        { onConflict: 'user_id,stage_num' },
       )
+      if (saveError && saveError.code !== '23505') {
+        console.error('[training] save failed:', saveError)
+      }
 
       // Refetch all log dates to compute streak
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
