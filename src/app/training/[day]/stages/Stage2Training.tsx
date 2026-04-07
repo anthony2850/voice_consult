@@ -183,7 +183,7 @@ export default function Stage2Training() {
         <StreakPopup
           streak={streakCount}
           logDates={allLogDates}
-          onClose={() => { setShowStreak(false); router.push(`/training`) }}
+          onClose={() => { setShowStreak(false); window.location.replace('/training') }}
         />
       )}
 
