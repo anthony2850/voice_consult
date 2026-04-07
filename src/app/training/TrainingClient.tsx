@@ -182,7 +182,7 @@ export default function TrainingClient() {
       )}
 
       {/* Today nudge */}
-      {!trainedToday && (
+      {completedStages.size === 0 && (
         <div className="mx-4 mt-4 glass rounded-2xl px-4 py-3 text-center">
           <p className="text-xs text-muted-foreground">오늘 아직 훈련을 안 했어요. 연속 기록을 이어가볼까요? 🔥</p>
         </div>
