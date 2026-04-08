@@ -93,7 +93,40 @@ function TrendChart({ logs }: { logs: VoiceQualityLog[] }) {
   const metric = TREND_METRICS[activeIdx]
 
   const recentLogs = logs.slice(-7)
-  if (recentLogs.length === 0) return null
+
+  if (recentLogs.length === 0) {
+    return (
+      <div className="glass rounded-3xl p-4 space-y-3">
+        <p className="text-sm font-bold text-foreground">개선 추이</p>
+        <div className="flex gap-1.5">
+          {TREND_METRICS.map((m, i) => (
+            <div key={m.key} className={`flex-1 py-1.5 rounded-xl text-[11px] font-semibold text-center
+              ${i === 0 ? 'text-white' : 'bg-secondary/60 text-muted-foreground'}`}
+              style={i === 0 ? { backgroundColor: m.color } : {}}
+            >
+              {m.short}
+            </div>
+          ))}
+        </div>
+        {/* Empty chart area */}
+        <div className="relative h-[140px] rounded-2xl bg-secondary/30 flex flex-col items-center justify-center gap-2">
+          <span className="text-2xl opacity-40">📈</span>
+          <p className="text-xs font-semibold text-muted-foreground">아직 분석 기록이 없어요</p>
+          <p className="text-[11px] text-muted-foreground/70 text-center px-6">
+            5단계 훈련 후 목소리 분석을 완료하면<br />그래프가 표시돼요
+          </p>
+        </div>
+        <div className="grid grid-cols-3 gap-2 pt-2 border-t border-border/40">
+          {['시작', '변화', '현재'].map((label) => (
+            <div key={label} className="text-center">
+              <p className="text-[10px] text-muted-foreground">{label}</p>
+              <p className="text-sm font-bold text-muted-foreground/30">—</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
 
   const points = recentLogs.map((l) => ({
     date: l.logged_at.slice(5, 10).replace('-', '/'),
@@ -542,7 +575,7 @@ export default function ArchiveClient() {
         )}
 
         {/* Trend chart */}
-        {qualityLogs.length > 0 && <TrendChart logs={qualityLogs} />}
+        <TrendChart logs={qualityLogs} />
 
         {/* Training Calendar */}
         <div>
