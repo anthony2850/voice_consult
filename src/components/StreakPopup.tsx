@@ -45,7 +45,7 @@ export default function StreakPopup({ streak, logDates, onClose }: Props) {
   })
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-background px-6 pb-8 pt-12">
+    <div className="fixed inset-0 z-50 flex flex-col bg-background px-6 pb-[100px] pt-12">
       {/* Speech bubble */}
       <div className="relative bg-secondary/80 rounded-2xl px-5 py-4 mb-2 mx-4">
         <p className="text-sm font-semibold text-foreground leading-relaxed text-center">
