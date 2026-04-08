@@ -18,7 +18,7 @@ interface VoiceQualityLog {
   stability_score: number
   pace_score: number
   expressiveness_score: number
-  logged_at: string
+  created_at: string
 }
 
 interface MetricStats {
@@ -130,7 +130,7 @@ function TrendChart({ logs }: { logs: VoiceQualityLog[] }) {
   }
 
   const points = recentLogs.map((l) => ({
-    date: l.logged_at.slice(5, 10).replace('-', '/'),
+    date: l.created_at.slice(5, 10).replace('-', '/'),
     value: l[metric.key] as number,
   }))
 
@@ -359,9 +359,9 @@ export default function ArchiveClient() {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data: qualityData } = await (supabase as any)
         .from('voice_quality_logs')
-        .select('stability_score, pace_score, expressiveness_score, logged_at')
+        .select('stability_score, pace_score, expressiveness_score, created_at')
         .eq('user_id', user.id)
-        .order('logged_at', { ascending: true })
+        .order('created_at', { ascending: true })
       if (qualityData) setQualityLogs(qualityData)
     }
     loadData()
@@ -379,7 +379,7 @@ export default function ArchiveClient() {
   // This month's quality logs
   const monthPrefix = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`
   const monthQualityLogs = useMemo(
-    () => qualityLogs.filter((l) => l.logged_at.startsWith(monthPrefix)),
+    () => qualityLogs.filter((l) => l.created_at.startsWith(monthPrefix)),
     [qualityLogs, monthPrefix],
   )
 
