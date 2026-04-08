@@ -557,7 +557,7 @@ export default function ArchiveClient() {
                     <div className="flex items-center gap-2">
                       <span className="text-[10px] text-muted-foreground w-8 text-right shrink-0">최저</span>
                       <div className="flex-1 h-2 bg-secondary/60 rounded-full overflow-hidden">
-                        <div className="h-full bg-secondary rounded-full" style={{ width: `${s.min}%` }} />
+                        <div className="h-full bg-muted-foreground/40 rounded-full" style={{ width: `${s.min}%` }} />
                       </div>
                       <span className="text-[10px] tabular-nums text-muted-foreground w-6 shrink-0">{s.min}</span>
                     </div>
