@@ -14,6 +14,7 @@ import StreakPopup from '@/components/StreakPopup'
 const MIN_DURATION_SEC = 5
 const JITTER_THRESHOLD = 1.5   // %
 const SHIMMER_THRESHOLD = 15   // %
+const DB_MEAN_THRESHOLD = -35  // dB (묵음 감지)
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function toDateStr(d: Date) {
@@ -44,9 +45,11 @@ interface AnalysisResult {
   durationSec: number
   jitterPct: number
   shimmerPct: number
+  dbMean: number
   jitterStable: boolean
   shimmerStable: boolean
-  passed: boolean  // duration >= 5s
+  soundDetected: boolean
+  passed: boolean  // duration >= 5s AND sound detected
 }
 
 type PageState = 'instruction' | 'recording' | 'analyzing' | 'result'
@@ -110,13 +113,17 @@ export default function Stage1Training() {
     const durationSec = features.duration_sec
     const jitterPct = features.voice_quality.jitter_rel_pct
     const shimmerPct = features.voice_quality.shimmer_rel_pct
+    const dbMean = features.energy.db_mean
+    const soundDetected = dbMean >= DB_MEAN_THRESHOLD
     setResult({
       durationSec,
       jitterPct,
       shimmerPct,
+      dbMean,
       jitterStable: jitterPct < JITTER_THRESHOLD,
       shimmerStable: shimmerPct < SHIMMER_THRESHOLD,
-      passed: durationSec >= MIN_DURATION_SEC,
+      soundDetected,
+      passed: durationSec >= MIN_DURATION_SEC && soundDetected,
     })
     setPageState('result')
   }
@@ -275,9 +282,13 @@ export default function Stage1Training() {
                 <span className="text-[10px] text-primary font-bold">목표 5초</span>
                 <span className="text-[10px] text-muted-foreground">15초</span>
               </div>
-              <p className={`text-xs font-semibold mt-3 ${result.passed ? 'text-emerald-400' : 'text-orange-400'}`}>
-                {result.passed ? '✓ 통과! 5초 이상 유지했어요' : `✗ 조금 더 필요해요 (${MIN_DURATION_SEC - result.durationSec > 0 ? (MIN_DURATION_SEC - result.durationSec).toFixed(1) : 0}초 부족)`}
-              </p>
+              {!result.soundDetected ? (
+                <p className="text-xs font-semibold mt-3 text-orange-400">✗ 소리가 감지되지 않았어요. '아—' 소리를 내주세요</p>
+              ) : (
+                <p className={`text-xs font-semibold mt-3 ${result.durationSec >= MIN_DURATION_SEC ? 'text-emerald-400' : 'text-orange-400'}`}>
+                  {result.durationSec >= MIN_DURATION_SEC ? '✓ 통과! 5초 이상 유지했어요' : `✗ 조금 더 필요해요 (${(MIN_DURATION_SEC - result.durationSec).toFixed(1)}초 부족)`}
+                </p>
+              )}
             </div>
 
             {/* Stability result */}
