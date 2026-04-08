@@ -64,6 +64,138 @@ const METRIC_CONFIG = [
 
 const DOW_LABELS = ['월', '화', '수', '목', '금', '토', '일']
 
+// ─── TrendChart ───────────────────────────────────────────────────────────────
+const CW = 320, CH = 140
+const PAD = { l: 28, r: 8, t: 10, b: 26 }
+const PW = CW - PAD.l - PAD.r
+const PH = CH - PAD.t - PAD.b
+
+const TREND_METRICS = [
+  { key: 'stability_score' as const,       short: '안정감',    color: '#8b5cf6' },
+  { key: 'pace_score' as const,            short: '말하기 여유', color: '#06b6d4' },
+  { key: 'expressiveness_score' as const,  short: '표현력',    color: '#f59e0b' },
+]
+
+function smoothPath(pts: [number, number][]): string {
+  if (pts.length < 2) return `M ${pts[0]?.[0] ?? 0} ${pts[0]?.[1] ?? 0}`
+  let d = `M ${pts[0][0].toFixed(1)} ${pts[0][1].toFixed(1)}`
+  for (let i = 1; i < pts.length; i++) {
+    const [px, py] = pts[i - 1]
+    const [cx, cy] = pts[i]
+    const mx = (px + cx) / 2
+    d += ` C ${mx.toFixed(1)} ${py.toFixed(1)}, ${mx.toFixed(1)} ${cy.toFixed(1)}, ${cx.toFixed(1)} ${cy.toFixed(1)}`
+  }
+  return d
+}
+
+function TrendChart({ logs }: { logs: VoiceQualityLog[] }) {
+  const [activeIdx, setActiveIdx] = useState(0)
+  const metric = TREND_METRICS[activeIdx]
+
+  const recentLogs = logs.slice(-7)
+  if (recentLogs.length === 0) return null
+
+  const points = recentLogs.map((l) => ({
+    date: l.logged_at.slice(5, 10).replace('-', '/'),
+    value: l[metric.key] as number,
+  }))
+
+  const values = points.map((p) => p.value)
+  const yMin = Math.max(55, Math.floor(Math.min(...values) / 5) * 5 - 5)
+  const yMax = Math.min(100, Math.ceil(Math.max(...values) / 5) * 5 + 5)
+  const yRange = yMax - yMin || 1
+
+  const xPos = (i: number) =>
+    PAD.l + (points.length === 1 ? PW / 2 : (i / (points.length - 1)) * PW)
+  const yPos = (v: number) => PAD.t + (1 - (v - yMin) / yRange) * PH
+
+  const coords: [number, number][] = points.map((p, i) => [xPos(i), yPos(p.value)])
+  const linePath = smoothPath(coords)
+  const areaPath = `${linePath} L ${coords[coords.length - 1][0].toFixed(1)} ${(PAD.t + PH).toFixed(1)} L ${coords[0][0].toFixed(1)} ${(PAD.t + PH).toFixed(1)} Z`
+
+  const tickStep = yRange <= 10 ? 5 : 10
+  const yTicks: number[] = []
+  for (let v = yMin; v <= yMax; v += tickStep) yTicks.push(v)
+
+  const first = points[0].value
+  const last = points[points.length - 1].value
+  const diff = last - first
+  const gradId = `tg${activeIdx}`
+
+  return (
+    <div className="glass rounded-3xl p-4 space-y-3">
+      <p className="text-sm font-bold text-foreground">개선 추이</p>
+
+      {/* Metric tabs */}
+      <div className="flex gap-1.5">
+        {TREND_METRICS.map((m, i) => (
+          <button
+            key={m.key}
+            onClick={() => setActiveIdx(i)}
+            className={`flex-1 py-1.5 rounded-xl text-[11px] font-semibold transition-all active:scale-95
+              ${activeIdx === i ? 'text-white shadow-sm' : 'bg-secondary/60 text-muted-foreground'}`}
+            style={activeIdx === i ? { backgroundColor: m.color } : {}}
+          >
+            {m.short}
+          </button>
+        ))}
+      </div>
+
+      {/* SVG Chart */}
+      <svg viewBox={`0 0 ${CW} ${CH}`} className="w-full" style={{ height: 140 }} aria-hidden>
+        <defs>
+          <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={metric.color} stopOpacity={0.22} />
+            <stop offset="100%" stopColor={metric.color} stopOpacity={0} />
+          </linearGradient>
+        </defs>
+
+        {/* Y grid + labels */}
+        {yTicks.map((v) => (
+          <g key={v}>
+            <line x1={PAD.l} y1={yPos(v)} x2={CW - PAD.r} y2={yPos(v)} stroke="#888" strokeOpacity={0.13} strokeWidth={1} />
+            <text x={PAD.l - 4} y={yPos(v) + 3.5} textAnchor="end" fontSize={8} fill="#888">{v}</text>
+          </g>
+        ))}
+
+        {/* Area fill */}
+        <path d={areaPath} fill={`url(#${gradId})`} />
+
+        {/* Line */}
+        <path d={linePath} fill="none" stroke={metric.color} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
+
+        {/* Data points */}
+        {coords.map(([x, y], i) => (
+          <circle key={i} cx={x} cy={y} r={3.5} fill={metric.color} stroke="white" strokeWidth={1.5} />
+        ))}
+
+        {/* X labels */}
+        {points.map((p, i) => (
+          <text key={i} x={xPos(i)} y={CH - 4} textAnchor="middle" fontSize={8} fill="#888">{p.date}</text>
+        ))}
+      </svg>
+
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-2 pt-2 border-t border-border/40">
+        <div className="text-center">
+          <p className="text-[10px] text-muted-foreground">시작</p>
+          <p className="text-sm font-bold text-muted-foreground">{first}pt</p>
+        </div>
+        <div className="text-center">
+          <p className="text-[10px] text-muted-foreground">변화</p>
+          <p className={`text-sm font-bold ${diff > 0 ? 'text-emerald-400' : diff < 0 ? 'text-orange-400' : 'text-muted-foreground'}`}>
+            {diff > 0 ? `+${diff}` : `${diff}`}pt
+          </p>
+        </div>
+        <div className="text-center">
+          <p className="text-[10px] text-muted-foreground">현재</p>
+          <p className="text-sm font-bold" style={{ color: metric.color }}>{last}pt</p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 const STAGE_INFO: Record<number, { name: string; emoji: string }> = {
   1: { name: '호흡 훈련', emoji: '🫁' },
   2: { name: '볼륨 훈련', emoji: '📢' },
@@ -408,6 +540,9 @@ export default function ArchiveClient() {
             })}
           </div>
         )}
+
+        {/* Trend chart */}
+        {qualityLogs.length > 0 && <TrendChart logs={qualityLogs} />}
 
         {/* Training Calendar */}
         <div>
