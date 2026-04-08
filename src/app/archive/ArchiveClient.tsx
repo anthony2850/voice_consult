@@ -100,12 +100,13 @@ function TrendChart({ logs }: { logs: VoiceQualityLog[] }) {
         <p className="text-sm font-bold text-foreground">개선 추이</p>
         <div className="flex gap-1.5">
           {TREND_METRICS.map((m, i) => (
-            <div key={m.key} className={`flex-1 py-1.5 rounded-xl text-[11px] font-semibold text-center
-              ${i === 0 ? 'text-white' : 'bg-secondary/60 text-muted-foreground'}`}
-              style={i === 0 ? { backgroundColor: m.color } : {}}
+            <button key={m.key} onClick={() => setActiveIdx(i)}
+              className={`flex-1 py-1.5 rounded-xl text-[11px] font-semibold text-center active:scale-95 transition-all
+                ${activeIdx === i ? 'text-white shadow-sm' : 'bg-secondary/60 text-muted-foreground'}`}
+              style={activeIdx === i ? { backgroundColor: m.color } : {}}
             >
               {m.short}
-            </div>
+            </button>
           ))}
         </div>
         {/* Empty chart area */}
