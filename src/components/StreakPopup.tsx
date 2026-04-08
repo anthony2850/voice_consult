@@ -35,10 +35,12 @@ export default function StreakPopup({ streak, logDates, onClose }: Props) {
   const todayStr = toDateStr(today)
   const logDateSet = new Set(logDates)
 
-  // Last 7 days ending today
+  // This week: Sun → Sat
+  const sunday = new Date(today)
+  sunday.setDate(today.getDate() - today.getDay())
   const recentDays = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(today)
-    d.setDate(today.getDate() - 6 + i)
+    const d = new Date(sunday)
+    d.setDate(sunday.getDate() + i)
     return d
   })
 
