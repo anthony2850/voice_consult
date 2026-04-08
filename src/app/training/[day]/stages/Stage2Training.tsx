@@ -12,6 +12,7 @@ import StreakPopup from '@/components/StreakPopup'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const TARGET_RATIO = 1.5
+const DB_MEAN_THRESHOLD = -35  // dB (묵음 감지)
 const SCRIPT = '안녕하세요. 저는 오늘 여러분께 중요한 이야기를 전하려고 합니다. 잘 부탁드립니다.'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -56,6 +57,9 @@ export default function Stage2Training() {
   const [pageState, setPageState] = useState<PageState>('step1_ready')
   const [baselineRms, setBaselineRms] = useState(0)
   const [loudRms, setLoudRms] = useState(0)
+  const [step1SoundDetected, setStep1SoundDetected] = useState(false)
+  const [step2SoundDetected, setStep2SoundDetected] = useState(false)
+  const [step1Error, setStep1Error] = useState(false)
   const [saving, setSaving] = useState(false)
   const [alreadyDone, setAlreadyDone] = useState(false)
   const [showStreak, setShowStreak] = useState(false)
@@ -107,16 +111,27 @@ export default function Stage2Training() {
     setPageState('step1_analyzing')
     const features = await extractAudioFeatures(blob)
     const rms = features?.energy.rms_mean ?? 0
+    const detected = (features?.energy.db_mean ?? -99) >= DB_MEAN_THRESHOLD
     setBaselineRms(rms)
-    setPageState('step1_done')
+    setStep1SoundDetected(detected)
+    if (!detected) {
+      setStep1Error(true)
+      recorder.reset()
+      setPageState('step1_ready')
+    } else {
+      setStep1Error(false)
+      setPageState('step1_done')
+    }
   }
 
   async function analyzeStep2(blob: Blob) {
-    audioBlobRef.current = blob  // save loud-voice recording
+    audioBlobRef.current = blob
     setPageState('step2_analyzing')
     const features = await extractAudioFeatures(blob)
     const rms = features?.energy.rms_mean ?? 0
+    const detected = (features?.energy.db_mean ?? -99) >= DB_MEAN_THRESHOLD
     setLoudRms(rms)
+    setStep2SoundDetected(detected)
     setPageState('result')
   }
 
@@ -138,11 +153,14 @@ export default function Stage2Training() {
     recorder.reset()
     setBaselineRms(0)
     setLoudRms(0)
+    setStep1SoundDetected(false)
+    setStep2SoundDetected(false)
+    setStep1Error(false)
     setPageState('step1_ready')
   }
 
   const ratio = baselineRms > 0 ? loudRms / baselineRms : 0
-  const passed = ratio >= TARGET_RATIO
+  const passed = step1SoundDetected && step2SoundDetected && ratio >= TARGET_RATIO
 
   async function handleComplete() {
     markStageComplete(2)
@@ -221,6 +239,9 @@ export default function Stage2Training() {
               <p className="text-xs text-muted-foreground text-center">
                 평소 대화할 때처럼 자연스럽게 읽어보세요
               </p>
+              {step1Error && (
+                <p className="text-xs font-semibold text-orange-400">✗ 소리가 감지되지 않았어요. 스크립트를 읽어주세요</p>
+              )}
               <button
                 onClick={startStep1}
                 className="w-14 h-14 rounded-full gradient-primary flex items-center justify-center shadow-lg shadow-primary/30 active:scale-95 transition-transform"
@@ -328,7 +349,8 @@ export default function Stage2Training() {
                   <span>{(baselineRms * 1000).toFixed(1)}</span>
                 </div>
                 <div className="h-3 bg-secondary/60 rounded-full overflow-hidden">
-                  <div className="h-full bg-secondary rounded-full" style={{ width: '40%' }} />
+                  <div className="h-full bg-muted-foreground/40 rounded-full"
+                    style={{ width: `${Math.min(100, (baselineRms / 0.05) * 50)}%` }} />
                 </div>
               </div>
 
@@ -341,24 +363,30 @@ export default function Stage2Training() {
                 <div className="h-3 bg-secondary/60 rounded-full overflow-hidden">
                   <div
                     className={`h-full rounded-full ${passed ? 'bg-emerald-400' : 'bg-orange-400'}`}
-                    style={{ width: `${Math.min(100, (ratio / TARGET_RATIO) * 40)}%` }}
+                    style={{ width: `${Math.min(100, (loudRms / 0.05) * 50)}%` }}
                   />
                 </div>
               </div>
 
               {/* Ratio */}
-              <div className={`rounded-2xl px-4 py-3 text-center ${
-                passed ? 'bg-emerald-400/10 border border-emerald-400/30' : 'bg-orange-400/10 border border-orange-400/30'
-              }`}>
-                <p className={`text-3xl font-black ${passed ? 'text-emerald-400' : 'text-orange-400'}`}>
-                  {ratio.toFixed(2)}배
-                </p>
-                <p className={`text-xs font-semibold mt-1 ${passed ? 'text-emerald-400' : 'text-orange-400'}`}>
-                  {passed
-                    ? `🎉 목표 달성! (목표: ${TARGET_RATIO}배 이상)`
-                    : `목표 ${TARGET_RATIO}배에 ${(TARGET_RATIO - ratio).toFixed(2)}배 부족해요`}
-                </p>
-              </div>
+              {!step2SoundDetected ? (
+                <div className="rounded-2xl px-4 py-3 text-center bg-orange-400/10 border border-orange-400/30">
+                  <p className="text-sm font-semibold text-orange-400">✗ 소리가 감지되지 않았어요. 스크립트를 읽어주세요</p>
+                </div>
+              ) : (
+                <div className={`rounded-2xl px-4 py-3 text-center ${
+                  passed ? 'bg-emerald-400/10 border border-emerald-400/30' : 'bg-orange-400/10 border border-orange-400/30'
+                }`}>
+                  <p className={`text-3xl font-black ${passed ? 'text-emerald-400' : 'text-orange-400'}`}>
+                    {ratio.toFixed(2)}배
+                  </p>
+                  <p className={`text-xs font-semibold mt-1 ${passed ? 'text-emerald-400' : 'text-orange-400'}`}>
+                    {passed
+                      ? `🎉 목표 달성! (목표: ${TARGET_RATIO}배 이상)`
+                      : `목표 ${TARGET_RATIO}배에 ${(TARGET_RATIO - ratio).toFixed(2)}배 부족해요`}
+                  </p>
+                </div>
+              )}
 
               <p className="text-xs text-muted-foreground leading-relaxed">
                 {passed
