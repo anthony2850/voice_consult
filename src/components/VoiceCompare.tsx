@@ -141,13 +141,13 @@ function RecordCard({
   const maxScore = emotions[0]?.score ?? 1
 
   const accentClass = accent === 'violet'
-    ? 'bg-violet-100 text-violet-700 border-violet-300'
-    : 'bg-indigo-100 text-indigo-700 border-indigo-300'
+    ? 'bg-[#FFD700]/20 text-[#7A6200] border-[#FFD700]/50'
+    : 'bg-[#00BECD]/20 text-[#005A6B] border-[#00BECD]/50'
 
   return (
     <div className="glass rounded-3xl overflow-hidden">
       {/* 카드 헤더 */}
-      <div className={`px-4 pt-4 pb-3 border-b border-border/50 ${accent === 'violet' ? 'bg-violet-50' : 'bg-indigo-50'}`}>
+      <div className={`px-4 pt-4 pb-3 border-b border-border/50 ${accent === 'violet' ? 'bg-[#FFD700]/10' : 'bg-[#00BECD]/10'}`}>
         <div className="flex items-center gap-2 mb-1">
           <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${accentClass}`}>
             {label}

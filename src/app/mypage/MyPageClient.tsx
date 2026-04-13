@@ -32,7 +32,7 @@ export default function MyPageClient() {
   return (
     <div className="flex flex-col min-h-[calc(100vh-84px)] pb-8">
       {/* Hero */}
-      <div className="relative bg-gradient-to-br from-violet-600 to-indigo-600 px-5 pt-10 pb-6 overflow-hidden">
+      <div className="relative bg-gradient-to-br from-[#0093BA] to-[#00BECD] px-5 pt-10 pb-6 overflow-hidden">
         <div className="absolute -top-10 -right-10 w-48 h-48 rounded-full bg-white/10 blur-3xl" />
         <div className="absolute -bottom-10 -left-10 w-48 h-48 rounded-full bg-white/10 blur-3xl" />
         <div className="relative z-10">

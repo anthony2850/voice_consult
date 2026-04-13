@@ -22,8 +22,8 @@ interface VoiceQualityLog {
 }
 
 interface MetricStats {
-  min: number
-  max: number
+  first: number
+  latest: number
   diff: number
 }
 
@@ -50,10 +50,10 @@ function getWeekDates(referenceDate: Date): string[] {
 
 function calcMetricStats(logs: VoiceQualityLog[], key: keyof Pick<VoiceQualityLog, 'stability_score' | 'pace_score' | 'expressiveness_score'>): MetricStats | null {
   if (logs.length === 0) return null
-  const vals = logs.map((l) => l[key] as number)
-  const min = Math.min(...vals)
-  const max = Math.max(...vals)
-  return { min, max, diff: max - min }
+  // logs are ordered by created_at ascending
+  const first = logs[0][key] as number
+  const latest = logs[logs.length - 1][key] as number
+  return { first, latest, diff: latest - first }
 }
 
 const METRIC_CONFIG = [
@@ -427,7 +427,7 @@ export default function ArchiveClient() {
     <div className="flex flex-col min-h-[calc(100vh-84px)] pb-8">
 
       {/* ── Header ─────────────────────────────────────────────────────────── */}
-      <div className="relative bg-gradient-to-br from-violet-700 to-indigo-700 px-5 pt-10 pb-6 overflow-hidden">
+      <div className="relative bg-gradient-to-br from-[#006B80] to-[#0093BA] px-5 pt-10 pb-6 overflow-hidden">
         <div className="absolute -top-10 -right-10 w-56 h-56 rounded-full bg-white/10 blur-3xl" />
         <div className="absolute -bottom-10 -left-10 w-56 h-56 rounded-full bg-white/10 blur-3xl" />
 
@@ -483,17 +483,17 @@ export default function ArchiveClient() {
         {bestMetric ? (
           <div>
             <p className="text-[11px] font-semibold text-muted-foreground mb-2 px-1">📊 지표 요약</p>
-            <div className="rounded-3xl bg-[#1e1b4b] p-5 space-y-3">
+            <div className="rounded-3xl bg-[#052d38] p-5 space-y-3">
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-[11px] text-indigo-300 font-semibold">
+                  <p className="text-[11px] text-amber-300 font-semibold">
                     {bestMetric.label} — 이번 달 최고 성장
                   </p>
                   <p className="text-4xl font-black text-white mt-1">
                     +{bestMetric.stats!.diff}pt
                   </p>
-                  <p className="text-[11px] text-indigo-200/70 mt-1">
-                    {bestMetric.stats!.min}pt → {bestMetric.stats!.max}pt
+                  <p className="text-[11px] text-amber-200/70 mt-1">
+                    {bestMetric.stats!.first}pt → {bestMetric.stats!.latest}pt
                   </p>
                 </div>
                 <span className="text-3xl mt-1">{bestMetric.emoji}</span>
@@ -501,12 +501,12 @@ export default function ArchiveClient() {
               <div className="relative h-2 bg-white/10 rounded-full overflow-hidden">
                 <div
                   className="h-full rounded-full gradient-primary transition-all duration-700"
-                  style={{ width: `${bestMetric.stats!.max}%` }}
+                  style={{ width: `${bestMetric.stats!.latest}%` }}
                 />
               </div>
-              <div className="flex justify-between text-[10px] text-indigo-200/60">
-                <span>최저 {bestMetric.stats!.min}pt</span>
-                <span>최고 {bestMetric.stats!.max}pt</span>
+              <div className="flex justify-between text-[10px] text-amber-200/60">
+                <span>시작 {bestMetric.stats!.first}pt</span>
+                <span>현재 {bestMetric.stats!.latest}pt</span>
               </div>
             </div>
           </div>
@@ -530,9 +530,11 @@ export default function ArchiveClient() {
         {/* Per-metric improvement rows */}
         {monthQualityLogs.length > 0 && (
           <div className="space-y-2">
-            <p className="text-[11px] font-semibold text-muted-foreground px-1">📈 개선 추이 (이번 달 최저 → 최고)</p>
+            <p className="text-[11px] font-semibold text-muted-foreground px-1">📈 개선 추이 (이번 달 시작 → 현재)</p>
             {metricStats.map(({ key, label, emoji, desc, stats }) => {
-              const s = stats ?? { min: 0, max: 0, diff: 0 }
+              const s = stats ?? { first: 0, latest: 0, diff: 0 }
+              const isUp = s.diff > 0
+              const isDown = s.diff < 0
               return (
                 <div key={key} className="glass rounded-2xl p-4">
                   <div className="flex items-center justify-between mb-2">
@@ -544,29 +546,29 @@ export default function ArchiveClient() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <span className={`text-lg font-black tabular-nums ${s.diff > 0 ? 'text-emerald-400' : 'text-muted-foreground'}`}>
-                        {s.diff > 0 ? `+${s.diff}pt` : `${s.max}pt`}
+                      <span className={`text-lg font-black tabular-nums ${isUp ? 'text-emerald-400' : isDown ? 'text-rose-400' : 'text-muted-foreground'}`}>
+                        {isUp ? `+${s.diff}pt` : isDown ? `${s.diff}pt` : `${s.latest}pt`}
                       </span>
-                      {s.diff > 0 && (
-                        <p className="text-[10px] text-muted-foreground">{s.min}pt → {s.max}pt</p>
+                      {s.diff !== 0 && (
+                        <p className="text-[10px] text-muted-foreground">{s.first}pt → {s.latest}pt</p>
                       )}
                     </div>
                   </div>
-                  {/* Dual bar: min and max */}
+                  {/* Dual bar: first and latest */}
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
-                      <span className="text-[10px] text-muted-foreground w-8 text-right shrink-0">최저</span>
+                      <span className="text-[10px] text-muted-foreground w-8 text-right shrink-0">시작</span>
                       <div className="flex-1 h-2 bg-secondary/60 rounded-full overflow-hidden">
-                        <div className="h-full bg-muted-foreground/40 rounded-full" style={{ width: `${s.min}%` }} />
+                        <div className="h-full bg-muted-foreground/40 rounded-full" style={{ width: `${s.first}%` }} />
                       </div>
-                      <span className="text-[10px] tabular-nums text-muted-foreground w-6 shrink-0">{s.min}</span>
+                      <span className="text-[10px] tabular-nums text-muted-foreground w-6 shrink-0">{s.first}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-[10px] text-emerald-400 w-8 text-right shrink-0">최고</span>
+                      <span className={`text-[10px] w-8 text-right shrink-0 ${isUp ? 'text-emerald-400' : isDown ? 'text-rose-400' : 'text-muted-foreground'}`}>현재</span>
                       <div className="flex-1 h-2 bg-secondary/60 rounded-full overflow-hidden">
-                        <div className="h-full rounded-full gradient-primary" style={{ width: `${s.max}%` }} />
+                        <div className={`h-full rounded-full ${isUp ? 'gradient-primary' : isDown ? 'bg-rose-400/70' : 'bg-muted-foreground/40'}`} style={{ width: `${s.latest}%` }} />
                       </div>
-                      <span className="text-[10px] tabular-nums text-emerald-400 w-6 shrink-0">{s.max}</span>
+                      <span className={`text-[10px] tabular-nums w-6 shrink-0 ${isUp ? 'text-emerald-400' : isDown ? 'text-rose-400' : 'text-muted-foreground'}`}>{s.latest}</span>
                     </div>
                   </div>
                 </div>
@@ -642,7 +644,7 @@ export default function ArchiveClient() {
             onClick={() => router.push('/training/voice-check')}
             className="mt-2 w-full flex items-center gap-3 p-3 rounded-2xl bg-secondary/60 hover:bg-secondary active:scale-95 transition-all"
           >
-            <span className="w-9 h-9 rounded-xl bg-indigo-500 flex items-center justify-center shadow-md shrink-0">
+            <span className="w-9 h-9 rounded-xl bg-[#0093BA] flex items-center justify-center shadow-md shrink-0">
               <TrendingUp size={16} className="text-white" />
             </span>
             <div className="flex-1 text-left">

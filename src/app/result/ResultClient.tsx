@@ -103,7 +103,7 @@ function getPitchToneLabel(hz: number): string {
 function getPitchToneColor(hz: number): string {
   if (hz <= 220) return 'text-blue-600'
   if (hz <= 349) return 'text-emerald-600'
-  return 'text-violet-600'
+  return 'text-[#0093BA]'
 }
 
 // ── Score calculations ─────────────────────────────────────
@@ -134,14 +134,14 @@ function calcExpressivenessScore(stdHz: number, dbMean: number): number {
 
 function getScoreColor(score: number): string {
   if (score >= 80) return 'text-emerald-600'
-  if (score >= 60) return 'text-violet-600'
+  if (score >= 60) return 'text-[#0093BA]'
   if (score >= 40) return 'text-amber-600'
   return 'text-rose-600'
 }
 
 function getScoreBarColor(score: number): string {
   if (score >= 80) return 'bg-emerald-500'
-  if (score >= 60) return 'bg-violet-500'
+  if (score >= 60) return 'bg-[#00BECD]'
   if (score >= 40) return 'bg-amber-500'
   return 'bg-rose-500'
 }
@@ -407,7 +407,7 @@ function PersonaActionSection({
     <div className="space-y-2.5">
       <button
         onClick={handleTrain}
-        className="w-full h-13 px-4 py-3.5 rounded-2xl bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-sm font-bold flex items-center justify-center gap-2 shadow-lg shadow-violet-900/30 active:scale-[0.98] transition-transform"
+        className="w-full h-13 px-4 py-3.5 rounded-2xl bg-gradient-to-r from-[#FFD700] to-[#FF9E52] text-gray-900 text-sm font-bold flex items-center justify-center gap-2 shadow-lg shadow-[#FFD700]/30 active:scale-[0.98] transition-transform"
       >
         <Dumbbell size={16} className="shrink-0" />
         <span>{persona.emoji} {persona.name}에 가까워지는 훈련 시작</span>
@@ -466,7 +466,7 @@ function PersonaGapSection({
         {gaps.map((g) => {
           const isBelow = g.gap > 10
           const isAbove = g.gap < -10
-          const barColor = isBelow ? 'bg-rose-500' : isAbove ? 'bg-emerald-500' : 'bg-violet-500'
+          const barColor = isBelow ? 'bg-rose-500' : isAbove ? 'bg-emerald-500' : 'bg-[#00BECD]'
           const label = EMOTION_KO[g.name] ?? g.name
           return (
             <div key={g.name}>
@@ -477,7 +477,7 @@ function PersonaGapSection({
                     목표 <span className="text-foreground font-bold">{g.target}</span>
                   </span>
                   <span className="text-[10px] text-muted-foreground">
-                    내 점수 <span className={`font-bold ${isBelow ? 'text-rose-400' : isAbove ? 'text-emerald-400' : 'text-violet-400'}`}>{g.user}</span>
+                    내 점수 <span className={`font-bold ${isBelow ? 'text-rose-400' : isAbove ? 'text-emerald-400' : 'text-[#00BECD]'}`}>{g.user}</span>
                   </span>
                 </div>
               </div>
@@ -485,7 +485,7 @@ function PersonaGapSection({
               <div className="relative h-2.5 rounded-full bg-border overflow-hidden">
                 {/* Target marker */}
                 <div
-                  className="absolute top-0 bottom-0 w-0.5 bg-violet-400 z-10"
+                  className="absolute top-0 bottom-0 w-0.5 bg-[#FFD700] z-10"
                   style={{ left: `${g.target}%` }}
                 />
                 {/* User bar */}
@@ -519,8 +519,8 @@ function PersonaGapSection({
             </div>
           )}
           {below.length === 0 && above.length === 0 && (
-            <div className="rounded-xl bg-violet-500/10 border border-violet-500/20 p-3">
-              <p className="text-[11px] font-bold text-violet-400 mb-1">✦ 완벽한 매칭</p>
+            <div className="rounded-xl bg-[#FFD700]/10 border border-[#FFD700]/30 p-3">
+              <p className="text-[11px] font-bold text-[#B8860B] mb-1">✦ 완벽한 매칭</p>
               <p className="text-[11px] text-muted-foreground">모든 감정이 이 페르소나와 아주 가깝게 나왔어요!</p>
             </div>
           )}
@@ -643,7 +643,7 @@ export default function ResultClient() {
       className={`flex flex-col min-h-[calc(100vh-84px)] pb-8 transition-opacity duration-500 ${revealed ? 'opacity-100' : 'opacity-0'}`}
     >
       {/* ── Hero Banner ── */}
-      <div className="relative bg-gradient-to-br from-violet-600 to-indigo-600 px-5 pt-10 pb-6 overflow-hidden">
+      <div className="relative bg-gradient-to-br from-[#0093BA] to-[#00BECD] px-5 pt-10 pb-6 overflow-hidden">
         <div className="absolute -top-10 -right-10 w-48 h-48 rounded-full bg-white/10 blur-3xl" />
         <div className="absolute -bottom-10 -left-10 w-48 h-48 rounded-full bg-white/10 blur-3xl" />
         <div className="relative z-10">

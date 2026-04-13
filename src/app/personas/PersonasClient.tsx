@@ -125,7 +125,7 @@ function PersonaCard({
 
         <button
           onClick={onStartTraining}
-          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-sm active:scale-[0.98] transition-transform"
+          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-[#FFD700] to-[#FF9E52] text-gray-900 shadow-sm active:scale-[0.98] transition-transform"
         >
           <Dumbbell size={12} className="shrink-0" />
           이 페르소나로 훈련 시작
