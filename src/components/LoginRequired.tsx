@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Image from 'next/image'
 import { getSupabase } from '@/lib/supabase'
 import { savePendingGuestData } from '@/lib/guest-migration'
 
@@ -47,7 +48,9 @@ export default function LoginRequired({ children }: { children: React.ReactNode 
           <div className="absolute -top-10 -right-10 w-48 h-48 rounded-full bg-white/10 blur-3xl" />
           <div className="absolute -bottom-10 -left-10 w-48 h-48 rounded-full bg-white/10 blur-3xl" />
           <div className="relative z-10 text-center">
-            <div className="text-5xl mb-4">🔒</div>
+            <div className="inline-flex items-center bg-white rounded-2xl px-4 py-2 mb-5 shadow-md">
+              <Image src="/logo.png" alt="MyTone" width={108} height={36} className="object-contain" />
+            </div>
             <h1 className="text-2xl font-black text-white mb-2">로그인이 필요해요</h1>
             <p className="text-white/70 text-sm">
               분석 기록 저장, 맞춤 훈련, 마이페이지는<br />로그인 후 이용할 수 있어요

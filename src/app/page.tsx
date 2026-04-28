@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import { Mic, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -17,7 +18,7 @@ export default function HomePage() {
       {/* ── Top Bar ────────────────────────────────── */}
       <header className="flex items-center justify-between px-5 pt-5 pb-2">
         <div className="flex items-center gap-1.5">
-          <span className="text-lg font-black gradient-text">Voice Emotion</span>
+          <Image src="/logo.png" alt="MyTone" width={96} height={32} className="object-contain" />
           <Badge
             variant="secondary"
             className="text-[10px] px-1.5 py-0 h-4 bg-primary/20 text-primary border-0"
