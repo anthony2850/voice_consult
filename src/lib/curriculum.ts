@@ -167,6 +167,15 @@ export const STAGES: Stage[] = [
   },
   {
     stageNum: 5,
+    name: '발음 훈련',
+    theme: 'accuracy',
+    emoji: '🗣️',
+    description: '지정 문장을 읽고 음소 정확도를 측정해보아요',
+    script: ACCURACY_SCRIPTS[0],
+    tip: THEME_TIPS.accuracy[0],
+  },
+  {
+    stageNum: 6,
     name: '종합 훈련',
     theme: 'accuracy',
     emoji: '🏆',

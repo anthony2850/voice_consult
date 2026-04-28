@@ -4,18 +4,36 @@ import { useEffect, useRef, useState } from 'react'
 import { Mic, Square, RotateCcw, CheckCircle } from 'lucide-react'
 import { useAudioRecorder } from '@/hooks/useAudioRecorder'
 import { useWaveform } from '@/hooks/useWaveform'
+import { extractAudioFeatures } from '@/lib/extractAudioFeatures'
 import { getSupabase } from '@/lib/supabase'
 import { markStageComplete } from '@/lib/trainingProgress'
 import { uploadTrainingAudio } from '@/lib/uploadTrainingAudio'
-import { calcPER } from '@/lib/phonemeErrorRate'
 import StreakPopup from '@/components/StreakPopup'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-const SCRIPT_TEXT = '간장 공장 공장장은 강 공장장이고 된장 공장 공장장은 장 공장장이다.'
-const SCRIPT_DESCRIPTION = "자음 'ㄱ'과 'ㅈ'의 정확한 발음을 연습하는 문장이에요."
+const SCRIPT_PARTS: { text: string; highlight: boolean }[] = [
+  { text: '저희 팀은 지난 반년간 이 문제에 ', highlight: false },
+  { text: '집중', highlight: true },
+  { text: '했습니다. 그 결과, 기존 방식보다 ', highlight: false },
+  { text: '훨씬', highlight: true },
+  { text: ' 빠른 솔루션을 ', highlight: false },
+  { text: '완성', highlight: true },
+  { text: '했습니다.', highlight: false },
+]
 
-// 음소 오류율 25% 이하 = 통과 (정확도 75% 이상)
-const PER_PASS_THRESHOLD = 0.25
+const SCRIPT_TEXT = SCRIPT_PARTS.map((p) => p.text).join('')
+
+function countKorean(text: string): number {
+  return [...text].filter((c) => c >= '가' && c <= '힣').length
+}
+const SCRIPT_CHAR_COUNT = countKorean(SCRIPT_TEXT) // 42
+
+// Speed thresholds
+const MIN_SPEED = 4.5
+const MAX_SPEED = 6.5
+
+// Emphasis threshold — volume-based only
+const ENERGY_CV_THRESHOLD = 0.6
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function toDateStr(d: Date) {
@@ -43,16 +61,17 @@ function calcStreak(dates: string[]): number {
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface AnalysisResult {
-  per: number
-  accuracy: number
-  transcript: string
+  speed: number
+  energyCV: number
+  speedPassed: boolean
+  emphasisPassed: boolean
   passed: boolean
 }
 
 type PageState = 'instruction' | 'recording' | 'analyzing' | 'result'
 
 // ─── Component ────────────────────────────────────────────────────────────────
-export default function Stage5Training() {
+export default function Stage6Training() {
   const todayStr = toDateStr(new Date())
 
   const [pageState, setPageState] = useState<PageState>('instruction')
@@ -62,7 +81,6 @@ export default function Stage5Training() {
   const [showStreak, setShowStreak] = useState(false)
   const [streakCount, setStreakCount] = useState(0)
   const [allLogDates, setAllLogDates] = useState<string[]>([])
-  const [transcribeError, setTranscribeError] = useState(false)
 
   const recorder = useAudioRecorder(30)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -81,7 +99,7 @@ export default function Stage5Training() {
         .select('stage_num, log_date')
         .eq('user_id', user.id)
       if (data) {
-        setAlreadyDone(data.some((r: { stage_num: number; log_date: string }) => r.stage_num === 5 && r.log_date === todayStr))
+        setAlreadyDone(data.some((r: { stage_num: number; log_date: string }) => r.stage_num === 6 && r.log_date === todayStr))
         setAllLogDates(data.map((r: { log_date: string }) => r.log_date))
       }
     }
@@ -101,53 +119,45 @@ export default function Stage5Training() {
   async function runAnalysis(blob: Blob) {
     audioBlobRef.current = blob
     setPageState('analyzing')
-    setTranscribeError(false)
-
-    let transcript = ''
-    try {
-      const fd = new FormData()
-      fd.append('audio', blob)
-      const res = await fetch('/api/transcribe', { method: 'POST', body: fd })
-      if (!res.ok) throw new Error('transcribe failed')
-      const json = await res.json()
-      transcript = (json.text as string) ?? ''
-    } catch {
-      setTranscribeError(true)
+    const features = await extractAudioFeatures(blob)
+    if (!features) {
       setPageState('instruction')
       recorder.reset()
       return
     }
-
-    if (!transcript.trim()) {
-      setTranscribeError(true)
-      setPageState('instruction')
-      recorder.reset()
-      return
-    }
-
-    const per = calcPER(SCRIPT_TEXT, transcript)
-    const accuracy = Math.max(0, Math.round((1 - per) * 100))
-    setResult({ per, accuracy, transcript, passed: per <= PER_PASS_THRESHOLD })
+    const speed = features.duration_sec > 0 ? SCRIPT_CHAR_COUNT / features.duration_sec : 0
+    const energyCV = features.energy.rms_mean > 0
+      ? features.energy.rms_std / features.energy.rms_mean
+      : 0
+    const speedPassed = speed >= MIN_SPEED && speed <= MAX_SPEED
+    const emphasisPassed = energyCV >= ENERGY_CV_THRESHOLD
+    setResult({
+      speed,
+      energyCV,
+      speedPassed,
+      emphasisPassed,
+      passed: speedPassed && emphasisPassed,
+    })
     setPageState('result')
   }
 
   async function handleComplete() {
     if (!result?.passed) return
-    markStageComplete(5)
+    markStageComplete(6)
     setSaving(true)
     try {
       const supabase = getSupabase()
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
       const audioPath = audioBlobRef.current
-        ? await uploadTrainingAudio(user.id, 5, todayStr, audioBlobRef.current)
+        ? await uploadTrainingAudio(user.id, 6, todayStr, audioBlobRef.current)
         : null
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { error: saveError } = await (supabase as any).from('user_training_logs').insert(
-        { user_id: user.id, log_date: todayStr, theme: 'accuracy', score: result.accuracy, stage_num: 5, audio_url: audioPath },
+        { user_id: user.id, log_date: todayStr, theme: 'accuracy', score: 100, stage_num: 6, audio_url: audioPath },
       )
       if (saveError && saveError.code !== '23505') {
-        console.error('[stage5] save failed:', saveError)
+        console.error('[stage6] save failed:', saveError)
       }
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data } = await (supabase as any)
@@ -167,22 +177,7 @@ export default function Stage5Training() {
   function handleRetry() {
     recorder.reset()
     setResult(null)
-    setTranscribeError(false)
     setPageState('instruction')
-  }
-
-  // ─── Accuracy color ──────────────────────────────────────────────────────
-  function accuracyColor(acc: number) {
-    if (acc >= 80) return 'text-emerald-400'
-    if (acc >= 60) return 'text-cyan-400'
-    if (acc >= 40) return 'text-amber-400'
-    return 'text-rose-400'
-  }
-  function accuracyBarColor(acc: number) {
-    if (acc >= 80) return 'bg-emerald-400'
-    if (acc >= 60) return 'bg-cyan-400'
-    if (acc >= 40) return 'bg-amber-400'
-    return 'bg-rose-400'
   }
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -204,35 +199,51 @@ export default function Stage5Training() {
           </div>
         )}
 
-        {transcribeError && (
-          <div className="flex items-center gap-3 bg-rose-400/10 border border-rose-400/30 rounded-2xl px-4 py-3">
-            <span className="text-lg">⚠️</span>
-            <p className="text-sm text-rose-400 font-medium">발음이 인식되지 않았어요. 더 크고 또렷하게 다시 읽어보세요.</p>
-          </div>
-        )}
-
         {/* Script card */}
         <div className="glass rounded-3xl p-5 space-y-3">
           <p className="text-[11px] font-semibold text-primary uppercase tracking-wide">훈련 스크립트</p>
-          <p className="text-base leading-relaxed font-bold text-foreground">
-            &ldquo;{SCRIPT_TEXT}&rdquo;
+          <p className="text-sm leading-relaxed font-medium">
+            {SCRIPT_PARTS.map((part, i) =>
+              part.highlight ? (
+                <span key={i} className="text-primary font-black underline decoration-primary/50 decoration-2 underline-offset-2">
+                  {part.text}
+                </span>
+              ) : (
+                <span key={i} className="text-foreground">{part.text}</span>
+              )
+            )}
           </p>
-          <p className="text-[11px] text-muted-foreground">{SCRIPT_DESCRIPTION}</p>
-          <div className="flex items-start gap-2 pt-1 border-t border-border/40">
-            <span className="text-primary mt-0.5">💡</span>
-            <p className="text-[11px] text-muted-foreground leading-relaxed">
-              각 음절을 또렷하게 끊어 읽어보세요. AI가 받아적은 내용을 기준 문장과 비교해 음소 정확도를 측정해요.
-            </p>
+          <div className="flex items-center gap-2 pt-1 border-t border-border/40">
+            <span className="w-3 h-3 rounded-sm bg-primary shrink-0" />
+            <p className="text-[11px] text-muted-foreground">강조 단어에 힘을 주고, {MIN_SPEED}~{MAX_SPEED}글자/초 속도로 읽어보세요</p>
           </div>
+        </div>
+
+        {/* Checklist */}
+        <div className="glass rounded-3xl p-5 space-y-2">
+          <p className="text-[11px] font-semibold text-muted-foreground mb-3">종합 체크리스트</p>
+          {[
+            { emoji: '⚡', label: '속도', desc: `${MIN_SPEED}~${MAX_SPEED}글자/초` },
+            { emoji: '🎯', label: '강세', desc: '강조 단어에서 음정·볼륨 변화' },
+          ].map((item) => (
+            <div key={item.label} className="flex items-center gap-3">
+              <span className="text-base">{item.emoji}</span>
+              <div>
+                <p className="text-xs font-semibold text-foreground">{item.label}</p>
+                <p className="text-[11px] text-muted-foreground">{item.desc}</p>
+              </div>
+            </div>
+          ))}
         </div>
 
         {/* Instruction */}
         {pageState === 'instruction' && (
           <div className="glass rounded-3xl p-6 flex flex-col items-center gap-5 text-center">
             <div className="space-y-2">
-              <p className="text-sm font-semibold text-foreground">위 문장을 소리 내어 읽어보세요</p>
+              <p className="text-sm font-semibold text-foreground">속도 + 강세를 한 번에</p>
               <p className="text-xs text-muted-foreground leading-relaxed">
-                각 음절을 정확하게 발음하고,<br />
+                강조 단어에 힘을 주면서,<br />
+                뉴스 앵커 속도로 읽어보세요.<br />
                 다 읽으면 <span className="text-primary font-semibold">바로 정지</span>해주세요.
               </p>
             </div>
@@ -249,10 +260,13 @@ export default function Stage5Training() {
         {/* Recording */}
         {pageState === 'recording' && (
           <div className="glass rounded-3xl p-6 flex flex-col items-center gap-5">
-            <p className="text-sm font-semibold text-primary animate-pulse">녹음 중 — 또렷하게 읽어보세요</p>
+            <p className="text-sm font-semibold text-primary animate-pulse">녹음 중 — 강조 단어를 짚어가세요</p>
             <canvas ref={canvasRef} className="w-full h-14 rounded-xl" />
             <p className="text-4xl font-black tabular-nums text-foreground">
               {recorder.duration}<span className="text-lg font-semibold text-muted-foreground ml-1">초</span>
+            </p>
+            <p className="text-[11px] text-muted-foreground">
+              목표 시간: {(SCRIPT_CHAR_COUNT / MAX_SPEED).toFixed(1)}~{(SCRIPT_CHAR_COUNT / MIN_SPEED).toFixed(1)}초
             </p>
             <button
               onClick={() => recorder.stop()}
@@ -267,8 +281,7 @@ export default function Stage5Training() {
         {pageState === 'analyzing' && (
           <div className="glass rounded-3xl p-10 flex flex-col items-center gap-4">
             <div className="w-10 h-10 rounded-full border-4 border-primary border-t-transparent animate-spin" />
-            <p className="text-sm text-muted-foreground">발음 정확도 분석 중이에요...</p>
-            <p className="text-[11px] text-muted-foreground">AI가 받아쓰기 중이에요, 잠시만 기다려주세요</p>
+            <p className="text-sm text-muted-foreground">종합 분석 중이에요...</p>
           </div>
         )}
 
@@ -281,69 +294,79 @@ export default function Stage5Training() {
                 ? 'bg-emerald-400/10 border border-emerald-400/30'
                 : 'bg-secondary/60'
             }`}>
-              <span className="text-2xl">{result.passed ? '🗣️' : '💪'}</span>
+              <span className="text-2xl">{result.passed ? '🏆' : '💪'}</span>
               <div>
                 <p className={`text-sm font-bold ${result.passed ? 'text-emerald-400' : 'text-foreground'}`}>
-                  {result.passed ? '발음 훈련 통과!' : '조금 더 또렷하게 읽어봐요'}
+                  {result.passed ? '종합 훈련 통과!' : '조금만 더 해봐요'}
                 </p>
                 <p className="text-[11px] text-muted-foreground">
                   {result.passed
-                    ? `정확도 ${result.accuracy}% — 훌륭한 발음이에요`
-                    : `정확도 ${result.accuracy}% — 목표 75% 이상`}
+                    ? '속도와 강세 모두 완벽해요'
+                    : `${!result.speedPassed ? '속도' : ''}${!result.speedPassed && !result.emphasisPassed ? ' · ' : ''}${!result.emphasisPassed ? '강세' : ''} 항목을 다시 확인해보세요`}
                 </p>
               </div>
             </div>
 
-            {/* Accuracy metric */}
+            {/* Metrics */}
             <div className="glass rounded-3xl p-5 space-y-4">
-              <div className="space-y-2">
+              {/* Speed */}
+              <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm">🗣️</span>
-                    <p className="text-xs font-semibold text-foreground">음소 정확도</p>
+                    <span className="text-sm">⚡</span>
+                    <p className="text-xs font-semibold text-foreground">속도</p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className={`text-lg font-black tabular-nums ${accuracyColor(result.accuracy)}`}>
-                      {result.accuracy}%
-                    </span>
+                    <span className="text-sm font-black tabular-nums">{result.speed.toFixed(1)}글자/초</span>
                     <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
-                      result.passed ? 'bg-emerald-400/20 text-emerald-400' : 'bg-orange-400/20 text-orange-400'
+                      result.speedPassed ? 'bg-emerald-400/20 text-emerald-400' : 'bg-orange-400/20 text-orange-400'
                     }`}>
-                      {result.passed ? '통과' : '개선 필요'}
+                      {result.speedPassed ? '통과' : result.speed < MIN_SPEED ? '느림' : '빠름'}
                     </span>
                   </div>
                 </div>
-                <div className="relative h-2.5 bg-secondary/60 rounded-full overflow-hidden">
-                  {/* Pass threshold marker */}
+                <div className="relative h-2 bg-secondary/60 rounded-full overflow-hidden">
                   <div
-                    className="absolute top-0 bottom-0 w-0.5 bg-emerald-400/60 z-10"
-                    style={{ left: '75%' }}
+                    className="absolute top-0 bottom-0 bg-emerald-400/30"
+                    style={{
+                      left: `${((MIN_SPEED - 2) / 7) * 100}%`,
+                      width: `${((MAX_SPEED - MIN_SPEED) / 7) * 100}%`,
+                    }}
                   />
                   <div
-                    className={`h-full rounded-full transition-all ${accuracyBarColor(result.accuracy)}`}
-                    style={{ width: `${result.accuracy}%` }}
+                    className={`absolute top-0.5 bottom-0.5 w-1 rounded-full ${result.speedPassed ? 'bg-emerald-400' : 'bg-orange-400'}`}
+                    style={{ left: `calc(${Math.min(100, Math.max(0, ((result.speed - 2) / 7) * 100))}% - 2px)` }}
                   />
                 </div>
                 <div className="flex justify-between text-[10px] text-muted-foreground">
-                  <span>0%</span>
-                  <span className="text-emerald-400">통과 기준 75%</span>
-                  <span>100%</span>
+                  <span>2글자/초</span>
+                  <span className="text-emerald-400">{MIN_SPEED}~{MAX_SPEED}</span>
+                  <span>9글자/초</span>
                 </div>
               </div>
 
               <div className="border-t border-border/40" />
 
-              {/* Transcript comparison */}
+              {/* Emphasis */}
               <div className="space-y-2">
-                <p className="text-[11px] font-semibold text-muted-foreground">AI 받아쓰기 결과</p>
-                <div className="rounded-xl bg-secondary/40 px-3 py-2.5">
-                  <p className="text-xs text-foreground leading-relaxed">
-                    {result.transcript || <span className="text-muted-foreground italic">인식 결과 없음</span>}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm">🎯</span>
+                    <p className="text-xs font-semibold text-foreground">강세</p>
+                  </div>
+                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                    result.emphasisPassed ? 'bg-emerald-400/20 text-emerald-400' : 'bg-orange-400/20 text-orange-400'
+                  }`}>
+                    {result.emphasisPassed ? '통과' : '개선 필요'}
+                  </span>
+                </div>
+                <div className="rounded-xl bg-secondary/60 p-2.5 text-center">
+                  <p className="text-[10px] text-muted-foreground">볼륨 변동률 (Energy CV)</p>
+                  <p className="text-sm font-black tabular-nums">{result.energyCV.toFixed(2)}</p>
+                  <p className={`text-[10px] font-bold ${result.energyCV >= ENERGY_CV_THRESHOLD ? 'text-emerald-400' : 'text-orange-400'}`}>
+                    기준 {ENERGY_CV_THRESHOLD}
                   </p>
                 </div>
-                <p className="text-[10px] text-muted-foreground">
-                  기준 문장과 다른 부분을 확인하고 다시 연습해보세요
-                </p>
               </div>
             </div>
 

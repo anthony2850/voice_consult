@@ -172,7 +172,7 @@ export default function TrainingClient() {
             </span>
             <div className="flex-1 text-left">
               <p className="text-sm font-bold text-primary">훈련 후 목소리 변화 분석하기</p>
-              <p className="text-[11px] text-muted-foreground">5단계 훈련 전후 목소리가 얼마나 달라졌는지 확인해요</p>
+              <p className="text-[11px] text-muted-foreground">6단계 훈련 전후 목소리가 얼마나 달라졌는지 확인해요</p>
             </div>
             <ChevronRight size={16} className="text-primary shrink-0" />
           </button>
