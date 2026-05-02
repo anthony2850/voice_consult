@@ -131,9 +131,9 @@ export default function DayTrainingClient({ dayIndex }: { dayIndex: number }) {
             </button>
             <div className="flex items-center gap-2 mb-1">
               <span className="text-2xl">🎵</span>
-              <h1 className="text-xl font-black text-white">7단계 · 음계 발성</h1>
+              <h1 className="text-xl font-black text-white">7단계 · 립 트릴</h1>
             </div>
-            <p className="text-white/70 text-sm">도-미-솔-미-도 음계를 따라가며 음정 감각을 키워보세요</p>
+            <p className="text-white/70 text-sm">입술을 부르르 떨며 도-미-솔-미-도 음계를 따라가 보세요</p>
           </div>
         </div>
         <Stage7Training />

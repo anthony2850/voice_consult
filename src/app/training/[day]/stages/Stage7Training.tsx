@@ -375,13 +375,29 @@ export default function Stage7Training() {
         {/* Instruction */}
         {pageState === 'instruction' && (
           <div className="glass rounded-3xl p-6 flex flex-col items-center gap-4 text-center">
-            <p className="text-sm font-semibold text-foreground">음계를 들으며 '아—' 소리 내기</p>
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              버튼을 누르면 <span className="text-primary font-semibold">도·미·솔·미·도</span> 순서로 음이 들려요.<br />
-              빨간 음표를 보면서 그 높낮이에 맞게<br />
-              <span className="text-primary font-semibold">'아——'</span> 하고 따라 소리 내보세요.<br />
-              C → D → E 3개 음계를 순서대로 진행해요.
+            <p className="text-sm font-semibold text-foreground">립 트릴 (Lip Trill) 훈련</p>
+
+            {/* How-to card */}
+            <div className="w-full rounded-2xl bg-secondary/60 p-4 space-y-2 text-left">
+              <p className="text-[11px] font-semibold text-muted-foreground mb-1">방법</p>
+              <div className="flex items-start gap-2 text-xs text-foreground">
+                <span className="shrink-0 text-primary font-bold">1.</span>
+                <span>입술을 가볍게 다물고 바람을 내보내 <span className="text-primary font-semibold">입술을 부르르</span> 떨리게 해요.</span>
+              </div>
+              <div className="flex items-start gap-2 text-xs text-foreground">
+                <span className="shrink-0 text-primary font-bold">2.</span>
+                <span>음이 들리면 그 높낮이에 맞춰 <span className="text-primary font-semibold">립 트릴을 유지</span>하며 따라가요.</span>
+              </div>
+              <div className="flex items-start gap-2 text-xs text-foreground">
+                <span className="shrink-0 text-primary font-bold">3.</span>
+                <span>도·미·솔·미·도 순서로 올라갔다 내려와요. C → D → E 3번 반복해요.</span>
+              </div>
+            </div>
+
+            <p className="text-[11px] text-muted-foreground leading-relaxed">
+              립 트릴은 성대 근육의 긴장을 풀고<br />발성 근육을 부드럽게 활성화시키는 워밍업이에요.
             </p>
+
             <button
               onClick={handleStart}
               className="flex items-center gap-2 px-8 py-3 rounded-2xl gradient-primary text-white font-bold shadow-lg shadow-primary/30 active:scale-95 transition-transform"
@@ -389,7 +405,7 @@ export default function Stage7Training() {
               <Play size={18} className="fill-white" />
               시작하기
             </button>
-            <p className="text-[11px] text-muted-foreground">소리가 잘 들리도록 볼륨을 높여두세요 🔊</p>
+            <p className="text-[11px] text-muted-foreground">볼륨을 높이고 시작하세요 🔊</p>
           </div>
         )}
 
@@ -397,9 +413,9 @@ export default function Stage7Training() {
         {pageState === 'playing' && (
           <div className="glass rounded-3xl px-5 py-4 flex flex-col items-center gap-2 text-center">
             <p className="text-base font-black text-primary">
-              {activeNote >= 0 ? `'${LABELS[activeNote]}' — 아——` : '···'}
+              {activeNote >= 0 ? `${LABELS[activeNote]} — 부르르르···` : '···'}
             </p>
-            <p className="text-xs text-muted-foreground">빨간 음표의 높낮이에 맞춰 '아—' 소리를 내주세요</p>
+            <p className="text-xs text-muted-foreground">입술을 부르르 떨며 빨간 음표의 높낮이를 따라가세요</p>
             <button
               onClick={handleRetry}
               className="mt-1 text-xs text-muted-foreground underline underline-offset-2"
@@ -415,7 +431,7 @@ export default function Stage7Training() {
             <div className="glass rounded-3xl p-5 text-center">
               <p className="text-xl font-black mb-1">🎉 훈련 완료!</p>
               <p className="text-xs text-muted-foreground">
-                도·미·솔·미·도 음계 발성을 3개 키로 마쳤어요
+                립 트릴 워밍업을 3개 키로 마쳤어요. 성대가 잘 풀렸을 거예요!
               </p>
             </div>
             <button

@@ -185,10 +185,10 @@ export const STAGES: Stage[] = [
   },
   {
     stageNum: 7,
-    name: '음계 발성',
+    name: '립 트릴',
     theme: 'accuracy',
     emoji: '🎵',
-    description: '도-미-솔-미-도 음계를 따라가며 음정 감각을 키워보아요',
+    description: '입술을 부르르 떨며 도-미-솔-미-도 음계를 따라가 보아요',
     script: ACCURACY_SCRIPTS[0],
     tip: THEME_TIPS.accuracy[0],
   },
