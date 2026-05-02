@@ -14,6 +14,7 @@ import Stage3Training from './stages/Stage3Training'
 import Stage4Training from './stages/Stage4Training'
 import Stage5Training from './stages/Stage5Training'
 import Stage6Training from './stages/Stage6Training'
+import Stage7Training from './stages/Stage7Training'
 
 function toDateStr(d: Date) {
   const y = d.getFullYear()
@@ -116,6 +117,28 @@ export default function DayTrainingClient({ dayIndex }: { dayIndex: number }) {
     } finally {
       setSaving(false)
     }
+  }
+
+  if (stage.stageNum === 7) {
+    return (
+      <div className="flex flex-col min-h-[calc(100vh-84px)]">
+        <div className="relative bg-gradient-to-br from-[#0093BA] to-[#00BECD] px-5 pt-10 pb-6 overflow-hidden">
+          <div className="absolute -top-10 -right-10 w-48 h-48 rounded-full bg-white/10 blur-3xl" />
+          <div className="absolute -bottom-10 -left-10 w-48 h-48 rounded-full bg-white/10 blur-3xl" />
+          <div className="relative z-10">
+            <button onClick={() => router.back()} className="flex items-center gap-1.5 text-white/70 hover:text-white mb-4 transition-colors">
+              <ArrowLeft size={16} /><span className="text-xs">훈련 목록</span>
+            </button>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-2xl">🎵</span>
+              <h1 className="text-xl font-black text-white">7단계 · 음계 발성</h1>
+            </div>
+            <p className="text-white/70 text-sm">도-미-솔-미-도 음계를 따라가며 음정 감각을 키워보세요</p>
+          </div>
+        </div>
+        <Stage7Training />
+      </div>
+    )
   }
 
   if (stage.stageNum === 6) {

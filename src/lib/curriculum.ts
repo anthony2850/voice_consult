@@ -183,6 +183,15 @@ export const STAGES: Stage[] = [
     script: SPEED_SCRIPTS[1],
     tip: THEME_TIPS.speed[0],
   },
+  {
+    stageNum: 7,
+    name: '음계 발성',
+    theme: 'accuracy',
+    emoji: '🎵',
+    description: '도-미-솔-미-도 음계를 따라가며 음정 감각을 키워보아요',
+    script: ACCURACY_SCRIPTS[0],
+    tip: THEME_TIPS.accuracy[0],
+  },
 ]
 
 function pickScript(scripts: Script[]): Script {
