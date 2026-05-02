@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { Mic, CheckCircle, RotateCcw } from 'lucide-react'
 import { getSupabase } from '@/lib/supabase'
-import { markStageComplete } from '@/lib/trainingProgress'
+import { markStageComplete, getTodayCompleted } from '@/lib/trainingProgress'
 import { usePitchDetector, autoCorrelate } from '@/hooks/usePitchDetector'
 import StreakPopup from '@/components/StreakPopup'
 
@@ -384,6 +384,7 @@ export default function Stage7Training() {
   async function handleComplete() {
     const passed = hitCount >= PASS_COUNT
     if (!passed) return
+    const isFirstToday = getTodayCompleted().length === 0
     markStageComplete(7)
     setSaving(true)
     try {
@@ -403,7 +404,8 @@ export default function Stage7Training() {
       setAllLogDates(dates)
       setStreakCount(calcStreak(dates))
       setAlreadyDone(true)
-      setShowStreak(true)
+      if (isFirstToday) setShowStreak(true)
+      else window.location.replace('/training')
     } finally {
       setSaving(false)
     }

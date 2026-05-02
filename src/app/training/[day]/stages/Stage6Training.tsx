@@ -6,7 +6,7 @@ import { useAudioRecorder } from '@/hooks/useAudioRecorder'
 import { useWaveform } from '@/hooks/useWaveform'
 import { extractAudioFeatures } from '@/lib/extractAudioFeatures'
 import { getSupabase } from '@/lib/supabase'
-import { markStageComplete } from '@/lib/trainingProgress'
+import { markStageComplete, getTodayCompleted } from '@/lib/trainingProgress'
 import { uploadTrainingAudio } from '@/lib/uploadTrainingAudio'
 import StreakPopup from '@/components/StreakPopup'
 
@@ -143,6 +143,7 @@ export default function Stage6Training() {
 
   async function handleComplete() {
     if (!result?.passed) return
+    const isFirstToday = getTodayCompleted().length === 0
     markStageComplete(6)
     setSaving(true)
     try {
@@ -168,7 +169,8 @@ export default function Stage6Training() {
       setAllLogDates(dates)
       setStreakCount(calcStreak(dates))
       setAlreadyDone(true)
-      setShowStreak(true)
+      if (isFirstToday) setShowStreak(true)
+      else window.location.replace('/training')
     } finally {
       setSaving(false)
     }

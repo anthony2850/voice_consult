@@ -17,17 +17,8 @@ function toDateStr(d: Date) {
 
 const DAY_KO = ['일', '월', '화', '수', '목', '금', '토']
 
-const MESSAGES: Record<number, string> = {
-  1: '첫 훈련을 완료했어요! 내일도 이어가볼까요?',
-  2: '이틀 연속이에요! 이대로 계속 가봐요 🔥',
-  3: '사흘 연속! 습관이 되고 있어요 💪',
-  7: '일주일 연속이에요! 정말 대단해요 🎉',
-}
-
-function getMessage(streak: number) {
-  if (streak >= 7) return MESSAGES[7]
-  if (streak >= 3) return MESSAGES[3]
-  return MESSAGES[streak] ?? '오늘도 훈련을 완료했어요! 내일도 한번 더 해봐요.'
+function getMessage() {
+  return '첫 훈련을 완료했어요!'
 }
 
 export default function StreakPopup({ streak, logDates, onClose }: Props) {
@@ -49,7 +40,7 @@ export default function StreakPopup({ streak, logDates, onClose }: Props) {
       {/* Speech bubble */}
       <div className="relative bg-secondary/80 rounded-2xl px-5 py-4 mb-2 mx-4">
         <p className="text-sm font-semibold text-foreground leading-relaxed text-center">
-          {getMessage(streak)}
+          {getMessage()}
         </p>
         {/* Arrow */}
         <div className="absolute left-1/2 -bottom-3 -translate-x-1/2 w-0 h-0

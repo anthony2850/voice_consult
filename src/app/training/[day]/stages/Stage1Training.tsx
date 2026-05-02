@@ -7,7 +7,7 @@ import { useWaveform } from '@/hooks/useWaveform'
 import { extractAudioFeatures } from '@/lib/extractAudioFeatures'
 import { getSupabase } from '@/lib/supabase'
 import { uploadTrainingAudio } from '@/lib/uploadTrainingAudio'
-import { markStageComplete } from '@/lib/trainingProgress'
+import { markStageComplete, getTodayCompleted } from '@/lib/trainingProgress'
 import StreakPopup from '@/components/StreakPopup'
 
 // ─── Thresholds ───────────────────────────────────────────────────────────────
@@ -130,7 +130,7 @@ export default function Stage1Training() {
 
   async function handleComplete() {
     if (!result?.passed) return
-    // localStorage에 즉시 저장 → unlock이 DB와 무관하게 동작
+    const isFirstToday = getTodayCompleted().length === 0
     markStageComplete(1)
     setSaving(true)
     try {
@@ -156,7 +156,8 @@ export default function Stage1Training() {
       setAllLogDates(dates)
       setStreakCount(calcStreak(dates))
       setAlreadyDone(true)
-      setShowStreak(true)
+      if (isFirstToday) setShowStreak(true)
+      else window.location.replace('/training')
     } finally {
       setSaving(false)
     }
