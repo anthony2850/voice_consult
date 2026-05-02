@@ -1,44 +1,39 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { Mic, Square, RotateCcw, CheckCircle } from 'lucide-react'
-import { useAudioRecorder } from '@/hooks/useAudioRecorder'
-import { useWaveform } from '@/hooks/useWaveform'
+import { Mic, RotateCcw, CheckCircle } from 'lucide-react'
 import { getSupabase } from '@/lib/supabase'
 import { markStageComplete, getTodayCompleted } from '@/lib/trainingProgress'
-import { uploadTrainingAudio } from '@/lib/uploadTrainingAudio'
 import { calcPER } from '@/lib/phonemeErrorRate'
 import StreakPopup from '@/components/StreakPopup'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const SCRIPT_TEXT = '간장 공장 공장장은 강 공장장이고 된장 공장 공장장은 장 공장장이다.'
 const SCRIPT_DESCRIPTION = "자음 'ㄱ'과 'ㅈ'의 정확한 발음을 연습하는 문장이에요."
-
-// 음소 오류율 25% 이하 = 통과 (정확도 75% 이상)
 const PER_PASS_THRESHOLD = 0.25
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function toDateStr(d: Date) {
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const dy = String(d.getDate()).padStart(2, '0')
-  return `${y}-${m}-${dy}`
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
-function calcStreak(dates: string[]): number {
+function calcStreak(dates: string[]) {
   const unique = [...new Set(dates)].sort((a, b) => b.localeCompare(a))
   const today = toDateStr(new Date())
-  let count = 0
-  let expected = today
+  let count = 0, expected = today
   for (const date of unique) {
-    if (date === expected) {
-      count++
-      const d = new Date(expected)
-      d.setDate(d.getDate() - 1)
-      expected = toDateStr(d)
-    } else if (date < expected) break
+    if (date === expected) { count++; const d = new Date(expected); d.setDate(d.getDate() - 1); expected = toDateStr(d) }
+    else if (date < expected) break
   }
   return count
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function getSpeechRecognition(): any | null {
+  if (typeof window === 'undefined') return null
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+  return SR ? new SR() : null
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -49,7 +44,8 @@ interface AnalysisResult {
   passed: boolean
 }
 
-type PageState = 'instruction' | 'recording' | 'analyzing' | 'result'
+type PageState = 'instruction' | 'recording' | 'result'
+type SpeechError = 'unsupported' | 'no-speech' | 'not-allowed' | 'network' | null
 
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function Stage5Training() {
@@ -62,69 +58,98 @@ export default function Stage5Training() {
   const [showStreak, setShowStreak] = useState(false)
   const [streakCount, setStreakCount] = useState(0)
   const [allLogDates, setAllLogDates] = useState<string[]>([])
-  const [transcribeError, setTranscribeError] = useState<'api' | 'empty' | null>(null)
+  const [speechError, setSpeechError] = useState<SpeechError>(null)
+  const [dots, setDots] = useState('.')
 
-  const recorder = useAudioRecorder(30)
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  useWaveform({ analyser: recorder.analyserNode, canvasRef, active: recorder.state === 'recording' })
-  const analyzingRef = useRef(false)
-  const audioBlobRef = useRef<Blob | null>(null)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const recognitionRef = useRef<any>(null)
+  const dotsRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
+  // Check completion status
   useEffect(() => {
     async function checkDone() {
       const supabase = getSupabase()
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data } = await (supabase as any)
-        .from('user_training_logs')
-        .select('stage_num, log_date')
-        .eq('user_id', user.id)
+      const { data } = await (supabase as any).from('user_training_logs').select('stage_num, log_date').eq('user_id', user.id)
       if (data) {
         setAlreadyDone(data.some((r: { stage_num: number; log_date: string }) => r.stage_num === 5 && r.log_date === todayStr))
         setAllLogDates(data.map((r: { log_date: string }) => r.log_date))
       }
     }
     checkDone()
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [todayStr])
 
-  useEffect(() => {
-    if (recorder.state === 'recorded' && recorder.audioBlob && !analyzingRef.current) {
-      analyzingRef.current = true
-      runAnalysis(recorder.audioBlob)
-    }
-    if (recorder.state === 'idle') {
-      analyzingRef.current = false
-    }
-  }, [recorder.state, recorder.audioBlob]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  async function runAnalysis(blob: Blob) {
-    audioBlobRef.current = blob
-    setPageState('analyzing')
-    setTranscribeError(null)
-
-    let transcript = ''
-    try {
-      const fd = new FormData()
-      fd.append('audio', blob)
-      const res = await fetch('/api/transcribe', { method: 'POST', body: fd })
-      if (!res.ok) throw new Error('api')
-      const json = await res.json()
-      transcript = (json.text as string) ?? ''
-    } catch {
-      setTranscribeError('api')
-      setPageState('instruction')
-      recorder.reset()
+  function startRecording() {
+    setSpeechError(null)
+    const recognition = getSpeechRecognition()
+    if (!recognition) {
+      setSpeechError('unsupported')
       return
     }
 
+    recognition.lang = 'ko-KR'
+    recognition.interimResults = false
+    recognition.maxAlternatives = 1
+    // Allow longer speech before auto-stopping
+    recognition.continuous = false
+    recognitionRef.current = recognition
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    recognition.onresult = (event: any) => {
+      const transcript = event.results[0]?.[0]?.transcript ?? ''
+      stopDots()
+      runAnalysis(transcript)
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    recognition.onerror = (event: any) => {
+      stopDots()
+      setPageState('instruction')
+      if (event.error === 'no-speech') setSpeechError('no-speech')
+      else if (event.error === 'not-allowed') setSpeechError('not-allowed')
+      else if (event.error === 'network') setSpeechError('network')
+      else setSpeechError('no-speech')
+    }
+
+    recognition.onend = () => {
+      stopDots()
+      // If still in recording state with no result → no-speech
+      setPageState(prev => {
+        if (prev === 'recording') { setSpeechError('no-speech'); return 'instruction' }
+        return prev
+      })
+    }
+
+    recognition.start()
+    setPageState('recording')
+    startDots()
+  }
+
+  function stopRecording() {
+    recognitionRef.current?.stop()
+    stopDots()
+  }
+
+  function startDots() {
+    let i = 0
+    dotsRef.current = setInterval(() => {
+      i = (i + 1) % 3
+      setDots('.'.repeat(i + 1))
+    }, 500)
+  }
+
+  function stopDots() {
+    if (dotsRef.current) { clearInterval(dotsRef.current); dotsRef.current = null }
+  }
+
+  function runAnalysis(transcript: string) {
     if (!transcript.trim()) {
-      setTranscribeError('empty')
+      setSpeechError('no-speech')
       setPageState('instruction')
-      recorder.reset()
       return
     }
-
     const per = calcPER(SCRIPT_TEXT, transcript)
     const accuracy = Math.max(0, Math.round((1 - per) * 100))
     setResult({ per, accuracy, transcript, passed: per <= PER_PASS_THRESHOLD })
@@ -140,21 +165,13 @@ export default function Stage5Training() {
       const supabase = getSupabase()
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
-      const audioPath = audioBlobRef.current
-        ? await uploadTrainingAudio(user.id, 5, todayStr, audioBlobRef.current)
-        : null
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { error: saveError } = await (supabase as any).from('user_training_logs').insert(
-        { user_id: user.id, log_date: todayStr, theme: 'accuracy', score: result.accuracy, stage_num: 5, audio_url: audioPath },
+        { user_id: user.id, log_date: todayStr, theme: 'accuracy', score: result.accuracy, stage_num: 5 },
       )
-      if (saveError && saveError.code !== '23505') {
-        console.error('[stage5] save failed:', saveError)
-      }
+      if (saveError && saveError.code !== '23505') console.error('[stage5] save failed:', saveError)
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data } = await (supabase as any)
-        .from('user_training_logs')
-        .select('log_date')
-        .eq('user_id', user.id)
+      const { data } = await (supabase as any).from('user_training_logs').select('log_date').eq('user_id', user.id)
       const dates: string[] = [...new Set([...(data?.map((r: { log_date: string }) => r.log_date) ?? []), todayStr])]
       setAllLogDates(dates)
       setStreakCount(calcStreak(dates))
@@ -167,13 +184,14 @@ export default function Stage5Training() {
   }
 
   function handleRetry() {
-    recorder.reset()
     setResult(null)
-    setTranscribeError(null)
+    setSpeechError(null)
     setPageState('instruction')
   }
 
-  // ─── Accuracy color ──────────────────────────────────────────────────────
+  useEffect(() => () => { recognitionRef.current?.abort(); stopDots() }, [])
+
+  // ─── Accuracy colors ───────────────────────────────────────────────────────
   function accuracyColor(acc: number) {
     if (acc >= 80) return 'text-emerald-400'
     if (acc >= 60) return 'text-cyan-400'
@@ -187,7 +205,14 @@ export default function Stage5Training() {
     return 'bg-rose-400'
   }
 
-  // ── Render ────────────────────────────────────────────────────────────────
+  const errorMessages: Record<NonNullable<SpeechError>, string> = {
+    unsupported: '이 브라우저는 음성 인식을 지원하지 않아요. Chrome 또는 Safari를 사용해주세요.',
+    'no-speech': '목소리가 인식되지 않았어요. 마이크에 가까이 대고 또렷하게 읽어보세요.',
+    'not-allowed': '마이크 접근 권한이 필요해요. 브라우저 설정에서 허용해주세요.',
+    network: '네트워크 오류가 발생했어요. 인터넷 연결을 확인해주세요.',
+  }
+
+  // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <>
       {showStreak && (
@@ -206,13 +231,11 @@ export default function Stage5Training() {
           </div>
         )}
 
-        {transcribeError && (
+        {speechError && (
           <div className="flex items-start gap-3 bg-rose-400/10 border border-rose-400/30 rounded-2xl px-4 py-3">
             <span className="text-lg shrink-0">⚠️</span>
             <p className="text-sm text-rose-400 font-medium leading-relaxed">
-              {transcribeError === 'api'
-                ? '음성 인식 서버 오류가 발생했어요. 잠시 후 다시 시도해주세요.'
-                : '목소리가 인식되지 않았어요. 마이크에 가까이 대고 또렷하게 읽어보세요.'}
+              {errorMessages[speechError]}
             </p>
           </div>
         )}
@@ -227,7 +250,7 @@ export default function Stage5Training() {
           <div className="flex items-start gap-2 pt-1 border-t border-border/40">
             <span className="text-primary mt-0.5">💡</span>
             <p className="text-[11px] text-muted-foreground leading-relaxed">
-              각 음절을 또렷하게 끊어 읽어보세요. AI가 받아적은 내용을 기준 문장과 비교해 음소 정확도를 측정해요.
+              각 음절을 또렷하게 끊어 읽어보세요. 브라우저 음성 인식이 받아적은 내용을 기준 문장과 비교해 정확도를 측정해요.
             </p>
           </div>
         </div>
@@ -238,54 +261,44 @@ export default function Stage5Training() {
             <div className="space-y-2">
               <p className="text-sm font-semibold text-foreground">위 문장을 소리 내어 읽어보세요</p>
               <p className="text-xs text-muted-foreground leading-relaxed">
-                각 음절을 정확하게 발음하고,<br />
-                다 읽으면 <span className="text-primary font-semibold">바로 정지</span>해주세요.
+                버튼을 누른 뒤 문장을 처음부터 끝까지 읽어주세요.<br />
+                다 읽으면 자동으로 인식이 완료돼요.
               </p>
             </div>
             <button
-              onClick={() => { setPageState('recording'); recorder.start() }}
+              onClick={startRecording}
               className="w-16 h-16 rounded-full gradient-primary flex items-center justify-center shadow-xl shadow-primary/30 active:scale-95 transition-transform"
             >
               <Mic size={26} className="text-white" />
             </button>
-            <p className="text-[11px] text-muted-foreground">버튼을 누르는 즉시 녹음이 시작돼요</p>
+            <p className="text-[11px] text-muted-foreground">버튼을 누르는 즉시 인식이 시작돼요</p>
           </div>
         )}
 
         {/* Recording */}
         {pageState === 'recording' && (
-          <div className="glass rounded-3xl p-6 flex flex-col items-center gap-5">
-            <p className="text-sm font-semibold text-primary animate-pulse">녹음 중 — 또렷하게 읽어보세요</p>
-            <canvas ref={canvasRef} className="w-full h-14 rounded-xl" />
-            <p className="text-4xl font-black tabular-nums text-foreground">
-              {recorder.duration}<span className="text-lg font-semibold text-muted-foreground ml-1">초</span>
-            </p>
+          <div className="glass rounded-3xl p-6 flex flex-col items-center gap-5 text-center">
+            <div className="w-14 h-14 rounded-full bg-primary/20 flex items-center justify-center">
+              <Mic size={26} className="text-primary animate-pulse" />
+            </div>
+            <div className="space-y-1">
+              <p className="text-sm font-semibold text-primary">듣고 있어요{dots}</p>
+              <p className="text-xs text-muted-foreground">문장을 처음부터 끝까지 또렷하게 읽어주세요</p>
+            </div>
             <button
-              onClick={() => recorder.stop()}
-              className="w-16 h-16 rounded-full bg-red-500 flex items-center justify-center shadow-xl shadow-red-500/30 active:scale-95 transition-transform"
+              onClick={stopRecording}
+              className="px-6 py-2.5 rounded-xl bg-secondary/80 text-sm text-muted-foreground active:scale-95 transition-all"
             >
-              <Square size={22} className="text-white fill-white" />
+              취소
             </button>
-          </div>
-        )}
-
-        {/* Analyzing */}
-        {pageState === 'analyzing' && (
-          <div className="glass rounded-3xl p-10 flex flex-col items-center gap-4">
-            <div className="w-10 h-10 rounded-full border-4 border-primary border-t-transparent animate-spin" />
-            <p className="text-sm text-muted-foreground">발음 정확도 분석 중이에요...</p>
-            <p className="text-[11px] text-muted-foreground">AI가 받아쓰기 중이에요, 잠시만 기다려주세요</p>
           </div>
         )}
 
         {/* Result */}
         {pageState === 'result' && result && (
           <div className="space-y-4">
-            {/* Overall verdict */}
             <div className={`rounded-3xl px-5 py-4 flex items-center gap-3 ${
-              result.passed
-                ? 'bg-emerald-400/10 border border-emerald-400/30'
-                : 'bg-secondary/60'
+              result.passed ? 'bg-emerald-400/10 border border-emerald-400/30' : 'bg-secondary/60'
             }`}>
               <span className="text-2xl">{result.passed ? '🗣️' : '💪'}</span>
               <div>
@@ -293,14 +306,11 @@ export default function Stage5Training() {
                   {result.passed ? '발음 훈련 통과!' : '조금 더 또렷하게 읽어봐요'}
                 </p>
                 <p className="text-[11px] text-muted-foreground">
-                  {result.passed
-                    ? `정확도 ${result.accuracy}% — 훌륭한 발음이에요`
-                    : `정확도 ${result.accuracy}% — 목표 75% 이상`}
+                  {result.passed ? `정확도 ${result.accuracy}% — 훌륭한 발음이에요` : `정확도 ${result.accuracy}% — 목표 75% 이상`}
                 </p>
               </div>
             </div>
 
-            {/* Accuracy metric */}
             <div className="glass rounded-3xl p-5 space-y-4">
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
@@ -320,11 +330,7 @@ export default function Stage5Training() {
                   </div>
                 </div>
                 <div className="relative h-2.5 bg-secondary/60 rounded-full overflow-hidden">
-                  {/* Pass threshold marker */}
-                  <div
-                    className="absolute top-0 bottom-0 w-0.5 bg-emerald-400/60 z-10"
-                    style={{ left: '75%' }}
-                  />
+                  <div className="absolute top-0 bottom-0 w-0.5 bg-emerald-400/60 z-10" style={{ left: '75%' }} />
                   <div
                     className={`h-full rounded-full transition-all ${accuracyBarColor(result.accuracy)}`}
                     style={{ width: `${result.accuracy}%` }}
@@ -339,21 +345,17 @@ export default function Stage5Training() {
 
               <div className="border-t border-border/40" />
 
-              {/* Transcript comparison */}
               <div className="space-y-2">
-                <p className="text-[11px] font-semibold text-muted-foreground">AI 받아쓰기 결과</p>
+                <p className="text-[11px] font-semibold text-muted-foreground">인식된 발음</p>
                 <div className="rounded-xl bg-secondary/40 px-3 py-2.5">
                   <p className="text-xs text-foreground leading-relaxed">
                     {result.transcript || <span className="text-muted-foreground italic">인식 결과 없음</span>}
                   </p>
                 </div>
-                <p className="text-[10px] text-muted-foreground">
-                  기준 문장과 다른 부분을 확인하고 다시 연습해보세요
-                </p>
+                <p className="text-[10px] text-muted-foreground">기준 문장과 다른 부분을 확인하고 다시 연습해보세요</p>
               </div>
             </div>
 
-            {/* Actions */}
             <div className="space-y-3">
               {result.passed && (
                 <button
@@ -368,7 +370,7 @@ export default function Stage5Training() {
               )}
               <button
                 onClick={handleRetry}
-                className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-secondary/60 text-sm text-muted-foreground hover:text-foreground active:scale-95 transition-all"
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-secondary/60 text-sm text-muted-foreground active:scale-95 transition-all"
               >
                 <RotateCcw size={14} />
                 다시 도전하기
