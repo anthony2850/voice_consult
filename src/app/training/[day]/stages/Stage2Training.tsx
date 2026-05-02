@@ -85,7 +85,7 @@ export default function Stage2Training() {
         .select('stage_num, log_date')
         .eq('user_id', user.id)
       if (data) {
-        setAlreadyDone(data.some((r: { stage_num: number; log_date: string }) => r.stage_num === 2 && r.log_date === todayStr))
+        setAlreadyDone(data.some((r: { stage_num: number; log_date: string }) => r.stage_num === 3 && r.log_date === todayStr))
         setAllLogDates(data.map((r: { log_date: string }) => r.log_date))
       }
     }
@@ -164,21 +164,21 @@ export default function Stage2Training() {
 
   async function handleComplete() {
     const isFirstToday = getTodayCompleted().length === 0
-    markStageComplete(2)
+    markStageComplete(3)
     setSaving(true)
     try {
       const supabase = getSupabase()
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
       const audioPath = audioBlobRef.current
-        ? await uploadTrainingAudio(user.id, 2, todayStr, audioBlobRef.current)
+        ? await uploadTrainingAudio(user.id, 3, todayStr, audioBlobRef.current)
         : null
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { error: saveError } = await (supabase as any).from('user_training_logs').insert(
-        { user_id: user.id, log_date: todayStr, theme: 'speed', score: 100, stage_num: 2, audio_url: audioPath },
+        { user_id: user.id, log_date: todayStr, theme: 'speed', score: 100, stage_num: 3, audio_url: audioPath },
       )
       if (saveError && saveError.code !== '23505') {
-        console.error('[stage2] save failed:', saveError)
+        console.error('[stage3] save failed:', saveError)
       }
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data } = await (supabase as any)

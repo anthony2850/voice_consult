@@ -284,7 +284,7 @@ export default function Stage7Training() {
         .from('user_training_logs').select('stage_num, log_date').eq('user_id', user.id)
       if (data) {
         setAlreadyDone(data.some((r: { stage_num: number; log_date: string }) =>
-          r.stage_num === 7 && r.log_date === todayStr))
+          r.stage_num === 2 && r.log_date === todayStr))
         setAllLogDates(data.map((r: { log_date: string }) => r.log_date))
       }
     }
@@ -359,7 +359,7 @@ export default function Stage7Training() {
 
   async function handleComplete() {
     const isFirstToday = getTodayCompleted().length === 0
-    markStageComplete(7)
+    markStageComplete(2)
     setSaving(true)
     try {
       const supabase = getSupabase()
@@ -368,9 +368,9 @@ export default function Stage7Training() {
       if (!user) return
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { error } = await (supabase as any).from('user_training_logs').insert({
-        user_id: user.id, log_date: todayStr, theme: 'accuracy', score: 100, stage_num: 7,
+        user_id: user.id, log_date: todayStr, theme: 'accuracy', score: 100, stage_num: 2,
       })
-      if (error && error.code !== '23505') console.error('[stage7]', error)
+      if (error && error.code !== '23505') console.error('[stage2-liptrill]', error)
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data } = await (supabase as any)
         .from('user_training_logs').select('log_date').eq('user_id', user.id)
