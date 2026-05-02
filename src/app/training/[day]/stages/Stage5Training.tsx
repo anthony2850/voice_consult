@@ -62,7 +62,7 @@ export default function Stage5Training() {
   const [showStreak, setShowStreak] = useState(false)
   const [streakCount, setStreakCount] = useState(0)
   const [allLogDates, setAllLogDates] = useState<string[]>([])
-  const [transcribeError, setTranscribeError] = useState(false)
+  const [transcribeError, setTranscribeError] = useState<'api' | 'empty' | null>(null)
 
   const recorder = useAudioRecorder(30)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -101,25 +101,25 @@ export default function Stage5Training() {
   async function runAnalysis(blob: Blob) {
     audioBlobRef.current = blob
     setPageState('analyzing')
-    setTranscribeError(false)
+    setTranscribeError(null)
 
     let transcript = ''
     try {
       const fd = new FormData()
       fd.append('audio', blob)
       const res = await fetch('/api/transcribe', { method: 'POST', body: fd })
-      if (!res.ok) throw new Error('transcribe failed')
+      if (!res.ok) throw new Error('api')
       const json = await res.json()
       transcript = (json.text as string) ?? ''
     } catch {
-      setTranscribeError(true)
+      setTranscribeError('api')
       setPageState('instruction')
       recorder.reset()
       return
     }
 
     if (!transcript.trim()) {
-      setTranscribeError(true)
+      setTranscribeError('empty')
       setPageState('instruction')
       recorder.reset()
       return
@@ -169,7 +169,7 @@ export default function Stage5Training() {
   function handleRetry() {
     recorder.reset()
     setResult(null)
-    setTranscribeError(false)
+    setTranscribeError(null)
     setPageState('instruction')
   }
 
@@ -207,9 +207,13 @@ export default function Stage5Training() {
         )}
 
         {transcribeError && (
-          <div className="flex items-center gap-3 bg-rose-400/10 border border-rose-400/30 rounded-2xl px-4 py-3">
-            <span className="text-lg">⚠️</span>
-            <p className="text-sm text-rose-400 font-medium">발음이 인식되지 않았어요. 더 크고 또렷하게 다시 읽어보세요.</p>
+          <div className="flex items-start gap-3 bg-rose-400/10 border border-rose-400/30 rounded-2xl px-4 py-3">
+            <span className="text-lg shrink-0">⚠️</span>
+            <p className="text-sm text-rose-400 font-medium leading-relaxed">
+              {transcribeError === 'api'
+                ? '음성 인식 서버 오류가 발생했어요. 잠시 후 다시 시도해주세요.'
+                : '목소리가 인식되지 않았어요. 마이크에 가까이 대고 또렷하게 읽어보세요.'}
+            </p>
           </div>
         )}
 

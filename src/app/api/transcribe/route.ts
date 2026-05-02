@@ -22,7 +22,13 @@ export async function POST(req: NextRequest) {
   }
 
   const openai = new OpenAI({ apiKey })
-  const file = new File([audioFile], 'voice.webm', { type: audioFile.type || 'audio/webm' })
+
+  // File extension must match content — Safari/iOS records mp4, others webm/ogg
+  const mimeType = audioFile.type || 'audio/webm'
+  const ext = mimeType.includes('mp4') ? 'm4a'
+    : mimeType.includes('ogg') ? 'ogg'
+    : 'webm'
+  const file = new File([audioFile], `voice.${ext}`, { type: mimeType })
 
   const transcription = await openai.audio.transcriptions.create({
     file,
