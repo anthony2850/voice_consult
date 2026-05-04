@@ -2,29 +2,16 @@
 
 import { useRef, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Mic, Square, RotateCcw, Play, Pause, ChevronRight, AlertCircle, Sparkles } from 'lucide-react'
+import { Mic, Square, RotateCcw, Play, Pause, ChevronRight, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { useAudioRecorder } from '@/hooks/useAudioRecorder'
 import { useWaveform } from '@/hooks/useWaveform'
 import { saveVoiceRecord } from '@/lib/voiceDB'
-import { extractAudioFeatures } from '@/lib/extractAudioFeatures'
 
 const MAX_SECONDS = 30
 const MIN_SECONDS = 3   // minimum recording before allowing proceed
 
-const VOCAL_TIPS = [
-  { emoji: '🎯', tip: '복식호흡을 하면 목소리에 깊이가 생겨요. 배에서 소리를 밀어올리듯 발성해보세요.' },
-  { emoji: '💧', tip: '녹음 전 미지근한 물 한 모금이 성대를 풀어줘요. 차가운 음료는 피하세요.' },
-  { emoji: '📐', tip: '턱을 약간 당기고 시선을 정면보다 살짝 위로 향하면 공명이 잘 돼요.' },
-  { emoji: '🐢', tip: '말 속도를 평소보다 10% 느리게 해보세요. 듣는 사람이 신뢰감을 더 느껴요.' },
-  { emoji: '🌊', tip: '문장 끝을 내려서 마무리하면 자신감 있는 인상을 줘요.' },
-  { emoji: '🎵', tip: '중요한 단어를 강조할 때 살짝 높은 음으로 올리면 집중도가 높아져요.' },
-  { emoji: '🧘', tip: '발성 전 "음~" 허밍 5초로 성대를 워밍업하면 목이 덜 쉬어요.' },
-  { emoji: '😊', tip: '살짝 미소를 지으면서 말하면 목소리 톤이 자연스럽게 밝아져요.' },
-  { emoji: '🔊', tip: '가슴에 손을 얹고 말할 때 진동이 느껴지면 흉성 공명이 잘 되는 거예요.' },
-  { emoji: '⏸️', tip: '말 중간 0.5초 간격을 두면 듣는 사람에게 흡인력 있는 목소리로 느껴져요.' },
-]
 
 function formatTime(s: number) {
   const m = Math.floor(s / 60).toString().padStart(2, '0')
@@ -38,14 +25,6 @@ export default function RecordClient() {
   const audioRef = useRef<HTMLAudioElement>(null)
   const [isPlaying, setIsPlaying] = useState(false)
   const [playProgress, setPlayProgress] = useState(0)
-
-  const [analyzing, setAnalyzing] = useState(false)
-  const [analyzeProgress, setAnalyzeProgress] = useState(0)
-  const [currentTip, setCurrentTip] = useState(VOCAL_TIPS[0])
-
-  useEffect(() => {
-    setCurrentTip(VOCAL_TIPS[Math.floor(Math.random() * VOCAL_TIPS.length)])
-  }, [])
 
   const { state, duration, audioBlob, audioUrl, analyserNode, start, stop, reset, error } =
     useAudioRecorder(MAX_SECONDS)
@@ -89,78 +68,13 @@ export default function RecordClient() {
 
   const handleProceed = async () => {
     if (!audioBlob) return
-    setAnalyzing(true)
-    setAnalyzeProgress(0)
-
-    // fake progress animation while waiting for API
-    const progressInterval = setInterval(() => {
-      setAnalyzeProgress((p) => Math.min(p + Math.random() * 6 + 2, 90))
-    }, 300)
-
-    try {
-      const formData1 = new FormData()
-      formData1.append('audio', audioBlob, 'voice.webm')
-
-      const [emotionRes, audioFeatures] = await Promise.all([
-        fetch('/api/analyze-voice', { method: 'POST', body: formData1 }),
-        extractAudioFeatures(audioBlob),
-      ])
-
-      const emotionData = await emotionRes.json()
-
-      sessionStorage.setItem('voiceEmotions', JSON.stringify(emotionData.emotions ?? null))
-      sessionStorage.setItem('audioFeatures', JSON.stringify(audioFeatures))
-
-      // IndexedDB에 오디오 + 분석 결과 저장 (비동기, 실패해도 결과 페이지 이동은 계속)
-      const rawEmotions: Record<string, number> = emotionData.emotions ?? {}
-      const top5 = Object.entries(rawEmotions)
-        .map(([name, score]) => ({ name, score }))
-        .sort((a, b) => b.score - a.score)
-        .slice(0, 5)
-
-      saveVoiceRecord(audioBlob, {
-        emotions: top5,
-        audioFeatures: audioFeatures,
-      }).catch((e) => console.warn('[voiceDB] 저장 실패:', e))
-
-      setAnalyzeProgress(100)
-      setTimeout(() => router.push('/result'), 400)
-    } catch {
-      clearInterval(progressInterval)
-      setAnalyzing(false)
-      setAnalyzeProgress(0)
-    } finally {
-      clearInterval(progressInterval)
-    }
+    saveVoiceRecord(audioBlob, { emotions: null, audioFeatures: null }).catch((e) =>
+      console.warn('[voiceDB] 저장 실패:', e),
+    )
+    router.push('/')
   }
 
   const progressPct = (duration / MAX_SECONDS) * 100
-
-  // ── 분석 중 로딩 화면 ──────────────────────────────────
-  if (analyzing) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-84px)] px-5 text-center">
-        <div className="relative mb-8">
-          <span className="absolute inset-0 rounded-full gradient-primary opacity-20 animate-ping scale-150" />
-          <div className="relative w-20 h-20 rounded-full gradient-primary flex items-center justify-center shadow-2xl shadow-primary/40">
-            <Sparkles size={32} className="text-white animate-spin" style={{ animationDuration: '2s' }} />
-          </div>
-        </div>
-        <h2 className="text-xl font-bold text-foreground mb-2">AI가 분석 중이에요</h2>
-        <p className="text-sm text-muted-foreground mb-6">목소리의 감정·톤·에너지 패턴을 읽고 있어요</p>
-        <div className="w-full max-w-[300px] bg-muted rounded-2xl px-4 py-3 mb-6 text-center">
-          <p className="text-xs font-semibold text-primary mb-1">발성 꿀팁 {currentTip.emoji}</p>
-          <p className="text-sm text-foreground leading-relaxed">{currentTip.tip}</p>
-        </div>
-        <div className="w-full max-w-[280px]">
-          <div className="h-2 rounded-full bg-border overflow-hidden">
-            <div className="h-full gradient-primary rounded-full transition-all duration-300" style={{ width: `${analyzeProgress}%` }} />
-          </div>
-          <p className="text-xs text-muted-foreground mt-2">{Math.floor(analyzeProgress)}%</p>
-        </div>
-      </div>
-    )
-  }
 
   // ── States ────────────────────────────────────────────
   return (

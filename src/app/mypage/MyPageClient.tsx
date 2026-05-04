@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { User, LogOut, ChevronRight, Dumbbell, Archive } from 'lucide-react'
+import { User, LogOut, ChevronRight, Archive } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { getSupabase } from '@/lib/supabase'
 import type { User as SupabaseUser } from '@supabase/supabase-js'
@@ -73,18 +73,10 @@ export default function MyPageClient() {
         <div className="glass rounded-3xl overflow-hidden">
           <button
             onClick={() => router.push('/archive')}
-            className="w-full flex items-center gap-3 px-5 py-4 hover:bg-white/5 active:bg-white/10 transition-colors border-b border-border/40"
+            className="w-full flex items-center gap-3 px-5 py-4 hover:bg-white/5 active:bg-white/10 transition-colors"
           >
             <Archive size={18} className="text-primary" />
             <span className="flex-1 text-sm font-medium text-left">분석 기록 보기</span>
-            <ChevronRight size={16} className="text-muted-foreground" />
-          </button>
-          <button
-            onClick={() => router.push('/training')}
-            className="w-full flex items-center gap-3 px-5 py-4 hover:bg-white/5 active:bg-white/10 transition-colors"
-          >
-            <Dumbbell size={18} className="text-primary" />
-            <span className="flex-1 text-sm font-medium text-left">훈련 플랜</span>
             <ChevronRight size={16} className="text-muted-foreground" />
           </button>
         </div>
