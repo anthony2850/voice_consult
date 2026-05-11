@@ -2,12 +2,13 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Mic, Archive, User } from 'lucide-react'
+import { Mic, Dumbbell, Archive, User } from 'lucide-react'
 
 const NAV_ITEMS = [
-  { href: '/record',  label: '목소리 녹음', icon: Mic,     activeOn: ['/record'] },
-  { href: '/archive', label: '아카이브',    icon: Archive, activeOn: ['/archive'] },
-  { href: '/mypage',  label: '마이페이지',  icon: User,    activeOn: ['/mypage'] },
+  { href: '/record',   label: '목소리 분석', icon: Mic,      activeOn: ['/record', '/result'] },
+  { href: '/training', label: '훈련하기',    icon: Dumbbell, activeOn: ['/training'] },
+  { href: '/archive',  label: '아카이브',    icon: Archive,  activeOn: ['/archive'] },
+  { href: '/mypage',   label: '마이페이지',  icon: User,     activeOn: ['/mypage'] },
 ]
 
 export default function BottomNav() {
