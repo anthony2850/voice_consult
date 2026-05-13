@@ -98,9 +98,6 @@ export default function LoginRequired({ children }: { children: React.ReactNode 
           </button>
         </div>
 
-        <p className="text-center text-[11px] text-muted-foreground mt-4">
-          무료 · 언제든 탈퇴 가능
-        </p>
       </div>
     )
   }

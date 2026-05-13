@@ -96,9 +96,6 @@ export default function LoginCTA() {
           </button>
         </div>
 
-        <p className="text-center text-[11px] text-muted-foreground mt-3">
-          무료 · 분석 결과 영구 저장 · 언제든 탈퇴 가능
-        </p>
       </div>
     </div>
   )
