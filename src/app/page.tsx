@@ -1,7 +1,5 @@
-import Link from 'next/link'
 import Image from 'next/image'
 import { Mic, Sparkles } from 'lucide-react'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import StartRecordButton from '@/components/StartRecordButton'
 import HomeHero from '@/components/HomeHero'
@@ -26,15 +24,6 @@ export default function HomePage() {
             AI
           </Badge>
         </div>
-        <Link href="/api/auth/signin">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-xs text-muted-foreground border border-border/60 rounded-full h-8 px-3 hover:bg-secondary hover:text-foreground"
-          >
-            카카오 로그인
-          </Button>
-        </Link>
       </header>
 
       {/* ── Hero ───────────────────────────────────── */}
