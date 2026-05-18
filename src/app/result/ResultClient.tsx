@@ -636,8 +636,6 @@ export default function ResultClient() {
 
   if (emotions.length === 0) return null
 
-  const top5 = emotions.slice(0, 5)
-
   return (
     <div
       className={`flex flex-col min-h-[calc(100vh-84px)] pb-8 transition-opacity duration-500 ${revealed ? 'opacity-100' : 'opacity-0'}`}
@@ -654,23 +652,10 @@ export default function ResultClient() {
             {persona ? `${persona.emoji} ${persona.name}` : '감정 분석 리포트'}
           </h1>
           {persona && (
-            <p className="text-white/90 text-sm font-semibold mb-1">
+            <p className="text-white/90 text-sm font-semibold">
               일치율 {similarity}% · {persona.category}
             </p>
           )}
-          <p className="text-white/70 text-sm">
-            AI가 목소리에서 감지한 49가지 감정 지표
-          </p>
-          <div className="flex gap-2 mt-4 flex-wrap">
-            {top5.map((e) => (
-              <span
-                key={e.name}
-                className="bg-white/20 backdrop-blur text-white text-[11px] font-semibold px-2.5 py-1 rounded-full"
-              >
-                {EMOTION_KO[e.name] ?? e.name}
-              </span>
-            ))}
-          </div>
         </div>
       </div>
 

@@ -250,7 +250,7 @@ export default function RecordClient() {
       <div className="glass rounded-2xl p-4 mb-6">
         <p className="text-[11px] text-muted-foreground mb-2 font-semibold">읽어 주세요</p>
         <p className="text-sm text-foreground leading-relaxed">
-          &ldquo;안녕하세요. 저는 오늘 제 목소리를 분석하러 왔습니다. 저는 평소에 친구들과 이야기하는 것을 좋아하고, 새로운 것을 배우는 것도 즐깁니다. 잘 부탁드립니다.&rdquo;
+          &ldquo;안녕하세요, 저는 오늘 제 목소리를 분석하러 왔습니다. 잘 부탁드립니다.&rdquo;
         </p>
         <p className="text-[10px] text-muted-foreground mt-2">
           ✦ 평소 자신의 목소리 그대로 자연스럽게 읽어 주세요
