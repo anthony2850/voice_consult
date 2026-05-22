@@ -9,6 +9,7 @@ import { useAudioRecorder } from '@/hooks/useAudioRecorder'
 import { useWaveform } from '@/hooks/useWaveform'
 import { saveVoiceRecord } from '@/lib/voiceDB'
 import { extractAudioFeatures } from '@/lib/extractAudioFeatures'
+import { audioBlobToWav } from '@/lib/audioToWav'
 
 const MAX_SECONDS = 30
 const MIN_SECONDS = 3   // minimum recording before allowing proceed
@@ -98,8 +99,10 @@ export default function RecordClient() {
     }, 300)
 
     try {
+      // OpenAI 오디오 모델은 wav/mp3만 받으므로 업로드 전 WAV로 변환
+      const wavBlob = await audioBlobToWav(audioBlob)
       const formData1 = new FormData()
-      formData1.append('audio', audioBlob, 'voice.webm')
+      formData1.append('audio', wavBlob, 'voice.wav')
 
       const [emotionRes, audioFeatures] = await Promise.all([
         fetch('/api/analyze-voice', { method: 'POST', body: formData1 }),

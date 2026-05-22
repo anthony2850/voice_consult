@@ -22,7 +22,6 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "framer-motion": "^12.35.0",
-    "hume": "^0.15.15",
     "idb": "^8.0.3",
     "lucide-react": "^0.577.0",
     "nanoid": "^5.1.6",
