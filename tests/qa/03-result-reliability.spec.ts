@@ -58,7 +58,7 @@ test.describe('결과 페이지 신뢰성', () => {
     console.log('✓ 동일한 감정 데이터로 항상 동일한 페르소나 반환')
   })
 
-  test('상위 5개 감정 배지가 표시됨', async ({ page }) => {
+  test('페르소나 매칭 카드에 감정 항목들이 표시됨', async ({ page }) => {
     await page.goto('/result')
     await page.evaluate((emotions) => {
       sessionStorage.setItem('voiceEmotions', JSON.stringify(emotions))
@@ -66,10 +66,13 @@ test.describe('결과 페이지 신뢰성', () => {
     await page.reload()
     await page.waitForTimeout(1200)
 
-    // 헤더에 감정 배지들이 표시되어야 함
-    const badges = page.locator('.bg-white\\/20').filter({ hasText: /[가-힣]/ })
-    const count = await badges.count()
-    console.log('표시된 감정 배지 수:', count)
+    // 페르소나 매칭 결과 카드에 감정별 점수 행들이 표시되어야 함
+    await expect(
+      page.getByRole('heading', { name: '페르소나 매칭 결과' })
+    ).toBeVisible()
+    const emotionRows = page.getByText(/내 점수/)
+    const count = await emotionRows.count()
+    console.log('표시된 감정 항목 수:', count)
     expect(count).toBeGreaterThanOrEqual(3)
   })
 
