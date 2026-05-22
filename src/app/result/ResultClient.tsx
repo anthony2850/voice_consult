@@ -464,24 +464,21 @@ function PersonaGapSection({
       {/* Emotion bars */}
       <div className="space-y-3 mb-4">
         {gaps.map((g) => {
-          const isBelow = g.gap > 10
-          const isAbove = g.gap < -10
-          const barColor = isBelow ? 'bg-rose-500' : isAbove ? 'bg-emerald-500' : 'bg-[#00BECD]'
           const label = EMOTION_KO[g.name] ?? g.name
           return (
             <div key={g.name}>
               <div className="flex justify-between items-center mb-1">
                 <span className="text-xs font-semibold text-foreground">{label}</span>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 tabular-nums">
                   <span className="text-[10px] text-muted-foreground">
                     목표 <span className="text-foreground font-bold">{g.target}</span>
                   </span>
                   <span className="text-[10px] text-muted-foreground">
-                    내 점수 <span className={`font-bold ${isBelow ? 'text-rose-400' : isAbove ? 'text-emerald-400' : 'text-[#00BECD]'}`}>{g.user}</span>
+                    내 점수 <span className="font-bold text-foreground">{g.user}</span>
                   </span>
                 </div>
               </div>
-              {/* Target track */}
+              {/* Target track — gold marker = persona target, teal fill = my score */}
               <div className="relative h-2.5 rounded-full bg-border overflow-hidden">
                 {/* Target marker */}
                 <div
@@ -490,7 +487,7 @@ function PersonaGapSection({
                 />
                 {/* User bar */}
                 <div
-                  className={`h-full rounded-full transition-all duration-700 ease-out ${barColor} opacity-80`}
+                  className="h-full rounded-full bg-[#00BECD] transition-all duration-700 ease-out"
                   style={{ width: animate ? `${g.user}%` : '0%' }}
                 />
               </div>
@@ -648,13 +645,22 @@ export default function ResultClient() {
           <Badge className="mb-3 bg-white/20 text-white border-0 text-xs backdrop-blur">
             목소리 페르소나 분석 완료
           </Badge>
-          <h1 className="text-2xl font-black text-white mb-1">
+          <h1 className="text-2xl font-black text-white mb-3">
             {persona ? `${persona.emoji} ${persona.name}` : '감정 분석 리포트'}
           </h1>
           {persona && (
-            <p className="text-white/90 text-sm font-semibold">
-              일치율 {similarity}% · {persona.category}
-            </p>
+            <div className="flex items-end gap-2.5">
+              <div className="flex items-baseline gap-0.5 leading-none">
+                <span className="text-5xl font-black text-white tabular-nums tracking-tight">
+                  {similarity}
+                </span>
+                <span className="text-2xl font-black text-white/80">%</span>
+              </div>
+              <div className="pb-1">
+                <p className="text-white text-xs font-bold leading-tight">페르소나 일치율</p>
+                <p className="text-white/75 text-xs leading-tight">{persona.category}</p>
+              </div>
+            </div>
           )}
         </div>
       </div>
