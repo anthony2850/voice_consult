@@ -284,7 +284,7 @@ export default function Stage1Training() {
                 <span className="text-[10px] text-muted-foreground">15초</span>
               </div>
               {!result.soundDetected ? (
-                <p className="text-xs font-semibold mt-3 text-orange-400">✗ 소리가 감지되지 않았어요. '아—' 소리를 내주세요</p>
+                <p className="text-xs font-semibold mt-3 text-orange-400">✗ 소리가 감지되지 않았어요. ‘아—’ 소리를 내주세요</p>
               ) : (
                 <p className={`text-xs font-semibold mt-3 ${result.durationSec >= MIN_DURATION_SEC ? 'text-emerald-400' : 'text-orange-400'}`}>
                   {result.durationSec >= MIN_DURATION_SEC ? '✓ 통과! 5초 이상 유지했어요' : `✗ 조금 더 필요해요 (${(MIN_DURATION_SEC - result.durationSec).toFixed(1)}초 부족)`}

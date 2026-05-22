@@ -31,7 +31,9 @@ function AudioPlayer({ blob, label }: { blob: Blob; label: string }) {
   const [progress, setProgress] = useState(0)
 
   useEffect(() => {
+    // object URL은 revoke 정리가 필요한 side effect라 렌더 중 파생 불가 — effect에서 생성
     const objectUrl = URL.createObjectURL(blob)
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setUrl(objectUrl)
     return () => URL.revokeObjectURL(objectUrl)
   }, [blob])

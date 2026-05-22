@@ -25,7 +25,8 @@ export default function TrainingClient() {
   const [streakDates, setStreakDates] = useState<string[]>([])
 
   useEffect(() => {
-    // localStorage로 unlock 상태 최신화
+    // 마운트 시 외부 상태(localStorage)에서 unlock 상태를 동기화하는 의도된 패턴
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setCompletedStages(new Set(getTodayCompleted()))
 
     // DB는 스트릭 기록 표시용으로만 조회

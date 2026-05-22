@@ -24,6 +24,10 @@ export default function HomeHero() {
   const [variant, setVariant] = useState(VARIANTS[0])
 
   useEffect(() => {
+    // Client-only randomization: the server (and first client paint) render the
+    // deterministic VARIANTS[0]; swap to a random variant after hydration so each
+    // visit varies without triggering an SSR/client hydration mismatch.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setVariant(VARIANTS[Math.floor(Math.random() * VARIANTS.length)])
   }, [])
 
