@@ -33,7 +33,7 @@ export default function HomeHero() {
         {variant.headline.map((line, i) => (
           <span key={i}>
             {i === variant.highlight
-              ? <span className="gradient-text">{line}</span>
+              ? <span className="text-[#0093BA]">{line}</span>
               : <span className="text-foreground">{line}</span>
             }
             {i < variant.headline.length - 1 && <br />}
