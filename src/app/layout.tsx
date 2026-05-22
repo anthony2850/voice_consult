@@ -34,6 +34,13 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <head>
+        {/* ── Pretendard Variable — Korean web font ── */}
+        <link rel="preconnect" href="https://cdn.jsdelivr.net" crossOrigin="anonymous" />
+        <link
+          rel="stylesheet"
+          href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css"
+        />
+
         {/* ── Google Analytics 4 ── */}
         {GA_ID && (
           <>
