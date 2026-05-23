@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import OpenAI from 'openai'
 
 export const maxDuration = 60
 
+// Full 49-emotion space — kept for the output contract (persona matching expects
+// every key to exist, with 0 for emotions not present in the model's response).
 const ALL_EMOTIONS = [
   'Admiration', 'Adoration', 'Aesthetic Appreciation', 'Amusement', 'Anger',
   'Anxiety', 'Awe', 'Awkwardness', 'Boredom', 'Calmness',
@@ -14,6 +15,18 @@ const ALL_EMOTIONS = [
   'Nostalgia', 'Pain', 'Pride', 'Realization', 'Relief',
   'Romance', 'Sadness', 'Satisfaction', 'Shame', 'Surprise (negative)',
   'Surprise (positive)', 'Sympathy', 'Tiredness', 'Triumph',
+]
+
+// Subset actually referenced by the current 10 personas — what we ask the model
+// to rate. Asking for all 49 triggers a refusal pattern in gpt-audio; a tighter
+// prompt with audio-first ordering is reliable. Expand as personas grow.
+const EMOTIONS_TO_RATE = [
+  'Admiration', 'Adoration', 'Aesthetic Appreciation', 'Amusement', 'Awe',
+  'Awkwardness', 'Calmness', 'Concentration', 'Contemplation', 'Contentment',
+  'Craving', 'Determination', 'Disappointment', 'Doubt', 'Ecstasy',
+  'Empathic Pain', 'Enthusiasm', 'Excitement', 'Interest', 'Joy', 'Love',
+  'Nostalgia', 'Pain', 'Pride', 'Realization', 'Relief', 'Romance',
+  'Surprise (positive)', 'Sympathy', 'Triumph',
 ]
 
 /** Extract the first balanced JSON object from a model response. */
@@ -38,39 +51,51 @@ async function analyzeWithOpenAI(audioBlob: Blob): Promise<Record<string, number
   const apiKey = process.env.OPENAI_API_KEY
   if (!apiKey) return null
 
-  const openai = new OpenAI({ apiKey })
   const base64 = Buffer.from(await audioBlob.arrayBuffer()).toString('base64')
 
-  const completion = await openai.chat.completions.create({
-    model: 'gpt-4o-mini-audio-preview',
-    messages: [
-      {
-        role: 'system',
-        content:
-          '당신은 음성 감정 분석 전문가입니다. 화자의 목소리(음색, 억양, 떨림, 말 속도, ' +
-          '에너지, 휴지)를 듣고 49가지 감정이 각각 얼마나 드러나는지 평가합니다.',
-      },
-      {
-        role: 'user',
-        content: [
-          {
-            type: 'text',
-            text:
-              '이 음성을 듣고 아래 49개 감정 각각의 강도를 0.0~1.0 사이 숫자로 평가해주세요.\n\n' +
-              `감정 목록: ${ALL_EMOTIONS.join(', ')}\n\n` +
-              '응답은 오직 JSON 객체 하나로만 출력하세요 — 49개 감정의 영어 이름을 key, ' +
-              '0~1 숫자를 value로 합니다. 마크다운 코드블록이나 설명 없이 순수 JSON만 출력하세요.',
-          },
-          {
-            type: 'input_audio',
-            input_audio: { data: base64, format: 'wav' },
-          },
-        ],
-      },
-    ],
+  // Raw fetch instead of the OpenAI SDK — Next.js patches global fetch for
+  // caching/dedup and the patched fetch silently drops the input_audio block
+  // on large bodies when invoked through the SDK from a route handler.
+  // `cache: 'no-store'` opts out of Next's caching layer explicitly.
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    cache: 'no-store',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'gpt-audio',
+      modalities: ['text'],
+      // Audio block FIRST (text after) — empirically reliable. Reversing or
+      // adding a system prompt makes gpt-audio refuse / ask for the audio.
+      messages: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'input_audio',
+              input_audio: { data: base64, format: 'wav' },
+            },
+            {
+              type: 'text',
+              text:
+                '이 화자의 목소리에서 각 감정의 강도를 0.0~1.0으로 평가하세요. JSON만 출력.\n\n' +
+                `감정: ${EMOTIONS_TO_RATE.join(', ')}`,
+            },
+          ],
+        },
+      ],
+    }),
   })
 
-  const raw = completion.choices[0]?.message?.content
+  if (!response.ok) {
+    console.error('[analyze-voice] OpenAI HTTP', response.status, (await response.text()).slice(0, 300))
+    return null
+  }
+
+  const completion = await response.json()
+  const raw = completion.choices?.[0]?.message?.content
   if (!raw) return null
 
   const parsed = parseEmotionJson(raw)
