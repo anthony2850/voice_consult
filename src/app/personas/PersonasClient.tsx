@@ -17,7 +17,12 @@ const EMOTION_KO: Record<string, string> = {
   'Pain': '아파함', 'Pride': '자부심', 'Realization': '깨달음',
   'Relief': '안도감', 'Romance': '설렘', 'Sympathy': '공감·위로',
   'Triumph': '승리감', 'Surprise (positive)': '기분 좋은 놀람',
+  'Anxiety': '불안', 'Boredom': '지루함', 'Embarrassment': '당혹감',
+  'Sadness': '슬픔', 'Tiredness': '피로감',
 }
+
+// 페르소나 시범 음성 샘플 준비되면 true로 토글
+const SHOW_LISTEN_BUTTON = false
 
 // ── Audio playback hook ───────────────────────────────────
 // sampleAudio 있으면 <audio> 재생, 없으면 TTS 폴백
@@ -111,17 +116,19 @@ function PersonaCard({
 
       {/* Actions */}
       <div className="flex gap-2">
-        <button
-          onClick={onToggleListen}
-          className={`flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-semibold border transition-colors shrink-0 ${
-            isSpeaking
-              ? 'bg-rose-500/15 text-rose-400 border-rose-500/30'
-              : 'bg-secondary text-muted-foreground border-border hover:text-foreground'
-          }`}
-        >
-          {isSpeaking ? <Square size={12} /> : <Play size={12} />}
-          {isSpeaking ? '정지' : '시범 듣기'}
-        </button>
+        {SHOW_LISTEN_BUTTON && (
+          <button
+            onClick={onToggleListen}
+            className={`flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-semibold border transition-colors shrink-0 ${
+              isSpeaking
+                ? 'bg-rose-500/15 text-rose-400 border-rose-500/30'
+                : 'bg-secondary text-muted-foreground border-border hover:text-foreground'
+            }`}
+          >
+            {isSpeaking ? <Square size={12} /> : <Play size={12} />}
+            {isSpeaking ? '정지' : '시범 듣기'}
+          </button>
+        )}
 
         <button
           onClick={onStartTraining}
@@ -163,7 +170,7 @@ export default function PersonasClient() {
         </button>
         <h1 className="text-xl font-black text-foreground">페르소나 탐색</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          목표로 삼고 싶은 페르소나를 골라 시범 음성을 들어보세요
+          목표로 삼고 싶은 페르소나를 골라보세요
         </p>
       </div>
 

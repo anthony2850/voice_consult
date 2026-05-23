@@ -410,7 +410,7 @@ function PersonaActionSection({
         className="w-full h-13 px-4 py-3.5 rounded-2xl bg-gradient-to-r from-[#FFD700] to-[#FF9E52] text-gray-900 text-sm font-bold flex items-center justify-center gap-2 shadow-lg shadow-[#FFD700]/30 active:scale-[0.98] transition-transform"
       >
         <Dumbbell size={16} className="shrink-0" />
-        <span>{persona.emoji} {persona.name}에 가까워지는 훈련 시작</span>
+        <span>내 목소리의 약점을 보완하는 훈련 하러가기</span>
       </button>
       <button
         onClick={() => router.push('/personas')}
