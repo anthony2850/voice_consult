@@ -60,9 +60,13 @@ function remapTo60(raw: number): number {
 }
 
 function calcStabilityScore(jitter: number, shimmer: number): number {
-  // 실제 발화 jitter 분포: 0.2~3%, shimmer: 0.5~6%
-  const j = Math.max(0, 1 - jitter / 3.0) * 100
-  const s = Math.max(0, 1 - shimmer / 6.0) * 100
+  // jitter/shimmer here are frame-to-frame (46 ms hop) — NOT cycle-to-cycle
+  // Praat-style values. They capture prosody on top of pure tremor, so typical
+  // ranges are an order of magnitude higher than clinical baselines (a calm
+  // announcer sample measures ~21% / ~30%). Thresholds are tuned to that scale:
+  // 0% → 100 (perfectly steady), 50% / 70% → 0 (highly variable).
+  const j = Math.max(0, 1 - jitter / 50.0) * 100
+  const s = Math.max(0, 1 - shimmer / 70.0) * 100
   return remapTo60(j * 0.5 + s * 0.5)
 }
 
