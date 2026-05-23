@@ -4,9 +4,15 @@ export interface Persona {
   name: string
   description: string
   emoji: string
-  /** Hume AI emotion keys — order determines radar axis order */
+  /** Emotion keys (subset of ALL_EMOTIONS) — order determines radar axis order */
   emotions: string[]
-  /** Target score per emotion, 0–100 scale */
+  /**
+   * Target percentile per emotion, 0–100 scale.
+   * Matches the output of `normalizeHumeScore` — i.e., "where this emotion
+   * ranks within the user's full 49-dim vector." Designed by hand per persona
+   * (not derived from synthetic audio); the matching algorithm compares each
+   * persona's targets against the user's per-emotion percentiles.
+   */
   targetScores: Record<string, number>
   script: string
   /** Path to sample audio file under /public (optional) */
@@ -16,168 +22,169 @@ export interface Persona {
 export const PERSONAS: Persona[] = [
   {
     id: 1,
-    category: '신뢰/전문성',
-    name: '프로페셔널 아나운서',
-    description: '발표나 면접에서 뚝 부러지고 신뢰감을 주는 목소리',
-    emoji: '📢',
-    emotions: ['Determination', 'Calmness', 'Concentration', 'Realization'],
+    category: '직장인 일상',
+    name: '퇴근만 기다리는 신입사원',
+    description: '시계만 보면서 6시를 기다리는 그 마음',
+    emoji: '🕔',
+    emotions: ['Tiredness', 'Boredom', 'Relief', 'Disappointment'],
     targetScores: {
-      Determination: 78,
-      Calmness: 72,
-      Concentration: 75,
-      Realization: 60,
+      Tiredness: 82,
+      Boredom: 70,
+      Relief: 60,
+      Disappointment: 55,
     },
     script:
-      '시청자 여러분의 제보로 들어온 현장 소식, 오늘의 첫 소식으로 전해드립니다.',
-    sampleAudio: '/personas/persona-1.wav',
+      '오늘 점심 뭐 먹지... 아 벌써 4시네. 30분만 더 버티면 돼... 휴...',
   },
   {
     id: 2,
-    category: '공감/위로',
-    name: '다정한 심야 상담가',
-    description: '상대방의 말을 잘 들어주고 마음을 어루만져 주는 따뜻한 톤',
-    emoji: '🌙',
-    emotions: ['Love', 'Sympathy', 'Empathic Pain', 'Contentment'],
+    category: '감성 폭발',
+    name: '드라마 보다 우는 사람',
+    description: '주인공 한 마디에 눈물부터 차오르는 감정 부자',
+    emoji: '😢',
+    emotions: ['Empathic Pain', 'Sadness', 'Nostalgia', 'Love'],
     targetScores: {
-      Love: 75,
-      Sympathy: 80,
-      'Empathic Pain': 65,
-      Contentment: 60,
+      'Empathic Pain': 82,
+      Sadness: 75,
+      Nostalgia: 60,
+      Love: 60,
     },
     script:
-      '걱정하지 않아도 괜찮아요. 지금 이 순간, 당신의 마음이 어떤지 천천히 이야기해 주세요. 저는 여기서 끝까지 함께할게요. 어떤 이야기도 다 괜찮습니다.',
+      '어떡해 진짜... 저 둘이 헤어진다고? 아니 작가님 너무하시잖아요... 흑...',
   },
   {
     id: 3,
-    category: '에너지/활기',
-    name: '인간 비타민 크리에이터',
-    description: '듣기만 해도 기분이 좋아지고 텐션이 높아지는 인싸들의 목소리',
-    emoji: '⚡',
-    emotions: ['Enthusiasm', 'Excitement', 'Joy', 'Triumph'],
+    category: '연애 진행 중',
+    name: '썸 타는 중인 사람',
+    description: '카톡 한 줄에 심장이 출렁이는 그 시기',
+    emoji: '💗',
+    emotions: ['Awkwardness', 'Romance', 'Anxiety', 'Excitement'],
     targetScores: {
-      Enthusiasm: 82,
-      Excitement: 78,
-      Joy: 75,
-      Triumph: 60,
+      Awkwardness: 78,
+      Romance: 75,
+      Anxiety: 65,
+      Excitement: 65,
     },
     script:
-      '여러분! 오늘 하루도 정말 잘 해내셨어요! 힘들었던 하루가 지나고 나면 반드시 더 좋은 날이 옵니다. 오늘도 여러분은 최고입니다, 진짜로요!',
+      '어? 카톡 왔다... 아니야 천천히 답해야지... 근데 뭐라고 답하지... 이거 너무 친해 보이려나?',
   },
   {
     id: 4,
-    category: '지성/논리',
-    name: '냉철하고 지적인 전략가',
-    description: '감정에 치우치지 않고 객관적이고 논리적으로 들리는 이성적인 톤',
-    emoji: '🎯',
-    emotions: ['Contemplation', 'Calmness', 'Doubt'],
+    category: '덕질의 정수',
+    name: '콘서트 직관 중인 팬',
+    description: '실물 영접 순간의 그 비명',
+    emoji: '🎤',
+    emotions: ['Ecstasy', 'Excitement', 'Joy', 'Triumph'],
     targetScores: {
-      Contemplation: 78,
-      Calmness: 75,
-      Doubt: 55,
+      Ecstasy: 85,
+      Excitement: 82,
+      Joy: 75,
+      Triumph: 65,
     },
     script:
-      '데이터를 분석한 결과, 세 가지 핵심 변수를 발견했습니다. 감정적 판단을 배제하고 각 요인의 상관관계를 살펴보면, 최적의 전략이 명확하게 보입니다.',
+      '꺅~~ 진짜 실물 봤어! 너무 멋있어... 와 이 노래 라이브로 듣는다고? 미쳐버려!',
   },
   {
     id: 5,
-    category: '매력/호감',
-    name: '설렘 유발 로맨티스트',
-    description: '이성에게 호감을 주거나 라디오 DJ처럼 부드럽고 매력적인 톤',
-    emoji: '🌹',
-    emotions: ['Romance', 'Adoration', 'Aesthetic Appreciation', 'Nostalgia'],
+    category: '인생의 쓴맛',
+    name: '시험 떨어진 후 멘붕인 사람',
+    description: '결과 확인 후 5분 뒤의 그 멍한 상태',
+    emoji: '😶‍🌫️',
+    emotions: ['Disappointment', 'Sadness', 'Realization', 'Doubt'],
     targetScores: {
-      Romance: 78,
-      Adoration: 72,
-      'Aesthetic Appreciation': 68,
-      Nostalgia: 62,
+      Disappointment: 82,
+      Sadness: 70,
+      Realization: 68,
+      Doubt: 60,
     },
     script:
-      '처음 당신을 봤을 때부터 알았어요. 봄날 오후처럼 따뜻하고, 잔잔한 음악처럼 편안한 사람이라는 걸요. 그래서 더 오래 기억될 것 같아요.',
+      '음... 그래, 다시 하면 되지... 근데 진짜 떨어졌어. 한 학기 또 같은 거 해야 하나...',
   },
   {
     id: 6,
-    category: '리더십/카리스마',
-    name: '단단하고 여유로운 리더',
-    description: '크게 소리치지 않아도 좌중을 압도하고 설득력을 가지는 목소리',
-    emoji: '👑',
-    emotions: ['Pride', 'Determination', 'Admiration', 'Awe'],
+    category: '사회적 가식',
+    name: '명절에 친척 만난 사람',
+    description: '취업·결혼 질문 폭격을 견디는 그 표정',
+    emoji: '😅',
+    emotions: ['Awkwardness', 'Embarrassment', 'Tiredness', 'Doubt'],
     targetScores: {
-      Pride: 72,
-      Determination: 80,
-      Admiration: 65,
-      Awe: 60,
+      Awkwardness: 82,
+      Embarrassment: 72,
+      Tiredness: 65,
+      Doubt: 60,
     },
     script:
-      '우리 팀이라면 반드시 해낼 수 있습니다. 지금까지 우리가 함께 쌓아온 것들을 믿으세요. 어떤 어려움이 와도, 우리는 함께라면 이겨낼 수 있습니다.',
+      '아 네... 잘 지냈어요... 취업이요? 아직 준비 중이에요... 그게... 네...',
   },
   {
     id: 7,
-    category: '친근함/소통',
-    name: '편안한 동네 베프',
-    description: '어색함 없이 누구나 쉽게 다가갈 수 있는 친근하고 편안한 톤',
-    emoji: '🤝',
-    emotions: ['Relief', 'Amusement', 'Interest'],
-    targetScores: {
-      Relief: 70,
-      Amusement: 75,
-      Interest: 72,
-    },
-    script:
-      '야, 오늘 뭐해? 나 마침 시간 있는데 잠깐 나올 수 있어? 근처에 카페 새로 생겼는데 같이 가면 딱 좋을 것 같아서. 오랜만에 수다 좀 떨자!',
-  },
-  {
-    id: 8,
-    category: '진정성/호소',
-    name: '마음을 울리는 스토리텔러',
-    description: '자신의 이야기로 사람들을 깊게 몰입시키고 감동을 주는 목소리',
-    emoji: '✨',
-    emotions: ['Craving', 'Ecstasy', 'Disappointment', 'Pain'],
-    targetScores: {
-      Craving: 68,
-      Ecstasy: 72,
-      Disappointment: 60,
-      Pain: 65,
-    },
-    script:
-      '그날 밤을 아직도 잊을 수가 없어요. 창밖으로 빗소리가 들리고, 우리는 아무 말 없이 그냥 앉아 있었어요. 그 침묵이 그 어떤 말보다 많은 것을 담고 있었죠.',
-  },
-  {
-    id: 9,
-    category: '유쾌/센스',
-    name: '센스 만점 분위기 메이커',
-    description: '재치 있고 유머러스하며 대화의 분위기를 주도하는 톤',
+    category: '수다 폭주',
+    name: '카페에서 어제 일 떠드는 사람',
+    description: '한 시간 떠들 거리를 가져온 그 친구',
     emoji: '😄',
-    emotions: ['Surprise (positive)', 'Amusement', 'Awkwardness'],
+    emotions: ['Amusement', 'Excitement', 'Surprise (positive)', 'Awkwardness'],
     targetScores: {
-      'Surprise (positive)': 72,
-      Amusement: 80,
+      Amusement: 82,
+      Excitement: 72,
+      'Surprise (positive)': 65,
       Awkwardness: 55,
     },
     script:
-      '잠깐, 이거 진짜 들어봐요. 제 친구가 어제 이런 말을 했는데요, 솔직히 저는 그 순간 웃음을 참을 수가 없었어요. 여러분도 분명히 공감하실 거예요!',
+      '야 진짜 어제 말이야! 내가 그 사람 봤거든? 근데 글쎄, 진짜 헐대박... 너무 웃겨!',
+  },
+  {
+    id: 8,
+    category: '심야 사색가',
+    name: '새벽 3시 감성에 빠진 사람',
+    description: '안 올린 슬픈 글 한 줄이 떠다니는 그 시간',
+    emoji: '🌙',
+    emotions: ['Contemplation', 'Nostalgia', 'Sadness', 'Love'],
+    targetScores: {
+      Contemplation: 78,
+      Nostalgia: 75,
+      Sadness: 62,
+      Love: 60,
+    },
+    script:
+      '그때 그 친구 잘 지내겠지... 왜 갑자기 생각났을까. 이런 밤은 참 길어요...',
+  },
+  {
+    id: 9,
+    category: '사랑 폭발',
+    name: '강아지 본 직후인 사람',
+    description: '귀여움 앞에 무너지는 그 목소리',
+    emoji: '🐶',
+    emotions: ['Adoration', 'Love', 'Joy'],
+    targetScores: {
+      Adoration: 85,
+      Love: 78,
+      Joy: 75,
+    },
+    script:
+      '어우~ 너무 귀여워! 와~ 진짜 천사 아니에요? 한 번만 만져봐도 돼요? 어쩜 이렇게...',
   },
   {
     id: 10,
-    category: '우아함/기품',
-    name: '세련된 갤러리 큐레이터',
-    description: '조급하지 않고 고급스러우며 기품이 흘러넘치는 목소리',
-    emoji: '🎨',
-    emotions: ['Calmness', 'Aesthetic Appreciation', 'Contentment', 'Admiration'],
+    category: '평온한 시간',
+    name: '혼자 카페에서 책 읽는 사람',
+    description: '커피 한 잔과 좋은 문장 한 줄이면 충분한 사람',
+    emoji: '☕',
+    emotions: ['Calmness', 'Contentment', 'Contemplation', 'Aesthetic Appreciation'],
     targetScores: {
-      Calmness: 75,
-      'Aesthetic Appreciation': 72,
-      Contentment: 68,
-      Admiration: 65,
+      Calmness: 80,
+      Contentment: 75,
+      Contemplation: 72,
+      'Aesthetic Appreciation': 65,
     },
     script:
-      '이 작품이 전하고자 하는 것은 단순한 아름다움이 아닙니다. 고요함 속에서 찾아오는 깊은 울림이요. 천천히 바라보실수록, 더 많은 것이 보일 거예요.',
+      '음... 좋은 문장이네. 다시 한번 읽어볼까. 이 작가는 정말 단어를 잘 골라요...',
   },
 ]
 
 /**
- * Convert a single Hume emotion score to a 0–100 percentile value
- * relative to all 48 emotions in the user's result.
- * This prevents clustering at 100 and gives natural variance.
+ * Convert a single emotion score (0–1) to a 0–100 percentile within the user's
+ * full 49-emotion vector. This is how `targetScores` is interpreted at match
+ * time — "how strong is this emotion relative to the user's other emotions."
  */
 export function normalizeHumeScore(
   emotionName: string,
@@ -193,9 +200,9 @@ export function normalizeHumeScore(
 
 /**
  * Find the persona that best matches the user's raw emotions.
- * For each persona, compute the mean absolute distance between
- * the user's normalized scores and the persona's targetScores.
- * Returns the persona with the smallest distance, plus the similarity (0–100).
+ * For each persona, compute the mean absolute distance between the user's
+ * per-emotion percentile (normalizeHumeScore) and the persona's targetScores —
+ * over only the emotions that persona uses. Pick the smallest distance.
  */
 export function findBestPersona(
   allEmotions: Record<string, number>,

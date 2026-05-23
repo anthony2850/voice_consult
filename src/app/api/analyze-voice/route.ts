@@ -21,12 +21,11 @@ const ALL_EMOTIONS = [
 // to rate. Asking for all 49 triggers a refusal pattern in gpt-audio; a tighter
 // prompt with audio-first ordering is reliable. Expand as personas grow.
 const EMOTIONS_TO_RATE = [
-  'Admiration', 'Adoration', 'Aesthetic Appreciation', 'Amusement', 'Awe',
-  'Awkwardness', 'Calmness', 'Concentration', 'Contemplation', 'Contentment',
-  'Craving', 'Determination', 'Disappointment', 'Doubt', 'Ecstasy',
-  'Empathic Pain', 'Enthusiasm', 'Excitement', 'Interest', 'Joy', 'Love',
-  'Nostalgia', 'Pain', 'Pride', 'Realization', 'Relief', 'Romance',
-  'Surprise (positive)', 'Sympathy', 'Triumph',
+  'Adoration', 'Aesthetic Appreciation', 'Amusement', 'Anxiety', 'Awkwardness',
+  'Boredom', 'Calmness', 'Contemplation', 'Contentment', 'Disappointment',
+  'Doubt', 'Ecstasy', 'Embarrassment', 'Empathic Pain', 'Excitement',
+  'Joy', 'Love', 'Nostalgia', 'Realization', 'Relief',
+  'Romance', 'Sadness', 'Surprise (positive)', 'Tiredness', 'Triumph',
 ]
 
 /** Extract the first balanced JSON object from a model response. */
