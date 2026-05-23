@@ -1,39 +1,7 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
-
-const EMOTION_KO: Record<string, string> = {
-  'Admiration': '감탄',
-  'Adoration': '경애',
-  'Aesthetic Appreciation': '미적 감상',
-  'Amusement': '즐거움',
-  'Awe': '경외감',
-  'Awkwardness': '어색함',
-  'Calmness': '차분함',
-  'Concentration': '집중',
-  'Contemplation': '사색',
-  'Contentment': '만족감',
-  'Craving': '갈망',
-  'Determination': '결단력',
-  'Disappointment': '실망',
-  'Doubt': '의심',
-  'Ecstasy': '황홀감',
-  'Empathic Pain': '공감·아픔',
-  'Enthusiasm': '열정',
-  'Excitement': '흥분',
-  'Interest': '호기심',
-  'Joy': '기쁨',
-  'Love': '사랑',
-  'Nostalgia': '향수',
-  'Pain': '아파함',
-  'Pride': '자부심',
-  'Realization': '깨달음',
-  'Relief': '안도감',
-  'Romance': '설렘',
-  'Sympathy': '공감·위로',
-  'Triumph': '승리감',
-  'Surprise (positive)': '긍정 놀람',
-}
+import { EMOTION_KO } from '@/lib/emotions'
 
 interface RadarChartProps {
   /** Ordered list of axis names */

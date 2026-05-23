@@ -3,25 +3,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { Play, Pause, ArrowDown, Mic, TrendingUp, TrendingDown, Minus } from 'lucide-react'
 import { getBeforeAndAfter, VoiceRecord, VoiceEmotion } from '@/lib/voiceDB'
-
-// ── 감정 한국어 레이블 ──────────────────────────────────────
-const EMOTION_KO: Record<string, string> = {
-  Admiration: '감탄', Adoration: '경애', 'Aesthetic Appreciation': '미적 감상',
-  Amusement: '즐거움', Anger: '분노', Anxiety: '불안', Awe: '경외감',
-  Awkwardness: '어색함', Boredom: '지루함', Calmness: '차분함',
-  Concentration: '집중', Confusion: '혼란', Contemplation: '사색',
-  Contempt: '경멸', Contentment: '만족감', Craving: '갈망', Desire: '욕망',
-  Determination: '결단력', Disappointment: '실망', Disgust: '혐오',
-  Distress: '고통', Doubt: '의심', Ecstasy: '황홀감', Embarrassment: '당혹감',
-  'Empathic Pain': '공감적 아픔', Enthusiasm: '열정', Entrancement: '매혹',
-  Envy: '질투', Excitement: '흥분', Fear: '두려움', Guilt: '죄책감',
-  Horror: '공포', Interest: '호기심', Joy: '기쁨', Love: '사랑',
-  Nostalgia: '향수', Pain: '통증', Pride: '자부심', Realization: '깨달음',
-  Relief: '안도', Romance: '낭만', Sadness: '슬픔', Satisfaction: '성취감',
-  Shame: '수치심', 'Surprise (negative)': '놀람 (부정)',
-  'Surprise (positive)': '놀람 (긍정)', Sympathy: '공감',
-  Tiredness: '피로감', Triumph: '승리감',
-}
+import { EMOTION_KO } from '@/lib/emotions'
 
 // ── 오디오 플레이어 ─────────────────────────────────────────
 function AudioPlayer({ blob, label }: { blob: Blob; label: string }) {
