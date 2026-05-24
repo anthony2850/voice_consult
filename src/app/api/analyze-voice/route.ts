@@ -79,8 +79,12 @@ async function analyzeWithOpenAI(audioBlob: Blob): Promise<Record<string, number
             {
               type: 'text',
               text:
-                '이 화자의 목소리에서 각 감정의 강도를 0.0~1.0으로 평가하세요. JSON만 출력.\n\n' +
-                `감정: ${EMOTIONS_TO_RATE.join(', ')}`,
+                '위 오디오에 담긴 화자의 목소리 톤·발성·운율을 듣고 다음 감정 각각의 ' +
+                '강도(0.0~1.0)를 추정해 JSON 객체 하나로 응답하세요. ' +
+                'JSON 외 다른 텍스트, 설명, 거절 메시지는 절대 포함하지 마세요. ' +
+                '키는 정확히 아래 영문 표기를 사용하세요.\n\n' +
+                `예시 응답: {"Joy": 0.7, "Calmness": 0.4, "Sadness": 0.1, ...}\n\n` +
+                `감정 목록: ${EMOTIONS_TO_RATE.join(', ')}`,
             },
           ],
         },
@@ -95,10 +99,16 @@ async function analyzeWithOpenAI(audioBlob: Blob): Promise<Record<string, number
 
   const completion = await response.json()
   const raw = completion.choices?.[0]?.message?.content
-  if (!raw) return null
+  if (!raw) {
+    console.error('[analyze-voice] empty content from OpenAI:', JSON.stringify(completion).slice(0, 500))
+    return null
+  }
 
   const parsed = parseEmotionJson(raw)
-  if (!parsed) return null
+  if (!parsed) {
+    console.error('[analyze-voice] unparseable content:', raw.slice(0, 500))
+    return null
+  }
 
   // Map onto the canonical 49-emotion space, clamped to [0, 1]
   const emotions: Record<string, number> = {}
@@ -114,7 +124,11 @@ async function analyzeWithOpenAI(audioBlob: Blob): Promise<Record<string, number
   }
 
   // Require a reasonable fraction of emotions to be filled, else treat as failure
-  return validCount >= 10 ? emotions : null
+  if (validCount < 10) {
+    console.error('[analyze-voice] only', validCount, 'valid emotions; raw content:', raw.slice(0, 500))
+    return null
+  }
+  return emotions
 }
 
 function getMockEmotions(): Record<string, number> {
