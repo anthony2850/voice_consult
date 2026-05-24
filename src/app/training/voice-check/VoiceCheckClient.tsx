@@ -5,16 +5,20 @@ import { useRouter } from 'next/navigation'
 import { Mic, Square, RotateCcw, CheckCircle, ChevronRight } from 'lucide-react'
 import { useAudioRecorder } from '@/hooks/useAudioRecorder'
 import { useWaveform } from '@/hooks/useWaveform'
-import { extractAudioFeatures } from '@/lib/extractAudioFeatures'
+import { extractAudioFeaturesWithPraat, type AudioFeatures } from '@/lib/extractAudioFeatures'
 import { getSupabase } from '@/lib/supabase'
 
 // ─── Scoring (same as ResultClient) ───────────────────────────────────────────
 function remapTo60(raw: number): number {
   return Math.round(60 + (Math.max(0, Math.min(100, raw)) / 100) * 40)
 }
-function calcStabilityScore(jitter: number, shimmer: number): number {
-  const j = Math.max(0, 1 - jitter / 3.0) * 100
-  const s = Math.max(0, 1 - shimmer / 6.0) * 100
+function calcStabilityScore(vq: AudioFeatures['voice_quality']): number {
+  // Praat = cycle-to-cycle (clinical: jitter ≤ 3%, shimmer ≤ 6%).
+  // Frame = browser fallback, frame-to-frame prosody variation — values
+  // run ~10× higher than clinical so thresholds scale accordingly.
+  const [jMax, sMax] = vq.source === 'praat' ? [3.0, 6.0] : [50.0, 70.0]
+  const j = Math.max(0, 1 - vq.jitter_rel_pct / jMax) * 100
+  const s = Math.max(0, 1 - vq.shimmer_rel_pct / sMax) * 100
   return remapTo60(j * 0.5 + s * 0.5)
 }
 function calcPaceScore(opsec: number): number {
@@ -71,7 +75,7 @@ export default function VoiceCheckClient() {
 
   async function runAnalysis(blob: Blob) {
     setPageState('analyzing')
-    const features = await extractAudioFeatures(blob)
+    const features = await extractAudioFeaturesWithPraat(blob)
     if (!features) {
       setPageState('idle')
       recorder.reset()
@@ -79,10 +83,7 @@ export default function VoiceCheckClient() {
       return
     }
     setScores({
-      stability: calcStabilityScore(
-        features.voice_quality.jitter_rel_pct,
-        features.voice_quality.shimmer_rel_pct,
-      ),
+      stability: calcStabilityScore(features.voice_quality),
       pace: calcPaceScore(features.rhythm.onsets_per_second),
       expressiveness: calcExpressivenessScore(features.pitch.std_hz, features.energy.db_mean),
     })

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Mic, Square, RotateCcw, CheckCircle } from 'lucide-react'
 import { useAudioRecorder } from '@/hooks/useAudioRecorder'
 import { useWaveform } from '@/hooks/useWaveform'
-import { extractAudioFeatures } from '@/lib/extractAudioFeatures'
+import { extractAudioFeaturesWithPraat } from '@/lib/extractAudioFeatures'
 import { getSupabase } from '@/lib/supabase'
 import { uploadTrainingAudio } from '@/lib/uploadTrainingAudio'
 import { markStageComplete, getTodayCompleted } from '@/lib/trainingProgress'
@@ -12,8 +12,11 @@ import StreakPopup from '@/components/StreakPopup'
 
 // ─── Thresholds ───────────────────────────────────────────────────────────────
 const MIN_DURATION_SEC = 5
-const JITTER_THRESHOLD = 1.5   // %
-const SHIMMER_THRESHOLD = 15   // %
+// Praat = cycle-to-cycle (clinical scale); Frame = browser fallback runs ~10× higher.
+const JITTER_THRESHOLD_PRAAT = 1.5   // %
+const SHIMMER_THRESHOLD_PRAAT = 15   // %
+const JITTER_THRESHOLD_FRAME = 30    // %
+const SHIMMER_THRESHOLD_FRAME = 50   // %
 const DB_MEAN_THRESHOLD = -35  // dB (묵음 감지)
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -45,6 +48,8 @@ interface AnalysisResult {
   durationSec: number
   jitterPct: number
   shimmerPct: number
+  jitterMax: number
+  shimmerMax: number
   dbMean: number
   jitterStable: boolean
   shimmerStable: boolean
@@ -104,7 +109,7 @@ export default function Stage1Training() {
   async function runAnalysis(blob: Blob) {
     audioBlobRef.current = blob
     setPageState('analyzing')
-    const features = await extractAudioFeatures(blob)
+    const features = await extractAudioFeaturesWithPraat(blob)
     if (!features) {
       setPageState('instruction')
       recorder.reset()
@@ -115,13 +120,18 @@ export default function Stage1Training() {
     const shimmerPct = features.voice_quality.shimmer_rel_pct
     const dbMean = features.energy.db_mean
     const soundDetected = dbMean >= DB_MEAN_THRESHOLD
+    const usingPraat = features.voice_quality.source === 'praat'
+    const jitterMax = usingPraat ? JITTER_THRESHOLD_PRAAT : JITTER_THRESHOLD_FRAME
+    const shimmerMax = usingPraat ? SHIMMER_THRESHOLD_PRAAT : SHIMMER_THRESHOLD_FRAME
     setResult({
       durationSec,
       jitterPct,
       shimmerPct,
+      jitterMax,
+      shimmerMax,
       dbMean,
-      jitterStable: jitterPct < JITTER_THRESHOLD,
-      shimmerStable: shimmerPct < SHIMMER_THRESHOLD,
+      jitterStable: jitterPct < jitterMax,
+      shimmerStable: shimmerPct < shimmerMax,
       soundDetected,
       passed: durationSec >= MIN_DURATION_SEC && soundDetected,
     })
@@ -211,11 +221,11 @@ export default function Stage1Training() {
               </div>
               <div className="flex items-center justify-between text-xs">
                 <span className="text-foreground">Jitter (음정 흔들림)</span>
-                <span className="text-muted-foreground">{JITTER_THRESHOLD}% 미만 → 안정</span>
+                <span className="text-muted-foreground">{JITTER_THRESHOLD_PRAAT}% 미만 → 안정</span>
               </div>
               <div className="flex items-center justify-between text-xs">
                 <span className="text-foreground">Shimmer (음량 흔들림)</span>
-                <span className="text-muted-foreground">{SHIMMER_THRESHOLD}% 미만 → 안정</span>
+                <span className="text-muted-foreground">{SHIMMER_THRESHOLD_PRAAT}% 미만 → 안정</span>
               </div>
             </div>
 
@@ -299,7 +309,7 @@ export default function Stage1Training() {
               <div className="flex items-center justify-between py-2 border-b border-border/40">
                 <div>
                   <p className="text-xs font-semibold text-foreground">Jitter (음정 흔들림)</p>
-                  <p className="text-[11px] text-muted-foreground">기준: {JITTER_THRESHOLD}% 미만</p>
+                  <p className="text-[11px] text-muted-foreground">기준: {result.jitterMax}% 미만</p>
                 </div>
                 <div className="text-right">
                   <p className="text-sm font-black tabular-nums">{result.jitterPct.toFixed(2)}%</p>
@@ -312,7 +322,7 @@ export default function Stage1Training() {
               <div className="flex items-center justify-between py-2">
                 <div>
                   <p className="text-xs font-semibold text-foreground">Shimmer (음량 흔들림)</p>
-                  <p className="text-[11px] text-muted-foreground">기준: {SHIMMER_THRESHOLD}% 미만</p>
+                  <p className="text-[11px] text-muted-foreground">기준: {result.shimmerMax}% 미만</p>
                 </div>
                 <div className="text-right">
                   <p className="text-sm font-black tabular-nums">{result.shimmerPct.toFixed(2)}%</p>

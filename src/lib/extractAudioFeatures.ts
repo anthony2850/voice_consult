@@ -1,5 +1,16 @@
 'use client'
 
+import { audioBlobToWav } from './audioToWav'
+
+/**
+ * 'praat'  — jitter/shimmer are cycle-to-cycle values from Modal/parselmouth,
+ *            comparable to clinical baselines (jitter ≤ 3%, shimmer ≤ 6%).
+ * 'frame'  — frame-to-frame (≈46 ms hop) approximation computed in the
+ *            browser. Captures prosody on top of tremor, so values run
+ *            ~10× higher than clinical thresholds.
+ */
+export type VoiceQualitySource = 'praat' | 'frame'
+
 export interface AudioFeatures {
   duration_sec: number
   sample_rate: number
@@ -9,7 +20,13 @@ export interface AudioFeatures {
   mfccs: Record<string, number>
   zero_crossing: { mean: number; std: number }
   rhythm: { tempo_bpm: number; onset_count: number; onsets_per_second: number }
-  voice_quality: { jitter_abs_ms: number; jitter_rel_pct: number; shimmer_abs: number; shimmer_rel_pct: number }
+  voice_quality: {
+    jitter_abs_ms: number
+    jitter_rel_pct: number
+    shimmer_abs: number
+    shimmer_rel_pct: number
+    source: VoiceQualitySource
+  }
   hnr_db: number
 }
 
@@ -231,6 +248,7 @@ export async function extractAudioFeatures(audioBlob: Blob): Promise<AudioFeatur
       jitter_rel_pct: jitterRel * 100,
       shimmer_abs: shimmerAbs,
       shimmer_rel_pct: shimmerRel * 100,
+      source: 'frame' as VoiceQualitySource,
     }
 
     // ── Spectral placeholders (not rendered in UI) ────────
@@ -262,4 +280,58 @@ export async function extractAudioFeatures(audioBlob: Blob): Promise<AudioFeatur
     console.error('[audio features] extraction failed:', err)
     return null
   }
+}
+
+/**
+ * Cycle-to-cycle Praat jitter/shimmer from the Modal microservice.
+ * Returns null on any failure (Modal unconfigured, network error, recording
+ * too short for cycle detection) — callers stay on the in-browser fallback.
+ */
+async function fetchPraatVoiceQuality(blob: Blob): Promise<
+  { jitter_rel_pct: number; shimmer_rel_pct: number; hnr_db: number } | null
+> {
+  try {
+    const wav = await audioBlobToWav(blob)
+    const res = await fetch('/api/voice-quality', {
+      method: 'POST',
+      headers: { 'Content-Type': 'audio/wav' },
+      body: wav,
+    })
+    if (res.status !== 200) return null
+    const data = await res.json()
+    const j = Number(data.jitter_rel_pct)
+    const s = Number(data.shimmer_rel_pct)
+    const h = Number(data.hnr_db)
+    if (!Number.isFinite(j) || !Number.isFinite(s)) return null
+    return { jitter_rel_pct: j, shimmer_rel_pct: s, hnr_db: Number.isFinite(h) ? h : 0 }
+  } catch (err) {
+    console.warn('[praat voice-quality] fetch failed:', err)
+    return null
+  }
+}
+
+/**
+ * Like extractAudioFeatures(), but overlays clinical Praat jitter/shimmer
+ * from the Modal microservice onto voice_quality (tagged source='praat').
+ * Falls back to the browser-only frame-based numbers if Modal is offline.
+ */
+export async function extractAudioFeaturesWithPraat(
+  blob: Blob,
+): Promise<AudioFeatures | null> {
+  const [features, praat] = await Promise.all([
+    extractAudioFeatures(blob),
+    fetchPraatVoiceQuality(blob),
+  ])
+  if (!features) return null
+  if (praat) {
+    features.voice_quality.jitter_rel_pct = praat.jitter_rel_pct
+    features.voice_quality.shimmer_rel_pct = praat.shimmer_rel_pct
+    // jitter_abs_ms / shimmer_abs aren't shown in UI but keep them
+    // proportional so anything downstream stays sane.
+    features.voice_quality.jitter_abs_ms = praat.jitter_rel_pct / 100 * 7 // ~7ms mean adult period
+    features.voice_quality.shimmer_abs = praat.shimmer_rel_pct / 100
+    features.voice_quality.source = 'praat'
+    features.hnr_db = praat.hnr_db
+  }
+  return features
 }

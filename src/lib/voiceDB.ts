@@ -52,6 +52,7 @@ export interface AudioFeatures {
     jitter_rel_pct: number
     shimmer_abs: number
     shimmer_rel_pct: number
+    source: 'praat' | 'frame'
   }
   hnr_db: number
 }

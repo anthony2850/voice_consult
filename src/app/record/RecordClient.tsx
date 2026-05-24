@@ -8,7 +8,7 @@ import { Progress } from '@/components/ui/progress'
 import { useAudioRecorder } from '@/hooks/useAudioRecorder'
 import { useWaveform } from '@/hooks/useWaveform'
 import { saveVoiceRecord } from '@/lib/voiceDB'
-import { extractAudioFeatures } from '@/lib/extractAudioFeatures'
+import { extractAudioFeaturesWithPraat } from '@/lib/extractAudioFeatures'
 import { audioBlobToWav } from '@/lib/audioToWav'
 
 const MAX_SECONDS = 30
@@ -106,7 +106,7 @@ export default function RecordClient() {
 
       const [emotionRes, audioFeatures] = await Promise.all([
         fetch('/api/analyze-voice', { method: 'POST', body: formData1 }),
-        extractAudioFeatures(audioBlob),
+        extractAudioFeaturesWithPraat(audioBlob),
       ])
 
       const emotionData = await emotionRes.json()

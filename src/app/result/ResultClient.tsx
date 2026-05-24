@@ -59,14 +59,14 @@ function remapTo60(raw: number): number {
   return Math.round(60 + (Math.max(0, Math.min(100, raw)) / 100) * 40)
 }
 
-function calcStabilityScore(jitter: number, shimmer: number): number {
-  // jitter/shimmer here are frame-to-frame (46 ms hop) — NOT cycle-to-cycle
-  // Praat-style values. They capture prosody on top of pure tremor, so typical
-  // ranges are an order of magnitude higher than clinical baselines (a calm
-  // announcer sample measures ~21% / ~30%). Thresholds are tuned to that scale:
-  // 0% → 100 (perfectly steady), 50% / 70% → 0 (highly variable).
-  const j = Math.max(0, 1 - jitter / 50.0) * 100
-  const s = Math.max(0, 1 - shimmer / 70.0) * 100
+function calcStabilityScore(vq: AudioFeatures['voice_quality']): number {
+  // Praat = cycle-to-cycle (clinical: jitter ≤ 3%, shimmer ≤ 6% ≈ steady voice).
+  // Frame = browser fallback, frame-to-frame (46 ms hop) — captures prosody
+  // on top of tremor, so values run ~10× higher than clinical (calm announcer
+  // sample measures ~21% / ~30%). Thresholds scale accordingly.
+  const [jMax, sMax] = vq.source === 'praat' ? [3.0, 6.0] : [50.0, 70.0]
+  const j = Math.max(0, 1 - vq.jitter_rel_pct / jMax) * 100
+  const s = Math.max(0, 1 - vq.shimmer_rel_pct / sMax) * 100
   return remapTo60(j * 0.5 + s * 0.5)
 }
 
@@ -149,10 +149,7 @@ function ScoreCard({
 
 // ── Voice Quality Radar + Pitch section ──────────────────
 function VoiceRadarSection({ features, animate }: { features: AudioFeatures; animate: boolean }) {
-  const stabilityScore = calcStabilityScore(
-    features.voice_quality.jitter_rel_pct,
-    features.voice_quality.shimmer_rel_pct,
-  )
+  const stabilityScore = calcStabilityScore(features.voice_quality)
   const paceScore = calcPaceScore(features.rhythm.onsets_per_second)
   const expressivenessScore = calcExpressivenessScore(features.pitch.std_hz, features.energy.db_mean)
 
@@ -204,10 +201,7 @@ function VoiceRadarSection({ features, animate }: { features: AudioFeatures; ani
 
 // ── Audio feature section (score cards only) ──────────────
 function AudioFeaturesSection({ features, animate }: { features: AudioFeatures; animate: boolean }) {
-  const stabilityScore = calcStabilityScore(
-    features.voice_quality.jitter_rel_pct,
-    features.voice_quality.shimmer_rel_pct,
-  )
+  const stabilityScore = calcStabilityScore(features.voice_quality)
   const paceScore = calcPaceScore(features.rhythm.onsets_per_second)
   const expressivenessScore = calcExpressivenessScore(features.pitch.std_hz, features.energy.db_mean)
 
@@ -459,7 +453,7 @@ function PersonaGapSection({
       {(below.length > 0 || above.length > 0) && (
         <div className="space-y-2 pt-3 border-t border-border/40">
           {below.length > 0 && (
-            <div className="rounded-xl bg-rose-500/10 border border-rose-500/20 p-3">
+            <div className="rounded-xl bg-rose-500/10 border border-rose-500/20 p-3 text-center">
               <p className="text-[11px] font-bold text-rose-400 mb-1">✦ 이 페르소나와 다른 점</p>
               <p className="text-[11px] text-muted-foreground leading-relaxed">
                 {below.map((g) => EMOTION_KO[g.name] ?? g.name).join(', ')} 영역이 이 페르소나보다 낮게 나왔어요.
@@ -467,7 +461,7 @@ function PersonaGapSection({
             </div>
           )}
           {above.length > 0 && (
-            <div className="rounded-xl bg-emerald-500/10 border border-emerald-500/20 p-3">
+            <div className="rounded-xl bg-emerald-500/10 border border-emerald-500/20 p-3 text-center">
               <p className="text-[11px] font-bold text-emerald-400 mb-1">✦ 이 페르소나보다 강한 점</p>
               <p className="text-[11px] text-muted-foreground leading-relaxed">
                 {above.map((g) => EMOTION_KO[g.name] ?? g.name).join(', ')} 영역은 페르소나 기준보다 더 높게 나왔어요.
@@ -475,7 +469,7 @@ function PersonaGapSection({
             </div>
           )}
           {below.length === 0 && above.length === 0 && (
-            <div className="rounded-xl bg-[#FFD700]/10 border border-[#FFD700]/30 p-3">
+            <div className="rounded-xl bg-[#FFD700]/10 border border-[#FFD700]/30 p-3 text-center">
               <p className="text-[11px] font-bold text-[#B8860B] mb-1">✦ 완벽한 매칭</p>
               <p className="text-[11px] text-muted-foreground">모든 감정이 이 페르소나와 아주 가깝게 나왔어요!</p>
             </div>
