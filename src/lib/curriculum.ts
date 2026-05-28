@@ -1,192 +1,128 @@
-export type Theme = 'accuracy' | 'speed' | 'emotion'
+/**
+ * 훈련 커리큘럼 — 5-day 통합 코스.
+ * 사용자 concerns 배열과 매칭되는 Day에서 deep 운동이 활성화됨.
+ * 테마(호흡/이완/공명/속도/발음)와 운동 콘텐츠는 잠정 안 — 추후 코치 콘텐츠 조사 후 데이터만 교체.
+ */
 
-export interface Script {
+export type ConcernSlug = 'small_voice' | 'trembling' | 'fast' | 'diction'
+
+export const CONCERN_LABELS: Record<ConcernSlug, string> = {
+  small_voice: '작은 목소리',
+  trembling: '떨리는 목소리',
+  fast: '빨라지는 목소리',
+  diction: '발음 웅얼거림',
+}
+
+export type Interaction = 'guided' | 'record'
+// 'metronome' | 'visualizer' will be added when needed.
+
+export interface ExerciseUnit {
   id: string
-  text: string
+  title: string
   description: string
+  instructions: string[]
+  durationSec: number
+  interaction: Interaction
+  scriptPool?: string[]
 }
 
-export interface DayCurriculum {
-  theme: Theme
-  label: string
+export interface TrainingDay {
+  dayNum: 1 | 2 | 3 | 4 | 5
+  theme: string
   emoji: string
-  description: string
-  script: Script
+  matchingConcerns: ConcernSlug[]
+  standard: ExerciseUnit[]
+  deep: ExerciseUnit[]
 }
 
-// 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
-export const THEME_BY_DOW: Record<number, Theme> = {
-  0: 'emotion',
-  1: 'accuracy',
-  2: 'speed',
-  3: 'emotion',
-  4: 'accuracy',
-  5: 'speed',
-  6: 'emotion',
+// v1 sample content — 1 sample 'guided' + 1 sample 'record' per day to validate the framework.
+// Replace these with real exercises after coach content research.
+function sampleStandard(dayKey: string): ExerciseUnit[] {
+  return [
+    {
+      id: `${dayKey}-warmup`,
+      title: '워밍업',
+      description: '오늘의 단계 준비',
+      instructions: ['편안하게 호흡을 가다듬으세요', '어깨를 천천히 돌려보세요'],
+      durationSec: 60,
+      interaction: 'guided',
+    },
+    {
+      id: `${dayKey}-main`,
+      title: '메인 운동 (sample)',
+      description: '오늘의 핵심 연습',
+      instructions: ['스크립트를 읽고 녹음하세요'],
+      durationSec: 120,
+      interaction: 'record',
+      scriptPool: [
+        '안녕하세요. 오늘의 훈련을 시작합니다.',
+        '천천히 정확하게 읽어보겠습니다.',
+        '편안한 마음으로 연습합니다.',
+      ],
+    },
+  ]
 }
 
-export const THEME_INFO: Record<Theme, { label: string; emoji: string; description: string }> = {
-  accuracy: {
-    label: '정확도 훈련',
-    emoji: '🎯',
-    description: '한 글자도 빠짐없이, 또렷하게 발음하며 읽어보세요',
-  },
-  speed: {
-    label: '속도 훈련',
-    emoji: '⚡',
-    description: '뉴스 앵커처럼 초당 5~6글자의 자연스러운 속도로 읽어보세요',
-  },
-  emotion: {
-    label: '감정 훈련',
-    emoji: '🎭',
-    description: '상황에 맞는 감정을 담아 자연스럽게 읽으면 스탬프가 부여돼요',
-  },
+function sampleDeep(dayKey: string): ExerciseUnit[] {
+  return [
+    {
+      id: `${dayKey}-deep-1`,
+      title: '깊이 운동 (sample)',
+      description: '약점 일치 day 추가 연습',
+      instructions: ['좀 더 도전적인 변형을 시도하세요'],
+      durationSec: 90,
+      interaction: 'record',
+      scriptPool: [
+        '한 번 더 집중해서 읽어보겠습니다.',
+        '핵심 약점을 강화하는 시간입니다.',
+      ],
+    },
+  ]
 }
 
-export const THEME_TIPS: Record<Theme, { tip: string; exercise: string }[]> = {
-  accuracy: [
-    { tip: '입을 크게 벌리고 각 음절을 또렷하게 끊어 읽어보세요.', exercise: '거울을 보며 입 모양을 확인하면서 읽으면 더 효과적이에요.' },
-    { tip: '천천히 읽어도 괜찮아요. 정확함이 속도보다 중요합니다.', exercise: '어려운 부분을 3회 반복 후 전체를 이어 읽어보세요.' },
-  ],
-  speed: [
-    { tip: '말하기 전 숨을 충분히 들이쉬고 시작하세요.', exercise: '메트로놈 앱을 켜고 박자에 맞춰 읽으면 속도 감각이 생겨요.' },
-    { tip: '단어 사이의 끊음을 자연스럽게 유지하며 읽어보세요.', exercise: '뉴스를 보며 아나운서의 속도를 따라 읽는 섀도잉을 해보세요.' },
-  ],
-  emotion: [
-    { tip: '그 상황에 실제로 있다고 상상하며 읽어보세요.', exercise: '읽기 전 5초간 눈을 감고 장면을 머릿속에 그려보세요.' },
-    { tip: '감정이 목소리 톤, 속도, 볼륨에 자연스럽게 배어나오도록 해보세요.', exercise: '같은 문장을 전혀 다른 감정으로 읽어보며 차이를 느껴보세요.' },
-  ],
-}
-
-export const ACCURACY_SCRIPTS: Script[] = [
+export const CURRICULUM: TrainingDay[] = [
   {
-    id: 'acc-1',
-    text: '간장 공장 공장장은 강 공장장이고 된장 공장 공장장은 장 공장장이다.',
-    description: "자음 'ㅈ'과 'ㄱ'의 정확한 발음을 연습하는 문장이에요.",
-  },
-  {
-    id: 'acc-2',
-    text: '경찰청 쇠창살은 외쇠창살이고 검찰청 쇠창살도 외쇠창살이다.',
-    description: '겹받침과 연음 규칙을 정확하게 읽어보세요.',
-  },
-  {
-    id: 'acc-3',
-    text: '저 분은 백 법학 박사이고 이 분은 박 법학 박사이다. 두 분 다 훌륭한 법학 박사님이시다.',
-    description: "'ㅂ' 받침 연음과 'ㄱ' 경음화를 연습해보세요.",
-  },
-]
-
-export const SPEED_SCRIPTS: Script[] = [
-  {
-    id: 'spd-1',
-    text: '오늘 오전 서울 도심에서 기습 폭우가 내려 출근길 시민들이 큰 불편을 겪었습니다. 기상청은 오후까지 강한 비가 이어질 것으로 예보하며 우산 지참을 당부했습니다.',
-    description: '뉴스 앵커 속도, 초당 5~6글자를 목표로 해보세요.',
-  },
-  {
-    id: 'spd-2',
-    text: '정부는 오늘 새로운 경제 활성화 정책을 발표했습니다. 이번 정책은 중소기업 지원과 일자리 창출을 핵심 목표로 삼고 있으며 다음 달부터 본격 시행될 예정입니다.',
-    description: '또렷하면서도 빠르게, 뉴스 속도를 목표로 해보세요.',
-  },
-  {
-    id: 'spd-3',
-    text: '해외 주요 증시가 일제히 상승세를 보이며 국내 투자자들의 관심이 높아지고 있습니다. 전문가들은 당분간 상승 흐름이 이어질 것으로 전망하면서도 신중한 투자를 조언했습니다.',
-    description: '전문 용어도 정확하게 발음하며 속도를 맞춰보세요.',
-  },
-]
-
-export const EMOTION_SCRIPTS: Script[] = [
-  {
-    id: 'emo-1',
-    text: '요즘 많이 힘들었지? 그 말 듣고 나도 마음이 아팠어. 괜찮아, 여기 있을게. 네가 힘들 때 내가 곁에 있으면 좋겠어.',
-    description: '힘들어하는 친구를 위로하는 상황이에요. 따뜻하고 진심 어린 톤으로 읽어보세요.',
-  },
-  {
-    id: 'emo-2',
-    text: '여러분, 저는 오늘 정말 설레는 마음으로 이 자리에 섰습니다. 지난 6개월간 우리 팀이 함께 만들어낸 이 결과를 드디어 여러분께 선보일 수 있게 되었습니다.',
-    description: '발표 시작 장면이에요. 열정과 흥분이 담긴 목소리로 읽어보세요.',
-  },
-  {
-    id: 'emo-3',
-    text: '정말 고마워요. 당신이 옆에 있어줘서 제가 여기까지 올 수 있었어요. 이 감사함을 어떻게 다 표현해야 할지 모르겠지만 진심으로 고맙습니다.',
-    description: '깊은 감사를 전하는 장면이에요. 진지하고 진심 어린 감정을 담아보세요.',
-  },
-]
-
-export const SCRIPTS_BY_THEME: Record<Theme, Script[]> = {
-  accuracy: ACCURACY_SCRIPTS,
-  speed: SPEED_SCRIPTS,
-  emotion: EMOTION_SCRIPTS,
-}
-
-export interface Stage {
-  stageNum: number   // 1–7
-  name: string
-  theme: Theme
-  emoji: string
-  description: string
-  script: Script
-  tip: { tip: string; exercise: string }
-}
-
-export const STAGES: Stage[] = [
-  {
-    stageNum: 1,
-    name: '호흡 훈련',
-    theme: 'accuracy',
+    dayNum: 1,
+    theme: '호흡·안정',
     emoji: '🫁',
-    description: '아- 소리를 흔들림 없이 5초 이상 유지해보세요',
-    script: ACCURACY_SCRIPTS[0],
-    tip: THEME_TIPS.accuracy[0],
+    matchingConcerns: ['trembling'],
+    standard: sampleStandard('day1'),
+    deep: sampleDeep('day1'),
   },
   {
-    stageNum: 2,
-    name: '립 트릴',
-    theme: 'accuracy',
+    dayNum: 2,
+    theme: '립트릴·이완',
     emoji: '🎵',
-    description: '입술을 부르르 떨며 도-미-솔-미-도 음계를 따라가 보아요',
-    script: ACCURACY_SCRIPTS[0],
-    tip: THEME_TIPS.accuracy[0],
+    matchingConcerns: ['trembling'],
+    standard: sampleStandard('day2'),
+    deep: sampleDeep('day2'),
   },
   {
-    stageNum: 3,
-    name: '볼륨 훈련',
-    theme: 'speed',
+    dayNum: 3,
+    theme: '공명·볼륨',
     emoji: '📢',
-    description: '평소보다 1.5배 더 크게 말하는 연습을 해보아요',
-    script: SPEED_SCRIPTS[0],
-    tip: THEME_TIPS.speed[0],
+    matchingConcerns: ['small_voice'],
+    standard: sampleStandard('day3'),
+    deep: sampleDeep('day3'),
   },
   {
-    stageNum: 4,
-    name: '속도 훈련',
-    theme: 'speed',
+    dayNum: 4,
+    theme: '속도 조절',
     emoji: '⚡',
-    description: '뉴스 앵커처럼 일정한 속도로 읽어보아요',
-    script: SPEED_SCRIPTS[0],
-    tip: THEME_TIPS.speed[0],
+    matchingConcerns: ['fast'],
+    standard: sampleStandard('day4'),
+    deep: sampleDeep('day4'),
   },
   {
-    stageNum: 5,
-    name: '발음 훈련',
-    theme: 'accuracy',
+    dayNum: 5,
+    theme: '발음·딕션',
     emoji: '🗣️',
-    description: '지정 문장을 읽고 음소 정확도를 측정해보아요',
-    script: ACCURACY_SCRIPTS[0],
-    tip: THEME_TIPS.accuracy[0],
+    matchingConcerns: ['diction'],
+    standard: sampleStandard('day5'),
+    deep: sampleDeep('day5'),
   },
 ]
 
-function pickScript(scripts: Script[]): Script {
-  const dayOfYear = Math.floor(
-    (Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000,
-  )
-  return scripts[dayOfYear % scripts.length]
-}
-
-export function getTodayCurriculum(): DayCurriculum {
-  const dow = new Date().getDay()
-  const theme = THEME_BY_DOW[dow]
-  const info = THEME_INFO[theme]
-  const script = pickScript(SCRIPTS_BY_THEME[theme])
-  return { theme, ...info, script }
+export function getDay(dayNum: number): TrainingDay | undefined {
+  return CURRICULUM.find((d) => d.dayNum === dayNum)
 }
