@@ -1,66 +1,51 @@
 'use client'
 
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Lock, Flame, CheckCircle, ChevronRight } from 'lucide-react'
+import { Flame, ChevronRight, Pencil } from 'lucide-react'
 import { getSupabase } from '@/lib/supabase'
-import { STAGES } from '@/lib/curriculum'
 import { Badge } from '@/components/ui/badge'
-import { getTodayCompleted } from '@/lib/trainingProgress'
+import { CURRICULUM, CONCERN_LABELS } from '@/lib/curriculum'
+import { nextDayNum, isDeepDay, type TrainingLog } from '@/lib/trainingCycle'
+import { useConcerns } from '@/hooks/useConcerns'
+import ConcernsModal from '@/components/training/ConcernsModal'
+import { trackEvent } from '@/lib/analytics'
 
 function toDateStr(d: Date) {
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${y}-${m}-${day}`
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
 export default function TrainingClient() {
   const router = useRouter()
   const todayStr = useMemo(() => toDateStr(new Date()), [])
-  // localStorage에서 즉시 초기화 → DB/네트워크와 무관하게 unlock 즉시 반영
-  const [completedStages, setCompletedStages] = useState<Set<number>>(
-    () => new Set(typeof window !== 'undefined' ? getTodayCompleted() : [])
-  )
-  const [streakDates, setStreakDates] = useState<string[]>([])
+  const [logs, setLogs] = useState<TrainingLog[]>([])
+  const { concerns, save: saveConcerns } = useConcerns()
+  const [editing, setEditing] = useState(false)
 
   useEffect(() => {
-    // 마운트 시 외부 상태(localStorage)에서 unlock 상태를 동기화하는 의도된 패턴
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setCompletedStages(new Set(getTodayCompleted()))
-
-    // DB는 스트릭 기록 표시용으로만 조회
-    async function loadStreak() {
+    async function load() {
       const supabase = getSupabase()
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data } = await (supabase as any)
         .from('user_training_logs')
-        .select('log_date')
+        .select('stage_num, log_date')
         .eq('user_id', user.id)
-      if (data) {
-        setStreakDates(data.map((r: { log_date: string }) => r.log_date))
-      }
+      if (data) setLogs(data as TrainingLog[])
     }
-    loadStreak()
+    load()
   }, [])
 
-  // Streak = consecutive days ending today or yesterday
   const streak = useMemo(() => {
-    const unique = [...new Set(streakDates)].sort((a, b) => b.localeCompare(a))
+    const unique = [...new Set(logs.map((l) => l.log_date))].sort((a, b) => b.localeCompare(a))
     if (unique.length === 0) return 0
-
     const yesterday = new Date(todayStr)
     yesterday.setDate(yesterday.getDate() - 1)
     const yesterdayStr = toDateStr(yesterday)
-
-    // Start from today if trained today, yesterday if trained yesterday, else 0
-    const mostRecent = unique[0]
-    if (mostRecent !== todayStr && mostRecent !== yesterdayStr) return 0
-
+    if (unique[0] !== todayStr && unique[0] !== yesterdayStr) return 0
     let count = 0
-    let expected = mostRecent
+    let expected = unique[0]
     for (const date of unique) {
       if (date === expected) {
         count++
@@ -70,7 +55,15 @@ export default function TrainingClient() {
       } else if (date < expected) break
     }
     return count
-  }, [streakDates, todayStr])
+  }, [logs, todayStr])
+
+  const todayDayNum = useMemo(() => nextDayNum(logs), [logs])
+  const todayDay = useMemo(() => CURRICULUM.find((d) => d.dayNum === todayDayNum)!, [todayDayNum])
+  const todayIsDeep = useMemo(() => isDeepDay(todayDay.matchingConcerns, concerns), [todayDay, concerns])
+  const alreadyDoneToday = useMemo(
+    () => logs.some((l) => l.log_date === todayStr),
+    [logs, todayStr],
+  )
 
   return (
     <div className="flex flex-col min-h-[calc(100vh-84px)] pb-8">
@@ -79,113 +72,101 @@ export default function TrainingClient() {
         <div className="absolute -top-10 -right-10 w-48 h-48 rounded-full bg-white/10 blur-3xl" />
         <div className="absolute -bottom-10 -left-10 w-48 h-48 rounded-full bg-white/10 blur-3xl" />
         <div className="relative z-10">
-          <Badge className="mb-3 bg-white/20 text-white border-0 text-xs backdrop-blur">훈련 커리큘럼</Badge>
+          <Badge className="mb-3 bg-white/20 text-white border-0 text-xs backdrop-blur">훈련 트랙</Badge>
           <h1 className="text-2xl font-black text-white mb-1">Voice Training</h1>
-          <div className="flex items-center gap-3 mt-2">
+          <p className="text-white/80 text-xs mb-3">5일 사이클의 통합 코스</p>
+          <div className="flex items-center gap-2">
             <div className="flex items-center gap-1.5 bg-white/15 rounded-full px-3 py-1">
               <Flame size={14} className="text-orange-300" />
               <span className="text-white text-xs font-bold">{streak}일 연속</span>
-            </div>
-            <div className="flex items-center gap-1.5 bg-white/15 rounded-full px-3 py-1">
-              <CheckCircle size={14} className="text-emerald-300" />
-              <span className="text-white text-xs font-bold">{completedStages.size}/{STAGES.length} 완료</span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Stage grid: 4 + 3 */}
-      <div className="px-4 pt-8 pb-4 flex flex-wrap justify-center gap-3">
-        {STAGES.map((stage) => {
-          const isCompleted = completedStages.has(stage.stageNum)
-          const isLocked = stage.stageNum > 1 && !completedStages.has(stage.stageNum - 1)
-
-          const nodeClass = [
-            'flex flex-col items-center justify-center rounded-2xl py-3 gap-1.5 transition-all',
-            isCompleted ? 'gradient-primary shadow-md shadow-primary/40' : '',
-            isLocked ? 'bg-secondary/40 opacity-50 cursor-not-allowed' : !isCompleted ? 'bg-secondary/80 cursor-pointer active:scale-95' : 'cursor-pointer active:scale-95',
-          ].filter(Boolean).join(' ')
-
-          return (
-            <button
-              key={stage.stageNum}
-              onClick={() => { if (!isLocked) router.push(`/training/${stage.stageNum}`) }}
-              disabled={isLocked}
-              className={nodeClass}
-              style={{ width: 'calc(25% - 9px)' }}
-            >
-              {isLocked ? (
-                <Lock size={20} className="text-muted-foreground" />
-              ) : isCompleted ? (
-                <Flame size={22} className="text-white" />
-              ) : (
-                <span className="text-xl">{stage.emoji}</span>
-              )}
-              <span className={`text-[10px] font-bold leading-tight text-center px-1
-                ${isCompleted ? 'text-white' : 'text-muted-foreground'}`}>
-                {stage.stageNum}단계
-              </span>
-            </button>
-          )
-        })}
+      {/* Today's day card */}
+      <div className="px-4 pt-6">
+        <button
+          onClick={() => {
+            trackEvent('training_today_clicked', { day_num: todayDay.dayNum, deep: todayIsDeep })
+            router.push(`/training/session/${todayDay.dayNum}`)
+          }}
+          className="w-full text-left rounded-3xl bg-secondary/60 hover:bg-secondary active:scale-[0.98] transition-all p-5"
+        >
+          <p className="text-[11px] font-semibold text-primary uppercase tracking-wide mb-1">
+            오늘의 단계 · Day {todayDay.dayNum} / 5
+          </p>
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-2xl">{todayDay.emoji}</span>
+            <p className="text-base font-bold text-foreground">{todayDay.theme}</p>
+          </div>
+          {todayIsDeep && (
+            <p className="text-[11px] font-semibold text-orange-400 mb-1">⚡ 당신의 핵심 단계예요</p>
+          )}
+          {alreadyDoneToday && (
+            <p className="text-[11px] text-emerald-400 font-semibold">✓ 오늘 이미 완료 · 다시 진행 가능</p>
+          )}
+        </button>
       </div>
 
-      {/* Stage list */}
-      <div className="px-4 mt-2 space-y-2">
-        {STAGES.map((stage) => {
-          const isCompleted = completedStages.has(stage.stageNum)
-          const isLocked = stage.stageNum > 1 && !completedStages.has(stage.stageNum - 1)
-          return (
+      {/* Other days */}
+      <div className="px-4 pt-4">
+        <p className="text-[11px] font-semibold text-muted-foreground mb-2">다른 단계 둘러보기</p>
+        <div className="grid grid-cols-2 gap-2">
+          {CURRICULUM.filter((d) => d.dayNum !== todayDay.dayNum).map((d) => (
             <button
-              key={stage.stageNum}
-              onClick={() => { if (!isLocked) router.push(`/training/${stage.stageNum}`) }}
-              disabled={isLocked}
-              className={`w-full flex items-center gap-3 p-4 rounded-2xl transition-all text-left
-                ${isLocked ? 'bg-secondary/30 opacity-50 cursor-not-allowed' : 'bg-secondary/60 hover:bg-secondary active:scale-[0.98]'}`}
+              key={d.dayNum}
+              onClick={() => router.push(`/training/session/${d.dayNum}`)}
+              className="flex items-center gap-2 rounded-2xl bg-secondary/40 hover:bg-secondary/70 p-3 active:scale-95 transition-all"
             >
-              <span className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 text-base
-                ${isCompleted ? 'gradient-primary' : 'bg-secondary'}`}>
-                {isCompleted ? '✓' : isLocked ? '🔒' : stage.emoji}
-              </span>
-              <div className="flex-1 min-w-0">
-                <p className={`text-sm font-semibold ${isLocked ? 'text-muted-foreground' : 'text-foreground'}`}>
-                  {stage.stageNum}단계 · {stage.name}
-                </p>
-                <p className="text-[11px] text-muted-foreground truncate">{stage.description}</p>
+              <span className="text-lg">{d.emoji}</span>
+              <div className="text-left">
+                <p className="text-[10px] text-muted-foreground">Day {d.dayNum}</p>
+                <p className="text-xs font-semibold text-foreground">{d.theme}</p>
               </div>
-              {isCompleted && (
-                <Flame size={16} className="text-orange-400 shrink-0" />
-              )}
             </button>
-          )
-        })}
+          ))}
+        </div>
       </div>
 
-      {/* Post-training voice check CTA */}
-      {completedStages.size === STAGES.length && (
-        <div className="mx-4 mt-4">
-          <button
-            onClick={() => router.push('/training/voice-check')}
-            className="w-full flex items-center gap-3 p-4 rounded-2xl border border-primary/40 bg-primary/10 active:scale-[0.98] transition-all"
-          >
-            <span className="w-9 h-9 rounded-xl gradient-primary flex items-center justify-center shrink-0 text-base">
-              🎤
-            </span>
-            <div className="flex-1 text-left">
-              <p className="text-sm font-bold text-primary">훈련 후 목소리 변화 분석하기</p>
-              <p className="text-[11px] text-muted-foreground">6단계 훈련 전후 목소리가 얼마나 달라졌는지 확인해요</p>
-            </div>
-            <ChevronRight size={16} className="text-primary shrink-0" />
-          </button>
-        </div>
-      )}
+      {/* My concerns */}
+      <div className="px-4 pt-6">
+        <button
+          onClick={() => setEditing(true)}
+          className="w-full flex items-center justify-between p-3 rounded-2xl bg-secondary/30 active:scale-[0.98] transition-all"
+        >
+          <div className="text-left">
+            <p className="text-[10px] text-muted-foreground">현재 고민</p>
+            <p className="text-xs font-semibold text-foreground">
+              {concerns.length === 0 ? '아직 선언 안 함' : concerns.map((c) => CONCERN_LABELS[c]).join(', ')}
+            </p>
+          </div>
+          <Pencil size={14} className="text-muted-foreground" />
+        </button>
+      </div>
 
-      {/* Today nudge */}
-      {completedStages.size === 0 && (
-        <div className="mx-4 mt-4 glass rounded-2xl px-4 py-3 text-center">
-          <p className="text-xs text-muted-foreground">오늘 아직 훈련을 안 했어요. 연속 기록을 이어가볼까요? 🔥</p>
-        </div>
-      )}
+      {/* Voice-check CTA */}
+      <div className="px-4 mt-6">
+        <button
+          onClick={() => router.push('/training/voice-check')}
+          className="w-full flex items-center gap-3 p-4 rounded-2xl border border-primary/40 bg-primary/10 active:scale-[0.98] transition-all"
+        >
+          <span className="w-9 h-9 rounded-xl gradient-primary flex items-center justify-center shrink-0 text-base">🎤</span>
+          <div className="flex-1 text-left">
+            <p className="text-sm font-bold text-primary">훈련 후 목소리 변화 측정</p>
+            <p className="text-[11px] text-muted-foreground">전후 목소리 품질이 얼마나 달라졌는지 확인해요</p>
+          </div>
+          <ChevronRight size={16} className="text-primary shrink-0" />
+        </button>
+      </div>
+
+      <ConcernsModal
+        open={editing}
+        initial={concerns}
+        onClose={() => setEditing(false)}
+        onSave={saveConcerns}
+        title="고민 수정"
+      />
     </div>
   )
 }

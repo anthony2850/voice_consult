@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Share2, RotateCcw, Sparkles, Dumbbell, Compass } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
@@ -12,6 +12,9 @@ import { type AudioFeatures } from '@/lib/extractAudioFeatures'
 import LoginCTA from '@/components/LoginCTA'
 import { getSupabase } from '@/lib/supabase'
 import { EMOTION_KO } from '@/lib/emotions'
+import ConcernsModal from '@/components/training/ConcernsModal'
+import { useConcerns } from '@/hooks/useConcerns'
+import type { ConcernSlug } from '@/lib/curriculum'
 
 // ── Tooltip ───────────────────────────────────────────────
 function Tooltip({ text }: { text: string }) {
@@ -513,6 +516,37 @@ export default function ResultClient() {
   const [persona, setPersona] = useState<Persona | null>(null)
   const [similarity, setSimilarity] = useState(0)
 
+  // ── Concerns modal ──────────────────────────────────────
+  const { concerns, loading: concernsLoading, save: saveConcerns } = useConcerns()
+  const [showConcerns, setShowConcerns] = useState(false)
+  const [autoOpened, setAutoOpened] = useState(false)
+
+  // Derive the three quality scores from audioFeatures (same formulas as AudioFeaturesSection)
+  const stabilityScore = audioFeatures ? calcStabilityScore(audioFeatures.voice_quality) : null
+  const paceScore = audioFeatures ? calcPaceScore(audioFeatures.rhythm.onsets_per_second) : null
+  const expressivenessScore = audioFeatures
+    ? calcExpressivenessScore(audioFeatures.pitch.std_hz, audioFeatures.energy.db_mean)
+    : null
+
+  const suggestedFromScores = useMemo<ConcernSlug[]>(() => {
+    if (typeof stabilityScore !== 'number') return []
+    const out: ConcernSlug[] = []
+    if (stabilityScore < 75) out.push('trembling')
+    if (paceScore !== null && paceScore < 75) out.push('fast')
+    if (expressivenessScore !== null && expressivenessScore < 75) out.push('small_voice')
+    return out
+  }, [stabilityScore, paceScore, expressivenessScore])
+
+  useEffect(() => {
+    if (autoOpened) return
+    if (concernsLoading) return
+    if (typeof stabilityScore !== 'number') return
+    if (concerns.length === 0 && suggestedFromScores.length > 0) {
+      setShowConcerns(true)
+    }
+    setAutoOpened(true)
+  }, [stabilityScore, paceScore, expressivenessScore, concerns, concernsLoading, suggestedFromScores, autoOpened])
+
   useEffect(() => {
     let raw: Record<string, number>
     // URL param이 있으면 공유 링크 → param 우선 사용
@@ -675,6 +709,15 @@ export default function ResultClient() {
 
       {/* 지연된 회원가입 CTA */}
       <LoginCTA />
+
+      {/* 목소리 고민 모달 — 분석 완료 후 한 번 자동 노출 */}
+      <ConcernsModal
+        open={showConcerns}
+        initial={concerns.length > 0 ? concerns : suggestedFromScores}
+        onClose={() => setShowConcerns(false)}
+        onSave={saveConcerns}
+        title="내 목소리 고민 확인"
+      />
 
     </div>
   )
