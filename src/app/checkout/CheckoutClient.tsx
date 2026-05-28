@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { ShieldCheck, Sparkles, Lock } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import type { PaymentWidgetInstance } from '@tosspayments/payment-widget-sdk'
+import { trackEvent } from '@/lib/analytics'
 
 type Step = 'summary' | 'widget' | 'processing'
 
@@ -67,6 +68,7 @@ export default function CheckoutClient() {
 
   const handleRequestPayment = async () => {
     if (!widgetRef.current) return
+    trackEvent('payment_requested', { order_id: orderId, amount: AMOUNT })
     try {
       await widgetRef.current.requestPayment({
         orderId,
@@ -77,7 +79,11 @@ export default function CheckoutClient() {
       })
     } catch (err: unknown) {
       const tosErr = err as { code?: string; message?: string }
-      if (tosErr?.code === 'USER_CANCEL') return   // 사용자 취소 — 조용히 처리
+      if (tosErr?.code === 'USER_CANCEL') {
+        trackEvent('payment_canceled', { order_id: orderId })
+        return
+      }
+      trackEvent('payment_error', { order_id: orderId, code: tosErr?.code ?? 'unknown' })
       console.error('[Payment request error]', tosErr)
     }
   }

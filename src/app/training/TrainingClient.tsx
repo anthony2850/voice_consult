@@ -148,7 +148,10 @@ export default function TrainingClient() {
       {/* Voice-check CTA */}
       <div className="px-4 mt-6">
         <button
-          onClick={() => router.push('/training/voice-check')}
+          onClick={() => {
+            trackEvent('voice_check_cta_clicked', { source: 'training_landing' })
+            router.push('/training/voice-check')
+          }}
           className="w-full flex items-center gap-3 p-4 rounded-2xl border border-primary/40 bg-primary/10 active:scale-[0.98] transition-all"
         >
           <span className="w-9 h-9 rounded-xl gradient-primary flex items-center justify-center shrink-0 text-base">🎤</span>

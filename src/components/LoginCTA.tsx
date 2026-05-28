@@ -4,8 +4,10 @@ import { useEffect, useState } from 'react'
 import { Lock } from 'lucide-react'
 import { getSupabase } from '@/lib/supabase'
 import { savePendingGuestData } from '@/lib/guest-migration'
+import { trackEvent } from '@/lib/analytics'
 
 function signIn(provider: 'google' | 'kakao') {
+  trackEvent('login_clicked', { method: provider, source: 'login_cta' })
   savePendingGuestData()
   const supabase = getSupabase()
   supabase.auth.signInWithOAuth({

@@ -44,9 +44,12 @@ export function useAudioRecorder(maxSeconds = 30): AudioRecorderResult {
   const stop = useCallback(() => {
     if (mediaRecorderRef.current?.state === 'recording') {
       mediaRecorderRef.current.stop()
+      // duration === maxSeconds implies the auto-stop / hard-stop path triggered
+      const reason = duration >= maxSeconds ? 'autostop' : 'manual'
+      trackEvent('record_stopped', { reason, duration_sec: duration })
     }
     cleanup()
-  }, [cleanup])
+  }, [cleanup, duration, maxSeconds])
 
   const start = useCallback(async () => {
     setError(null)
@@ -61,6 +64,7 @@ export function useAudioRecorder(maxSeconds = 30): AudioRecorderResult {
       stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false })
       trackEvent('mic_permission_granted')
     } catch {
+      trackEvent('mic_permission_denied')
       setError('마이크 접근 권한이 필요합니다. 브라우저 설정에서 허용해 주세요.')
       return
     }
@@ -95,6 +99,7 @@ export function useAudioRecorder(maxSeconds = 30): AudioRecorderResult {
 
     recorder.start(100) // collect chunks every 100ms
     setState('recording')
+    trackEvent('record_started', { max_seconds: maxSeconds })
 
     // Timer
     timerRef.current = setInterval(() => {

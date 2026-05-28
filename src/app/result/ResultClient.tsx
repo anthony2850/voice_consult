@@ -345,6 +345,7 @@ function PersonaActionSection({
   })
 
   const handleTrain = () => {
+    trackEvent('result_train_clicked', { persona_id: persona.id, gap_emotion_count: belowEmotions.length })
     sessionStorage.setItem(
       'trainingTarget',
       JSON.stringify({ emotions: belowEmotions.length > 0 ? belowEmotions : persona.emotions, personaId: persona.id }),
@@ -355,7 +356,10 @@ function PersonaActionSection({
   return (
     <div className="space-y-2.5">
       <button
-        onClick={() => router.push('/record')}
+        onClick={() => {
+          trackEvent('result_retry_clicked', { persona_id: persona.id })
+          router.push('/record')
+        }}
         className="w-full h-12 px-4 rounded-2xl border border-border bg-secondary text-foreground text-sm font-semibold flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
       >
         <RotateCcw size={16} className="shrink-0" />
@@ -369,7 +373,10 @@ function PersonaActionSection({
         <span>내 목소리의 약점을 보완하는 훈련 하러가기</span>
       </button>
       <button
-        onClick={() => router.push('/personas')}
+        onClick={() => {
+          trackEvent('result_explore_personas_clicked', { persona_id: persona.id })
+          router.push('/personas')
+        }}
         className="w-full h-12 px-4 rounded-2xl border border-border bg-secondary text-foreground text-sm font-semibold flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
       >
         <Compass size={16} className="shrink-0" />
@@ -586,8 +593,11 @@ export default function ResultClient() {
   const handleShare = async () => {
     const top3 = emotions.slice(0, 3).map((e) => EMOTION_KO[e.name] ?? e.name).join(', ')
 
+    trackEvent('share_clicked', { content_type: 'result', persona_id: persona?.id ?? 'unknown' })
+
     // Supabase에 저장 후 짧은 공유 URL 생성
     let shareUrl: string
+    let urlSource: 'short' | 'encoded' = 'short'
     try {
       const res = await fetch('/api/share', {
         method: 'POST',
@@ -604,6 +614,7 @@ export default function ResultClient() {
       // 저장 실패 시 URL 인코딩 방식으로 fallback
       const encoded = encodeEmotions(rawEmotionMap)
       shareUrl = `${window.location.origin}/result?d=${encoded}`
+      urlSource = 'encoded'
     }
 
     try {
@@ -612,8 +623,11 @@ export default function ResultClient() {
         text: `내 목소리에서 가장 많이 감지된 감정: ${top3}`,
         url: shareUrl,
       })
+      // GA4 권장 이벤트 이름 — 자동 분류됨
+      trackEvent('share', { method: 'web_share', content_type: 'result', persona_id: persona?.id ?? 'unknown', url_source: urlSource })
     } catch {
       await navigator.clipboard.writeText(shareUrl).catch(() => {})
+      trackEvent('share', { method: 'clipboard', content_type: 'result', persona_id: persona?.id ?? 'unknown', url_source: urlSource })
       alert('링크가 복사됐어요!')
     }
   }

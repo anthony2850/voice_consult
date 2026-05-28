@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { Suspense } from 'react'
 import { getSupabase } from '@/lib/supabase'
 import { migrateGuestData } from '@/lib/guest-migration'
+import { trackEvent } from '@/lib/analytics'
 
 function CallbackHandler() {
   const router = useRouter()
@@ -21,10 +22,12 @@ function CallbackHandler() {
         // PKCE flow: ?code=xxx
         const { data, error } = await supabase.auth.exchangeCodeForSession(code)
         if (error || !data.session) {
+          trackEvent('login_failed', { flow: 'pkce', error: error?.message?.slice(0, 100) ?? 'no_session' })
           setStatus('error')
           setTimeout(() => router.replace('/result'), 1500)
           return
         }
+        trackEvent('login_success', { flow: 'pkce', provider: data.session.user.app_metadata?.provider ?? 'unknown' })
         setStatus('migrating')
         const hasMigrated = await migrateGuestData(data.session.user.id)
         setStatus('done')
@@ -44,10 +47,12 @@ function CallbackHandler() {
             refresh_token: refreshToken,
           })
           if (error || !data.session) {
+            trackEvent('login_failed', { flow: 'implicit', error: error?.message?.slice(0, 100) ?? 'no_session' })
             setStatus('error')
             setTimeout(() => router.replace('/record'), 1500)
             return
           }
+          trackEvent('login_success', { flow: 'implicit', provider: data.session.user.app_metadata?.provider ?? 'unknown' })
           setStatus('migrating')
           const hasMigrated = await migrateGuestData(data.session.user.id)
           setStatus('done')

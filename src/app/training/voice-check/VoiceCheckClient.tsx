@@ -7,6 +7,7 @@ import { useAudioRecorder } from '@/hooks/useAudioRecorder'
 import { useWaveform } from '@/hooks/useWaveform'
 import { extractAudioFeaturesWithPraat, type AudioFeatures } from '@/lib/extractAudioFeatures'
 import { getSupabase } from '@/lib/supabase'
+import { trackEvent } from '@/lib/analytics'
 
 // ─── Scoring (same as ResultClient) ───────────────────────────────────────────
 function remapTo60(raw: number): number {
@@ -47,7 +48,7 @@ interface Scores {
 
 type PageState = 'idle' | 'recording' | 'analyzing' | 'result' | 'saved'
 
-const SCRIPT = '안녕하세요. 저는 오늘 제 목소리를 분석하러 왔습니다. 저는 평소에 친구들과 이야기하는 것을 좋아하고, 새로운 것을 배우는 것도 즐깁니다. 잘 부탁드립니다.'
+const SCRIPT = '안녕하세요. 저는 오늘 제 목소리를 분석하러 왔습니다. 잘 부탁드립니다'
 
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function VoiceCheckClient() {
@@ -108,6 +109,11 @@ export default function VoiceCheckClient() {
         })
         if (error) console.error('[voice-check] save failed:', error)
       }
+      trackEvent('voice_check_saved', {
+        stability: scores.stability,
+        pace: scores.pace,
+        expressiveness: scores.expressiveness,
+      })
       setPageState('saved')
     } finally {
       setSaving(false)
@@ -115,6 +121,7 @@ export default function VoiceCheckClient() {
   }
 
   function handleRetry() {
+    trackEvent('voice_check_retried')
     recorder.reset()
     setScores(null)
     setPageState('idle')
@@ -148,7 +155,7 @@ export default function VoiceCheckClient() {
         <div className="glass rounded-3xl p-6 flex flex-col items-center gap-4">
           <p className="text-sm text-muted-foreground text-center">준비되면 녹음 버튼을 눌러주세요</p>
           <button
-            onClick={() => { setPageState('recording'); recorder.start() }}
+            onClick={() => { trackEvent('voice_check_started'); setPageState('recording'); recorder.start() }}
             className="w-16 h-16 rounded-full gradient-primary flex items-center justify-center shadow-xl shadow-primary/30 active:scale-95 transition-transform"
           >
             <Mic size={26} className="text-white" />

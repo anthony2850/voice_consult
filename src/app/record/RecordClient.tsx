@@ -10,6 +10,7 @@ import { useWaveform } from '@/hooks/useWaveform'
 import { saveVoiceRecord } from '@/lib/voiceDB'
 import { extractAudioFeaturesWithPraat } from '@/lib/extractAudioFeatures'
 import { audioBlobToWav } from '@/lib/audioToWav'
+import { trackEvent } from '@/lib/analytics'
 
 const MAX_SECONDS = 30
 const MIN_SECONDS = 3   // minimum recording before allowing proceed
@@ -92,6 +93,7 @@ export default function RecordClient() {
     if (!audioBlob) return
     setAnalyzing(true)
     setAnalyzeProgress(0)
+    trackEvent('analyze_started', { duration_sec: duration, audio_size: audioBlob.size })
 
     // fake progress animation while waiting for API
     const progressInterval = setInterval(() => {
@@ -128,10 +130,11 @@ export default function RecordClient() {
 
       setAnalyzeProgress(100)
       setTimeout(() => router.push('/result'), 400)
-    } catch {
+    } catch (err) {
       clearInterval(progressInterval)
       setAnalyzing(false)
       setAnalyzeProgress(0)
+      trackEvent('analyze_failed', { error: err instanceof Error ? err.message.slice(0, 100) : 'unknown' })
     } finally {
       clearInterval(progressInterval)
     }
