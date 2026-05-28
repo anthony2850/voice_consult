@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useRef } from 'react'
 import { Mic, Square, RotateCcw } from 'lucide-react'
 import { useAudioRecorder } from '@/hooks/useAudioRecorder'
 import { useWaveform } from '@/hooks/useWaveform'
@@ -18,11 +18,7 @@ export default function RecordExercise({ unit, onDone }: Props) {
   useWaveform({ analyser: recorder.analyserNode, canvasRef, active: recorder.state === 'recording' })
 
   const script = useMemo(() => pickFromPool(unit.scriptPool), [unit])
-  const [reviewing, setReviewing] = useState(false)
-
-  useEffect(() => {
-    if (recorder.state === 'recorded') setReviewing(true)
-  }, [recorder.state])
+  const reviewing = recorder.state === 'recorded'
 
   return (
     <div className="glass rounded-3xl p-6 space-y-4">
@@ -74,7 +70,7 @@ export default function RecordExercise({ unit, onDone }: Props) {
           <audio controls src={recorder.audioUrl} className="w-full h-10" />
           <div className="flex gap-2">
             <button
-              onClick={() => { recorder.reset(); setReviewing(false) }}
+              onClick={() => recorder.reset()}
               className="flex-1 flex items-center justify-center gap-1.5 h-10 rounded-2xl bg-secondary/60 text-xs text-muted-foreground hover:text-foreground transition-colors"
             >
               <RotateCcw size={13} />다시 녹음
