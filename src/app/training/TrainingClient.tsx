@@ -6,7 +6,7 @@ import { Flame, ChevronRight, Pencil } from 'lucide-react'
 import { getSupabase } from '@/lib/supabase'
 import { Badge } from '@/components/ui/badge'
 import { CURRICULUM, CONCERN_LABELS } from '@/lib/curriculum'
-import { nextDayNum, isDeepDay, type TrainingLog } from '@/lib/trainingCycle'
+import { nextDayNum, currentCycle, type TrainingLog } from '@/lib/trainingCycle'
 import { useConcerns } from '@/hooks/useConcerns'
 import ConcernsModal from '@/components/training/ConcernsModal'
 import { trackEvent } from '@/lib/analytics'
@@ -57,9 +57,13 @@ export default function TrainingClient() {
     return count
   }, [logs, todayStr])
 
+  const cycle = useMemo(() => currentCycle(logs), [logs])
   const todayDayNum = useMemo(() => nextDayNum(logs), [logs])
   const todayDay = useMemo(() => CURRICULUM.find((d) => d.dayNum === todayDayNum)!, [todayDayNum])
-  const todayIsDeep = useMemo(() => isDeepDay(todayDay.matchingConcerns, concerns), [todayDay, concerns])
+  const todayIsFocus = useMemo(
+    () => !!todayDay.matchingConcern && concerns.includes(todayDay.matchingConcern),
+    [todayDay, concerns],
+  )
   const alreadyDoneToday = useMemo(
     () => logs.some((l) => l.log_date === todayStr),
     [logs, todayStr],
@@ -74,7 +78,7 @@ export default function TrainingClient() {
         <div className="relative z-10">
           <Badge className="mb-3 bg-white/20 text-white border-0 text-xs backdrop-blur">훈련 트랙</Badge>
           <h1 className="text-2xl font-black text-white mb-1">Voice Training</h1>
-          <p className="text-white/80 text-xs mb-3">5일 사이클의 통합 코스</p>
+          <p className="text-white/80 text-xs mb-3">Cycle {cycle} · 5일 코스 진행 중</p>
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1.5 bg-white/15 rounded-full px-3 py-1">
               <Flame size={14} className="text-orange-300" />
@@ -88,7 +92,11 @@ export default function TrainingClient() {
       <div className="px-4 pt-6">
         <button
           onClick={() => {
-            trackEvent('training_today_clicked', { day_num: todayDay.dayNum, deep: todayIsDeep })
+            trackEvent('training_today_clicked', {
+              day_num: todayDay.dayNum,
+              outcome: todayDay.outcome,
+              focus: todayIsFocus,
+            })
             router.push(`/training/session/${todayDay.dayNum}`)
           }}
           className="w-full text-left rounded-3xl bg-secondary/60 hover:bg-secondary active:scale-[0.98] transition-all p-5"
@@ -100,8 +108,9 @@ export default function TrainingClient() {
             <span className="text-2xl">{todayDay.emoji}</span>
             <p className="text-base font-bold text-foreground">{todayDay.theme}</p>
           </div>
-          {todayIsDeep && (
-            <p className="text-[11px] font-semibold text-orange-400 mb-1">⚡ 당신의 핵심 단계예요</p>
+          <p className="text-[11px] text-muted-foreground leading-snug mb-1">{todayDay.subtitle}</p>
+          {todayIsFocus && (
+            <p className="text-[11px] font-semibold text-orange-400 mb-1">⚡ 당신이 가장 빛날 단계예요</p>
           )}
           {alreadyDoneToday && (
             <p className="text-[11px] text-emerald-400 font-semibold">✓ 오늘 이미 완료 · 다시 진행 가능</p>
