@@ -36,18 +36,10 @@ export interface TrainingDay {
   deep: ExerciseUnit[]
 }
 
-// v1 sample content — 1 sample 'guided' + 1 sample 'record' per day to validate the framework.
+// v1 sample content — 1 sample 'record' per day to validate the framework.
 // Replace these with real exercises after coach content research.
 function sampleStandard(dayKey: string): ExerciseUnit[] {
   return [
-    {
-      id: `${dayKey}-warmup`,
-      title: '워밍업',
-      description: '오늘의 단계 준비',
-      instructions: ['편안하게 호흡을 가다듬으세요', '어깨를 천천히 돌려보세요'],
-      durationSec: 60,
-      interaction: 'guided',
-    },
     {
       id: `${dayKey}-main`,
       title: '메인 운동 (sample)',
