@@ -18,6 +18,7 @@ export default async function Page({ params }: { params: Promise<{ day: string }
             <span className="text-2xl">{trainingDay.emoji}</span>
             <h1 className="text-xl font-black text-white">{trainingDay.theme}</h1>
           </div>
+          <p className="text-white/80 text-xs mt-2 leading-relaxed">{trainingDay.subtitle}</p>
         </div>
       </div>
       <SessionPlayer day={trainingDay} />

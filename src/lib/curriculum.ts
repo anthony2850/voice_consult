@@ -29,6 +29,7 @@ export interface ExerciseUnit {
 export interface TrainingDay {
   dayNum: 1 | 2 | 3 | 4 | 5
   theme: string
+  subtitle: string  // aspirational framing — "당신의 □□가 △△하도록"
   emoji: string
   matchingConcerns: ConcernSlug[]
   standard: ExerciseUnit[]
@@ -84,6 +85,7 @@ export const CURRICULUM: TrainingDay[] = [
   {
     dayNum: 1,
     theme: '호흡·안정',
+    subtitle: '당신의 진정성이 흔들림 없이 전달되도록',
     emoji: '🫁',
     matchingConcerns: ['trembling'],
     standard: sampleStandard('day1'),
@@ -92,6 +94,7 @@ export const CURRICULUM: TrainingDay[] = [
   {
     dayNum: 2,
     theme: '립트릴·이완',
+    subtitle: '당신의 목소리가 자연스럽게 풀려나오도록',
     emoji: '🎵',
     matchingConcerns: ['trembling'],
     standard: sampleStandard('day2'),
@@ -100,6 +103,7 @@ export const CURRICULUM: TrainingDay[] = [
   {
     dayNum: 3,
     theme: '공명·볼륨',
+    subtitle: '당신의 존재감이 또렷하게 닿도록',
     emoji: '📢',
     matchingConcerns: ['small_voice'],
     standard: sampleStandard('day3'),
@@ -108,6 +112,7 @@ export const CURRICULUM: TrainingDay[] = [
   {
     dayNum: 4,
     theme: '속도 조절',
+    subtitle: '당신의 말에 여유와 무게가 담기도록',
     emoji: '⚡',
     matchingConcerns: ['fast'],
     standard: sampleStandard('day4'),
@@ -116,6 +121,7 @@ export const CURRICULUM: TrainingDay[] = [
   {
     dayNum: 5,
     theme: '발음·딕션',
+    subtitle: '당신의 한 마디 한 마디가 또렷하게 전해지도록',
     emoji: '🗣️',
     matchingConcerns: ['diction'],
     standard: sampleStandard('day5'),
