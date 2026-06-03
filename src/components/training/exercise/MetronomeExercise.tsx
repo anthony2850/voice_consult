@@ -55,13 +55,17 @@ export default function MetronomeExercise({ unit, onDone }: Props) {
       }
       return
     }
-    tick()
-    setBeat((b) => b + 1)
-    intervalRef.current = window.setInterval(() => {
+    // Fire immediately then on each interval
+    const fire = () => {
       tick()
       setBeat((b) => b + 1)
-    }, intervalMs)
+    }
+    const t = window.setTimeout(() => {
+      fire()
+      intervalRef.current = window.setInterval(fire, intervalMs)
+    }, 0)
     return () => {
+      window.clearTimeout(t)
       if (intervalRef.current !== null) {
         window.clearInterval(intervalRef.current)
         intervalRef.current = null
