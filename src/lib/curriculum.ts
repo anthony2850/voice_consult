@@ -37,7 +37,12 @@ export const CONCERN_TO_OUTCOME: Record<ConcernSlug, Outcome> = {
   fast: 'expression',
 }
 
-export type Interaction = 'guided' | 'record' | 'metronome'
+export type Interaction = 'guided' | 'record' | 'metronome' | 'breath-pacer'
+
+export interface BreathPhase {
+  label: string         // e.g. "들이마시기", "멈춤", "내쉬기"
+  durationSec: number
+}
 
 export interface ExerciseUnit {
   id: string
@@ -47,7 +52,9 @@ export interface ExerciseUnit {
   durationSec: number
   interaction: Interaction
   scriptPool?: string[]
-  metronomeBPM?: number  // 'metronome' 용. 기본값은 컴포넌트가 결정
+  metronomeBPM?: number       // 'metronome' 용
+  breathPhases?: BreathPhase[]  // 'breath-pacer' 용 — 한 사이클의 단계들
+  repetitions?: number          // 'breath-pacer' 용 — 사이클 반복 횟수
 }
 
 /**
@@ -72,13 +79,17 @@ const STABILITY_EXERCISES: ExerciseUnit[] = [
     title: '4-7-8 호흡',
     description: '부교감 활성화로 떨림 진정',
     instructions: [
-      '코로 4초 천천히 들이마시기',
-      '7초 동안 숨 멈추기',
-      '입으로 8초 동안 천천히 내쉬기',
-      '4회 반복',
+      '코로 천천히 들이마시고, 잠시 멈추고, 입으로 천천히 내쉬기',
+      '아래 단계 가이드를 따라 자연스럽게 호흡',
     ],
-    durationSec: 90,
-    interaction: 'guided',
+    durationSec: 57,  // (4+7+8) × 3
+    interaction: 'breath-pacer',
+    breathPhases: [
+      { label: '들이마시기 (코)', durationSec: 4 },
+      { label: '멈춤', durationSec: 7 },
+      { label: '내쉬기 (입)', durationSec: 8 },
+    ],
+    repetitions: 3,
   },
   {
     id: 'stab-l2-sustained-vowel',
