@@ -59,19 +59,21 @@
 빠른 말         ↔  표현력 (Day 4)
 ```
 
-### Day 진행은 세션 기반
+### Day 진행은 세션 기반 — 캘린더 무관
+
+진행은 *세션 단위*. 두 진입 사이에 며칠이 지나든 시스템엔 영향 없음. 시스템 관점에서 "어제 안 들어옴"이라는 개념이 존재하지 않음 — 다음 진입은 항상 마지막 진입의 직후로 이어짐.
 
 ```
-[월] 진입 → Day 1 안정 (4 운동) → 완료 → currentSlot = 2
-[화] 못 들어옴 (캘린더에 영향 없음)
-[수] 진입 → Day 2 전달력 (4 운동) → 완료 → currentSlot = 3
-[목] 못 들어옴
-[금] 진입 → Day 3 명료성 → 완료 → currentSlot = 4
-[토] 진입 → Day 4 표현력 → 완료 → currentSlot = 5
-[일] 진입 → Day 5 (사용자 픽) → 완료 → currentSlot = 1, currentCycle++
+진입 1 → Day 1 안정 (4 운동) → 완료 → currentSlot = 2
+진입 2 → Day 2 전달력         → 완료 → currentSlot = 3
+진입 3 → Day 3 명료성         → 완료 → currentSlot = 4
+진입 4 → Day 4 표현력         → 완료 → currentSlot = 5
+진입 5 → Day 5 (사용자 픽)    → 완료 → currentSlot = 1, currentCycle++
 ```
 
-`currentSlot`이 5를 초과하면 `currentCycle++`, `currentSlot = 1`로 리셋.
+진입 간격은 자유 — 매일 진입해도 OK, 일주일에 한 번이어도 다음 Day로 자연스럽게 이어짐. `currentSlot`이 5를 초과하면 `currentCycle++`, `currentSlot = 1`로 리셋.
+
+단, streak(연속 일수)는 별개 — 캘린더 기반으로 계산하므로 이탈일 발생 시 끊김. streak는 진행 상태와 독립적.
 
 ---
 
