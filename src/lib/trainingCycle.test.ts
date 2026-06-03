@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   nextDayNum,
+  currentCycle,
   isDeepDay,
   pickFromPool,
 } from './trainingCycle'
@@ -10,24 +11,51 @@ describe('nextDayNum', () => {
     expect(nextDayNum([])).toBe(1)
   })
 
-  it('returns next day after last completed', () => {
-    expect(nextDayNum([{ stage_num: 2, log_date: '2026-05-26' }])).toBe(3)
+  it('returns 2 after 1 log', () => {
+    expect(nextDayNum([{ stage_num: 1, log_date: '2026-06-01' }])).toBe(2)
   })
 
-  it('wraps from 5 to 1', () => {
-    expect(nextDayNum([{ stage_num: 5, log_date: '2026-05-26' }])).toBe(1)
+  it('returns 5 after 4 logs', () => {
+    const logs = [1, 2, 3, 4].map((n) => ({ stage_num: n, log_date: `2026-06-0${n}` }))
+    expect(nextDayNum(logs)).toBe(5)
   })
 
-  it('uses the most recent log by date', () => {
+  it('wraps from 5 to 1 after 5 logs (cycle complete)', () => {
+    const logs = [1, 2, 3, 4, 5].map((n) => ({ stage_num: n, log_date: `2026-06-0${n}` }))
+    expect(nextDayNum(logs)).toBe(1)
+  })
+
+  it('ignores stage_num values — only counts rows', () => {
+    // Even if past logs are inconsistent (legacy old-system rows), count drives slot.
     const logs = [
-      { stage_num: 5, log_date: '2026-05-20' },
-      { stage_num: 2, log_date: '2026-05-26' },
+      { stage_num: 99, log_date: '2026-05-01' },
+      { stage_num: 99, log_date: '2026-05-02' },
     ]
     expect(nextDayNum(logs)).toBe(3)
   })
+})
 
-  it('caps invalid stage_num to range and returns Day 1', () => {
-    expect(nextDayNum([{ stage_num: 99, log_date: '2026-05-26' }])).toBe(1)
+describe('currentCycle', () => {
+  it('returns 1 when no logs', () => {
+    expect(currentCycle([])).toBe(1)
+  })
+
+  it('returns 1 during first 5 sessions', () => {
+    const logs = [1, 2, 3, 4].map((n) => ({ stage_num: n, log_date: `2026-06-0${n}` }))
+    expect(currentCycle(logs)).toBe(1)
+  })
+
+  it('returns 2 on the 6th session (after completing cycle 1)', () => {
+    const logs = [1, 2, 3, 4, 5].map((n) => ({ stage_num: n, log_date: `2026-06-0${n}` }))
+    expect(currentCycle(logs)).toBe(2)
+  })
+
+  it('returns 3 after 10 sessions', () => {
+    const logs = Array.from({ length: 10 }, (_, i) => ({
+      stage_num: (i % 5) + 1,
+      log_date: `2026-06-${String(i + 1).padStart(2, '0')}`,
+    }))
+    expect(currentCycle(logs)).toBe(3)
   })
 })
 
