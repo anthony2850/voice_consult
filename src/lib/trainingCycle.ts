@@ -8,21 +8,25 @@ export interface TrainingLog {
 }
 
 /**
- * Compute the next day number based on the most recent training log.
- * - No logs → Day 1
- * - Wraps from 5 to 1
- * - Out-of-range stage_num is treated as 5 (so next = 1) — a defensive default.
+ * Next slot to present, derived purely from session count.
+ * Slot cycles 1→2→3→4→5→1→2→... regardless of past stage_num values.
+ * Allows legacy rows to count without affecting the new rotation.
  */
 export function nextDayNum(logs: TrainingLog[]): DayNum {
-  if (logs.length === 0) return 1
-  const sorted = [...logs].sort((a, b) => b.log_date.localeCompare(a.log_date))
-  const last = sorted[0].stage_num
-  const safe = last >= 1 && last <= 5 ? last : 5
-  return (((safe) % 5) + 1) as DayNum
+  return ((logs.length % 5) + 1) as DayNum
+}
+
+/**
+ * Current cycle (1-based). Each completed set of 5 sessions advances to next cycle.
+ * No logs → cycle 1 (we are about to do the first session of cycle 1).
+ */
+export function currentCycle(logs: TrainingLog[]): number {
+  return Math.floor(logs.length / 5) + 1
 }
 
 /**
  * True iff the user's concerns intersect the day's matching concerns.
+ * Kept for backward compatibility / focus marker logic.
  */
 export function isDeepDay(
   dayMatchingConcerns: readonly ConcernSlug[],
