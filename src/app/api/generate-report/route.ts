@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
+import { createServiceClient } from '@/lib/supabase'
+import { verifyPaidOrder, type PaymentsClient } from '@/lib/verifyPaidOrder'
 
 export const maxDuration = 60
 
@@ -14,13 +16,22 @@ function topEmotions(emotions: Record<string, number>, n = 10) {
 }
 
 export async function POST(req: NextRequest) {
-  let body: { emotions?: Record<string, number> | null }
+  let body: { emotions?: Record<string, number> | null; orderId?: string }
   try {
     body = await req.json()
   } catch {
     return NextResponse.json({ error: 'invalid request body' }, { status: 400 })
   }
-  const { emotions } = body
+  const { emotions, orderId } = body
+
+  // 결제 게이트 — 승인된 orderId 없이는 리포트(mock 포함)를 생성하지 않는다
+  const paid = await verifyPaidOrder(
+    createServiceClient() as unknown as PaymentsClient,
+    orderId,
+  )
+  if (!paid) {
+    return NextResponse.json({ error: 'payment_required' }, { status: 402 })
+  }
 
   if (!process.env.ANTHROPIC_API_KEY) {
     return NextResponse.json({ report: getMockReport() })
