@@ -39,19 +39,24 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // 3. Supabase에 결제 내역 저장
+    // 3. Supabase에 결제 내역 저장 — 이 행이 리포트 언락 게이트의 근거이므로 실패 시 1회 재시도
     try {
       const supabase = createServiceClient()
-      await supabase.from('payments').insert({
+      const row = {
         order_id: orderId,
         payment_key: paymentKey,
         amount: tossData.totalAmount,
         method: tossData.method,
         status: tossData.status,
         approved_at: tossData.approvedAt,
-      })
+      }
+      let { error: dbErr } = await supabase.from('payments').insert(row)
+      if (dbErr) {
+        console.error('[Supabase insert error, retrying]', dbErr)
+        ;({ error: dbErr } = await supabase.from('payments').insert(row))
+        if (dbErr) console.error('[Supabase insert retry failed]', dbErr)
+      }
     } catch (dbErr) {
-      // DB 오류는 결제 성공에는 영향 없음 — 로그만 남김
       console.error('[Supabase insert error]', dbErr)
     }
 
