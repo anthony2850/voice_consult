@@ -3,7 +3,7 @@
  * URL: /result/success?paymentKey=...&orderId=...&amount=...
  *
  * 1. 서버에서 결제 최종 승인 요청
- * 2. 성공 → /result?paid=1 로 리다이렉트
+ * 2. 성공 → /report?orderId=... 로 리다이렉트
  * 3. 실패 → /checkout?error=confirm_failed
  */
 import { redirect } from 'next/navigation'
@@ -25,6 +25,7 @@ export default async function PaymentSuccessPage({
     redirect('/checkout?error=missing_params')
   }
 
+  let errorParam: string | null = null
   try {
     const baseUrl = process.env.NEXTAUTH_URL ?? 'http://localhost:3000'
     const res = await fetch(`${baseUrl}/api/payment/confirm`, {
@@ -33,16 +34,18 @@ export default async function PaymentSuccessPage({
       body: JSON.stringify({ paymentKey, orderId, amount: Number(amount) }),
       cache: 'no-store',
     })
-
     if (!res.ok) {
       const data = await res.json()
       console.error('[Payment confirm failed]', data)
-      redirect(`/checkout?error=${encodeURIComponent(data.message ?? 'confirm_failed')}`)
+      errorParam = data.message ?? 'confirm_failed'
     }
   } catch (err) {
     console.error('[Payment success handler error]', err)
-    redirect('/checkout?error=server_error')
+    errorParam = 'server_error'
   }
 
-  redirect('/report')
+  if (errorParam) {
+    redirect(`/checkout?error=${encodeURIComponent(errorParam)}`)
+  }
+  redirect(`/report?orderId=${encodeURIComponent(orderId)}`)
 }

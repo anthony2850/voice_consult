@@ -1,10 +1,11 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Sparkles, RotateCcw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { trackEvent } from '@/lib/analytics'
 
 function parseReportSections(text: string) {
   const lines = text.split('\n')
@@ -24,12 +25,31 @@ function parseReportSections(text: string) {
 
 export default function ReportClient() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [report, setReport] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [progress, setProgress] = useState(0)
 
   useEffect(() => {
-    async function loadReport() {
+    // ── 언락 토큰 확인: 쿼리 파라미터 우선, 없으면 localStorage ──
+    const queryOrderId = searchParams.get('orderId')
+    let orderId: string | null = queryOrderId
+    try {
+      if (queryOrderId) {
+        localStorage.setItem('paidOrderId', queryOrderId)
+      } else {
+        orderId = localStorage.getItem('paidOrderId')
+      }
+    } catch { /* noop */ }
+
+    if (!orderId) {
+      router.replace('/checkout')
+      return
+    }
+    // 결제 직후 최초 진입 (success 리다이렉트)에서만 발화
+    if (queryOrderId) trackEvent('funnel_payment_done', { order_id: queryOrderId })
+
+    async function loadReport(paidOrderId: string) {
       let emotions: Record<string, number> | null = null
       try {
         const e = sessionStorage.getItem('voiceEmotions')
@@ -44,11 +64,18 @@ export default function ReportClient() {
         const res = await fetch('/api/generate-report', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ emotions }),
+          body: JSON.stringify({ emotions, orderId: paidOrderId }),
         })
+        if (res.status === 402) {
+          // 서버가 결제를 확인 못 함 — 토큰 폐기 후 결제 페이지로
+          try { localStorage.removeItem('paidOrderId') } catch { /* noop */ }
+          router.replace('/checkout')
+          return
+        }
         const data = await res.json()
         setReport(data.report)
         setProgress(100)
+        trackEvent('funnel_report_view')
       } catch {
         setReport(null)
       } finally {
@@ -56,7 +83,8 @@ export default function ReportClient() {
         setLoading(false)
       }
     }
-    loadReport()
+    loadReport(orderId)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   if (loading) {
@@ -96,6 +124,10 @@ export default function ReportClient() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-84px)] px-5 text-center gap-4">
         <p className="text-foreground font-semibold">리포트를 불러오지 못했어요</p>
+        <p className="text-xs text-muted-foreground">결제는 정상 처리됐어요. 잠시 후 다시 시도해 주세요.</p>
+        <Button onClick={() => window.location.reload()} className="rounded-2xl gradient-primary text-white border-0">
+          다시 시도
+        </Button>
         <Button onClick={() => router.push('/result')} variant="outline" className="rounded-2xl">
           결과 페이지로 돌아가기
         </Button>
