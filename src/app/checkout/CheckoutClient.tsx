@@ -1,13 +1,13 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { ShieldCheck, Sparkles, Lock } from 'lucide-react'
+import { useSearchParams } from 'next/navigation'
+import { ShieldCheck, Lock } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import type { PaymentWidgetInstance } from '@tosspayments/payment-widget-sdk'
 import { trackEvent } from '@/lib/analytics'
 
-type Step = 'summary' | 'widget' | 'processing'
+type Step = 'summary' | 'widget'
 
 const FEATURES = [
   { icon: '🎙', title: 'AI 감정 분석', desc: '49가지 감정 지표 정밀 측정' },
@@ -21,9 +21,9 @@ const AMOUNT = 990
 const CLIENT_KEY = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY ?? 'test_ck_placeholder'
 
 export default function CheckoutClient() {
-  const router = useRouter()
+  const searchParams = useSearchParams()
+  const errorParam = searchParams.get('error')
   const [step, setStep] = useState<Step>('summary')
-  const [fakeProgress, setFakeProgress] = useState(0)
   const [orderId] = useState(() => `voice-mbti-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`)
   const widgetRef = useRef<PaymentWidgetInstance | null>(null)
   const paymentMethodRef = useRef<ReturnType<PaymentWidgetInstance['renderPaymentMethods']> | null>(null)
@@ -50,21 +50,10 @@ export default function CheckoutClient() {
     return () => { cancelled = true }
   }, [step])
 
-  // AI 분석 fake progress (결제 후)
   useEffect(() => {
-    if (step !== 'processing') return
-    let v = 0
-    const id = setInterval(() => {
-      v += Math.random() * 8 + 2
-      if (v >= 100) {
-        v = 100
-        clearInterval(id)
-        setTimeout(() => router.push('/result?paid=1'), 600)
-      }
-      setFakeProgress(Math.min(v, 100))
-    }, 200)
-    return () => clearInterval(id)
-  }, [step, router])
+    trackEvent('funnel_checkout_view', errorParam ? { error: errorParam } : undefined)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const handleRequestPayment = async () => {
     if (!widgetRef.current) return
@@ -86,40 +75,6 @@ export default function CheckoutClient() {
       trackEvent('payment_error', { order_id: orderId, code: tosErr?.code ?? 'unknown' })
       console.error('[Payment request error]', tosErr)
     }
-  }
-
-  // ── AI 분석 로딩 화면 ───────────────────────────────────
-  if (step === 'processing') {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-84px)] px-5 text-center">
-        <div className="relative mb-8">
-          <span className="absolute inset-0 rounded-full gradient-primary opacity-20 animate-ping scale-150" />
-          <div className="relative w-20 h-20 rounded-full gradient-primary flex items-center justify-center shadow-2xl shadow-primary/40">
-            <Sparkles size={32} className="text-white animate-spin" style={{ animationDuration: '2s' }} />
-          </div>
-        </div>
-        <h2 className="text-xl font-bold text-foreground mb-2">AI가 분석 중이에요</h2>
-        <p className="text-sm text-muted-foreground mb-8">목소리의 파형·음색·에너지 패턴을 읽고 있어요</p>
-        <div className="w-full max-w-[280px]">
-          <div className="h-2 rounded-full bg-border overflow-hidden">
-            <div className="h-full gradient-primary rounded-full transition-all duration-200" style={{ width: `${fakeProgress}%` }} />
-          </div>
-          <p className="text-xs text-muted-foreground mt-2">{Math.floor(fakeProgress)}%</p>
-        </div>
-        <div className="mt-10 space-y-2">
-          {[
-            { at: 0,  text: '음성 파형 추출 중...' },
-            { at: 30, text: '음색 특성 분류 중...' },
-            { at: 60, text: '성격 유형 매핑 중...' },
-            { at: 85, text: '리포트 생성 중...' },
-          ].map(({ at, text }) => (
-            <p key={text} className={`text-xs transition-colors duration-500 ${fakeProgress >= at ? 'text-primary' : 'text-muted-foreground/30'}`}>
-              {fakeProgress >= at ? '✓' : '○'} {text}
-            </p>
-          ))}
-        </div>
-      </div>
-    )
   }
 
   // ── 토스 결제 위젯 화면 ─────────────────────────────────
@@ -154,6 +109,12 @@ export default function CheckoutClient() {
   // ── 요약 화면 (default) ────────────────────────────────
   return (
     <div className="flex flex-col min-h-[calc(100vh-84px)] px-5 pt-6 pb-4">
+      {errorParam && (
+        <div className="mb-4 rounded-2xl border border-destructive/30 bg-destructive/10 p-3.5">
+          <p className="text-sm font-semibold text-destructive">결제가 완료되지 않았어요</p>
+          <p className="text-xs text-muted-foreground mt-0.5">다시 시도해 주세요. 문제가 계속되면 다른 결제 수단을 이용해 주세요.</p>
+        </div>
+      )}
       <div className="mb-6">
         <Badge className="mb-2 bg-primary/20 text-primary border-0 text-[11px]">음성 분석 리포트</Badge>
         <h1 className="text-xl font-bold text-foreground">AI 맞춤 리포트 받기</h1>
