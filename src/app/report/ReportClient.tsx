@@ -31,6 +31,8 @@ export default function ReportClient() {
   const [progress, setProgress] = useState(0)
 
   useEffect(() => {
+    let cancelled = false
+
     // ── 언락 토큰 확인: 쿼리 파라미터 우선, 없으면 localStorage ──
     const queryOrderId = searchParams.get('orderId')
     let orderId: string | null = queryOrderId
@@ -44,7 +46,7 @@ export default function ReportClient() {
 
     if (!orderId) {
       router.replace('/checkout')
-      return
+      return () => { cancelled = true }
     }
     // 결제 직후 최초 진입 (success 리다이렉트)에서만 발화
     if (queryOrderId) trackEvent('funnel_payment_done', { order_id: queryOrderId })
@@ -66,24 +68,32 @@ export default function ReportClient() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ emotions, orderId: paidOrderId }),
         })
+        if (cancelled) return
         if (res.status === 402) {
           // 서버가 결제를 확인 못 함 — 토큰 폐기 후 결제 페이지로
           try { localStorage.removeItem('paidOrderId') } catch { /* noop */ }
           router.replace('/checkout')
           return
         }
+        if (!res.ok) {
+          setReport(null)
+          return
+        }
         const data = await res.json()
+        if (cancelled) return
         setReport(data.report)
         setProgress(100)
         trackEvent('funnel_report_view')
       } catch {
-        setReport(null)
+        if (!cancelled) setReport(null)
       } finally {
         clearInterval(progressInterval)
-        setLoading(false)
+        if (!cancelled) setLoading(false)
       }
     }
     loadReport(orderId)
+
+    return () => { cancelled = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
