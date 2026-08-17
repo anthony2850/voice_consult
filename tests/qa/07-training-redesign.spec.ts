@@ -4,7 +4,7 @@ test.describe('Training tab redesign (Phase 2 — outcome-based)', () => {
   test('training entry shows pre-register landing (fake door)', async ({ page }) => {
     await page.goto('/training')
     await expect(page.getByText('AI 발성 훈련 프로그램')).toBeVisible()
-    await expect(page.getByText(/4,900/)).toBeVisible()
+    await expect(page.getByText('원 (정식 출시가)')).toBeVisible()
     await expect(page.getByText('이런 훈련을 받게 돼요')).toBeVisible()
     await expect(page.getByPlaceholder('이메일 주소를 입력해 주세요')).toBeVisible()
   })
