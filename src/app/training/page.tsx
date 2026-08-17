@@ -1,10 +1,5 @@
-import LoginRequired from '@/components/LoginRequired'
-import TrainingClient from './TrainingClient'
+import PreRegisterLanding from './PreRegisterLanding'
 
 export default function TrainingPage() {
-  return (
-    <LoginRequired>
-      <TrainingClient />
-    </LoginRequired>
-  )
+  return <PreRegisterLanding />
 }
