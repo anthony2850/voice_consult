@@ -15,6 +15,7 @@ import { EMOTION_KO } from '@/lib/emotions'
 import ConcernsModal from '@/components/training/ConcernsModal'
 import { useConcerns } from '@/hooks/useConcerns'
 import type { ConcernSlug } from '@/lib/curriculum'
+import ReportTeaser from '@/components/ReportTeaser'
 
 // ── Tooltip ───────────────────────────────────────────────
 function Tooltip({ text }: { text: string }) {
@@ -505,6 +506,7 @@ export default function ResultClient() {
     } catch { /* ignore */ }
 
     trackEvent('analysis_completed')
+    trackEvent('funnel_result_view')
 
     const t1 = setTimeout(() => setRevealed(true), 100)
     const t2 = setTimeout(() => setAnimate(true), 300)
@@ -613,6 +615,9 @@ export default function ResultClient() {
 
         {/* Score cards */}
         {audioFeatures && <AudioFeaturesSection features={audioFeatures} animate={animate} />}
+
+        {/* 990원 리포트 페이월 티저 */}
+        <ReportTeaser />
 
         {/* Share + retry */}
         <div className="flex gap-3">
