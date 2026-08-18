@@ -67,7 +67,7 @@ export default function ReportTeaser() {
       </button>
       {!paid && (
         <p className="text-center text-[11px] text-muted-foreground mt-2">
-          <span className="line-through mr-1">3,900원</span>75% 할인 · 결제 후 즉시 열람
+          출시 기념가 · 결제 후 즉시 열람
         </p>
       )}
     </div>

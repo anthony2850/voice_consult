@@ -142,8 +142,7 @@ export default function CheckoutClient() {
           </p>
         </div>
         <div className="text-right">
-          <p className="text-xs text-muted-foreground line-through">3,900원</p>
-          <Badge className="bg-accent/20 text-accent border-0 text-[11px]">75% 할인</Badge>
+          <Badge className="bg-accent/20 text-accent border-0 text-[11px]">출시 기념가</Badge>
         </div>
       </div>
 
