@@ -18,8 +18,8 @@ export interface PaymentsClient {
 export async function verifyPaidOrder(
   client: PaymentsClient,
   orderId: string | null | undefined,
-): Promise<boolean> {
-  if (!orderId) return false
+): Promise<'paid' | 'unpaid' | 'error'> {
+  if (!orderId) return 'unpaid'
   try {
     const { data, error } = await client
       .from('payments')
@@ -27,8 +27,9 @@ export async function verifyPaidOrder(
       .eq('order_id', orderId)
       .eq('status', 'DONE')
       .maybeSingle()
-    return !error && !!data
+    if (error) return 'error'
+    return data ? 'paid' : 'unpaid'
   } catch {
-    return false
+    return 'error'
   }
 }

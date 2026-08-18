@@ -915,6 +915,8 @@ Expected: 07 랜딩 테스트 + 세션 테스트 통과, 05의 generate-report �
 
 **배포 전 체크리스트:**
 - [ ] Supabase에 `2026-08-17-pre-registrations-source.sql` 적용
+- [ ] Supabase에 `2026-08-17-payments-hardening.sql` 적용 (order_id 유니크 인덱스 + RLS 활성화)
+- [ ] Supabase 대시보드에서 `payments` 테이블 RLS가 활성화되어 있고 anon 정책이 없는지 확인 (service role 키로만 쓰기 가능해야 함)
 - [ ] 프로덕션 환경변수 확인: `TOSS_SECRET_KEY`, `NEXT_PUBLIC_TOSS_CLIENT_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `ANTHROPIC_API_KEY`, `NEXTAUTH_URL`
 
 - [ ] **Step 4: Commit (잔여 수정이 있었을 경우)**

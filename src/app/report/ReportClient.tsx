@@ -49,7 +49,13 @@ export default function ReportClient() {
       return () => { cancelled = true }
     }
     // 결제 직후 최초 진입 (success 리다이렉트)에서만 발화
-    if (queryOrderId) trackEvent('funnel_payment_done', { order_id: queryOrderId })
+    // 이벤트 발화 후 쿼리 파라미터를 제거해 새로고침/재시도 시 재발화를 막는다.
+    // router.replace는 deps가 []인 이 effect를 재실행시키지 않으므로 아래는 캡처된
+    // orderId 값으로 계속 진행한다.
+    if (queryOrderId) {
+      trackEvent('funnel_payment_done', { order_id: queryOrderId })
+      router.replace('/report')
+    }
 
     async function loadReport(paidOrderId: string) {
       let emotions: Record<string, number> | null = null

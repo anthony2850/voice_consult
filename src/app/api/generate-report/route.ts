@@ -29,8 +29,11 @@ export async function POST(req: NextRequest) {
     createServiceClient() as unknown as PaymentsClient,
     orderId,
   )
-  if (!paid) {
+  if (paid === 'unpaid') {
     return NextResponse.json({ error: 'payment_required' }, { status: 402 })
+  }
+  if (paid === 'error') {
+    return NextResponse.json({ error: 'verification_unavailable' }, { status: 503 })
   }
 
   if (!process.env.ANTHROPIC_API_KEY) {
