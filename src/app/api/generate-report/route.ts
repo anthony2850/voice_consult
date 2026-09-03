@@ -41,10 +41,10 @@ export async function POST(req: NextRequest) {
   }
 
   const emotionContext = emotions
-    ? `주요 감정 지표 (Hume AI 분석): ${topEmotions(emotions)}`
+    ? `주요 감정 지표 (AI 음성 분석): ${topEmotions(emotions)}`
     : '감정 데이터 없음'
 
-  const prompt = `당신은 목소리 심리 분석 전문가입니다. 아래 Hume AI 음성 감정 분석 데이터를 바탕으로 상세 분석 리포트를 작성해주세요.
+  const prompt = `당신은 목소리 심리 분석 전문가입니다. 아래 AI 음성 감정 분석 데이터를 바탕으로 상세 분석 리포트를 작성해주세요.
 
 **${emotionContext}**
 

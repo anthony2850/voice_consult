@@ -1,14 +1,14 @@
 /**
- * QA-02: 공유 링크 페르소나 불일치 버그
+ * QA-02: 결과 데이터 신뢰성 및 공유 링크
  *
  * 재현 시나리오:
  *   1. 사용자가 음성 분석 → 특정 페르소나 배정
- *   2. 공유 버튼 → URL 복사 (현재: window.location.href = /result)
+ *   2. 공유 버튼 → 분석 데이터가 포함된 공유 URL 생성
  *   3. 친구가 해당 URL 접속 → 다른 세션이므로 sessionStorage 없음
- *   4. getMockEmotions() fallback → 랜덤 감정 → 다른 페르소나 출력
+ *   4. 분석 데이터 없는 직접 접근에는 재녹음 안내 출력
  *
  * 기대 결과: 공유받은 사람도 동일한 페르소나를 봐야 함
- * 현재 결과: 매번 다른 페르소나가 나올 수 있음
+ * 기대 결과: 가짜 감정 데이터나 임의의 페르소나를 만들지 않음
  */
 import { test, expect } from '@playwright/test'
 
@@ -44,51 +44,22 @@ test.describe('[BUG] 공유 링크 - 페르소나 불일치', () => {
     return heroText
   })
 
-  test('공유 링크 수신자: 새 세션에서 /result 접근 → 다른 페르소나 나올 수 있음', async ({ page }) => {
+  test('분석 데이터 없이 /result에 직접 접근하면 재녹음을 안내', async ({ page }) => {
     // sessionStorage 없는 새 세션으로 접근 (친구 상황)
     await page.goto('/result')
     await page.waitForTimeout(1000)
 
-    const heroText = await page.locator('h1').first().textContent()
-    console.log('[친구] 페르소나:', heroText)
-
-    // ⚠️ 이 테스트는 버그 존재 확인용:
-    // sessionStorage 없으면 getMockEmotions()가 랜덤 데이터를 생성하므로
-    // 원본과 다른 페르소나가 나올 수 있음
-    expect(heroText).toBeTruthy()
-    // TODO: 공유 기능 수정 후 원본 세션과 동일한 페르소나가 나와야 함
+    await expect(page.getByRole('heading', { name: '표시할 음성 분석 결과가 없어요' })).toBeVisible()
+    await expect(page.getByRole('button', { name: '목소리 녹음하러 가기' })).toBeVisible()
   })
 
-  test('새로고침 시 페르소나가 바뀌는 버그', async ({ page }) => {
-    // sessionStorage 없는 상태에서 여러 번 새로고침
+  test('분석 데이터 없는 상태를 새로고침해도 임의의 페르소나를 만들지 않음', async ({ page }) => {
     await page.goto('/result')
-    await page.waitForTimeout(800)
-    const persona1 = await page.locator('h1').first().textContent()
-
-    await page.reload()
-    await page.waitForTimeout(800)
-    const persona2 = await page.locator('h1').first().textContent()
-
-    await page.reload()
-    await page.waitForTimeout(800)
-    const persona3 = await page.locator('h1').first().textContent()
-
-    console.log('새로고침 테스트:')
-    console.log('  1회:', persona1)
-    console.log('  2회:', persona2)
-    console.log('  3회:', persona3)
-
-    // ⚠️ 버그: sessionStorage 없으면 새로고침마다 다른 페르소나가 나올 수 있음
-    // 수정 후: 세 번 모두 같은 페르소나여야 함
-    const allSame = persona1 === persona2 && persona2 === persona3
-    if (!allSame) {
-      console.log('⚠️  새로고침마다 페르소나가 달라지는 버그 확인됨')
-    } else {
-      console.log('✓  새로고침해도 동일한 페르소나 유지됨')
+    for (let i = 0; i < 3; i++) {
+      await expect(page.getByRole('heading', { name: '표시할 음성 분석 결과가 없어요' })).toBeVisible()
+      await expect(page.getByText('페르소나 일치율')).toHaveCount(0)
+      await page.reload()
     }
-    // 현재는 버그가 존재하므로 soft assertion (실패해도 다음 테스트 진행)
-    // 수정 후 아래 주석 해제:
-    // expect(allSame).toBe(true)
   })
 
   test('공유 버튼이 존재하는지 확인', async ({ page }) => {

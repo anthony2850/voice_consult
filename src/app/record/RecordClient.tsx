@@ -11,6 +11,7 @@ import { saveVoiceRecord } from '@/lib/voiceDB'
 import { extractAudioFeaturesWithPraat } from '@/lib/extractAudioFeatures'
 import { audioBlobToWav } from '@/lib/audioToWav'
 import { trackEvent } from '@/lib/analytics'
+import { readVoiceAnalysisResponse, VoiceAnalysisError } from '@/lib/voiceAnalysis'
 
 const MAX_SECONDS = 30
 const MIN_SECONDS = 3   // minimum recording before allowing proceed
@@ -43,6 +44,7 @@ export default function RecordClient() {
 
   const [analyzing, setAnalyzing] = useState(false)
   const [analyzeProgress, setAnalyzeProgress] = useState(0)
+  const [analyzeError, setAnalyzeError] = useState<string | null>(null)
   const [currentTip, setCurrentTip] = useState(VOCAL_TIPS[0])
 
   useEffect(() => {
@@ -93,6 +95,7 @@ export default function RecordClient() {
     if (!audioBlob) return
     setAnalyzing(true)
     setAnalyzeProgress(0)
+    setAnalyzeError(null)
     trackEvent('analyze_started', { duration_sec: duration, audio_size: audioBlob.size })
 
     // fake progress animation while waiting for API
@@ -111,13 +114,17 @@ export default function RecordClient() {
         extractAudioFeaturesWithPraat(audioBlob),
       ])
 
-      const emotionData = await emotionRes.json()
+      const emotionData = await readVoiceAnalysisResponse(emotionRes)
 
-      sessionStorage.setItem('voiceEmotions', JSON.stringify(emotionData.emotions ?? null))
+      sessionStorage.setItem('voiceEmotions', JSON.stringify(emotionData.emotions))
+      sessionStorage.setItem('voiceAnalysisMeta', JSON.stringify({
+        source: emotionData.source,
+        model: emotionData.model,
+      }))
       sessionStorage.setItem('audioFeatures', JSON.stringify(audioFeatures))
 
       // IndexedDB에 오디오 + 분석 결과 저장 (비동기, 실패해도 결과 페이지 이동은 계속)
-      const rawEmotions: Record<string, number> = emotionData.emotions ?? {}
+      const rawEmotions = emotionData.emotions
       const top5 = Object.entries(rawEmotions)
         .map(([name, score]) => ({ name, score }))
         .sort((a, b) => b.score - a.score)
@@ -134,6 +141,11 @@ export default function RecordClient() {
       clearInterval(progressInterval)
       setAnalyzing(false)
       setAnalyzeProgress(0)
+      setAnalyzeError(
+        err instanceof VoiceAnalysisError && !err.retryable
+          ? '현재 음성 분석 서비스 설정을 확인하고 있어요. 잠시 후 다시 시도해 주세요.'
+          : '음성 분석에 실패했어요. 녹음은 그대로 있으니 다시 시도해 주세요.',
+      )
       trackEvent('analyze_failed', { error: err instanceof Error ? err.message.slice(0, 100) : 'unknown' })
     } finally {
       clearInterval(progressInterval)
@@ -230,6 +242,13 @@ export default function RecordClient() {
         <div className="flex items-start gap-2 rounded-xl bg-destructive/10 border border-destructive/30 p-3 mb-4 text-sm text-destructive">
           <AlertCircle size={16} className="mt-0.5 shrink-0" />
           <p>{error}</p>
+        </div>
+      )}
+
+      {analyzeError && (
+        <div className="flex items-start gap-2 rounded-xl bg-destructive/10 border border-destructive/30 p-3 mb-4 text-sm text-destructive" role="alert">
+          <AlertCircle size={16} className="mt-0.5 shrink-0" />
+          <p>{analyzeError}</p>
         </div>
       )}
 

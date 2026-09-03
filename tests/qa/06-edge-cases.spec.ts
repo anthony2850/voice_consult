@@ -15,12 +15,13 @@ test.describe('엣지 케이스 & 비정상 상태', () => {
     await page.reload()
     await page.waitForTimeout(1000)
 
-    // 파싱 실패해도 화이트스크린/500이 아닌 fallback으로 렌더링
+    // 파싱 실패해도 화이트스크린/500이 아닌 재녹음 안내로 렌더링
     await expect(page.locator('body')).not.toContainText('500')
     await expect(page.locator('body')).not.toContainText('Unexpected token')
     const h1 = page.locator('h1').first()
     await expect(h1).toBeVisible()
-    console.log('✓ 깨진 JSON에서도 fallback 렌더링 확인')
+    await expect(page.getByRole('heading', { name: '표시할 음성 분석 결과가 없어요' })).toBeVisible()
+    console.log('✓ 깨진 JSON에서도 재녹음 안내 렌더링 확인')
   })
 
   test('결과 페이지: emotions 값이 빈 객체일 때', async ({ page }) => {

@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export const maxDuration = 60
 
+const VOICE_ANALYSIS_MODEL = 'gpt-audio-1.5'
+const EMOTION_TOOL_NAME = 'record_voice_emotions'
+
 // Full 49-emotion space — kept for the output contract (persona matching expects
 // every key to exist, with 0 for emotions not present in the model's response).
 const ALL_EMOTIONS = [
@@ -43,8 +46,7 @@ function parseEmotionJson(text: string): Record<string, unknown> | null {
 
 /**
  * Analyze voice emotion with OpenAI's audio model.
- * Returns a 0–1 score per emotion, or null if the analysis is unusable
- * (so the caller can fall back to mock data).
+ * Returns a 0–1 score per emotion, or null if the analysis is unusable.
  */
 async function analyzeWithOpenAI(audioBlob: Blob): Promise<Record<string, number> | null> {
   const apiKey = process.env.OPENAI_API_KEY
@@ -64,7 +66,7 @@ async function analyzeWithOpenAI(audioBlob: Blob): Promise<Record<string, number
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'gpt-audio',
+      model: VOICE_ANALYSIS_MODEL,
       modalities: ['text'],
       // Audio block FIRST (text after) — empirically reliable. Reversing or
       // adding a system prompt makes gpt-audio refuse / ask for the audio.
@@ -80,15 +82,36 @@ async function analyzeWithOpenAI(audioBlob: Blob): Promise<Record<string, number
               type: 'text',
               text:
                 '위 오디오에 담긴 화자의 목소리 톤·발성·운율을 듣고 다음 감정 각각의 ' +
-                '강도(0.0~1.0)를 추정해 JSON 객체 하나로 응답하세요. ' +
-                'JSON 외 다른 텍스트, 설명, 거절 메시지는 절대 포함하지 마세요. ' +
+                '강도(0.0~1.0)를 추정하고 제공된 함수로 기록하세요. ' +
                 '키는 정확히 아래 영문 표기를 사용하세요.\n\n' +
-                `예시 응답: {"Joy": 0.7, "Calmness": 0.4, "Sadness": 0.1, ...}\n\n` +
                 `감정 목록: ${EMOTIONS_TO_RATE.join(', ')}`,
             },
           ],
         },
       ],
+      tools: [{
+        type: 'function',
+        function: {
+          name: EMOTION_TOOL_NAME,
+          description: '목소리에서 추정한 감정별 강도를 기록합니다.',
+          parameters: {
+            type: 'object',
+            properties: Object.fromEntries(
+              EMOTIONS_TO_RATE.map((name) => [name, {
+                type: 'number',
+                minimum: 0,
+                maximum: 1,
+              }]),
+            ),
+            required: EMOTIONS_TO_RATE,
+            additionalProperties: false,
+          },
+        },
+      }],
+      tool_choice: {
+        type: 'function',
+        function: { name: EMOTION_TOOL_NAME },
+      },
     }),
   })
 
@@ -98,9 +121,12 @@ async function analyzeWithOpenAI(audioBlob: Blob): Promise<Record<string, number
   }
 
   const completion = await response.json()
-  const raw = completion.choices?.[0]?.message?.content
+  const toolCall = completion.choices?.[0]?.message?.tool_calls?.find(
+    (call: { function?: { name?: string } }) => call.function?.name === EMOTION_TOOL_NAME,
+  )
+  const raw = toolCall?.function?.arguments
   if (!raw) {
-    console.error('[analyze-voice] empty content from OpenAI:', JSON.stringify(completion).slice(0, 500))
+    console.error('[analyze-voice] missing emotion tool call:', JSON.stringify(completion).slice(0, 500))
     return null
   }
 
@@ -110,31 +136,22 @@ async function analyzeWithOpenAI(audioBlob: Blob): Promise<Record<string, number
     return null
   }
 
-  // Map onto the canonical 49-emotion space, clamped to [0, 1]
-  const emotions: Record<string, number> = {}
-  let validCount = 0
-  for (const name of ALL_EMOTIONS) {
-    const v = parsed[name]
-    if (typeof v === 'number' && isFinite(v)) {
-      emotions[name] = Math.max(0, Math.min(1, v))
-      validCount++
-    } else {
-      emotions[name] = 0
-    }
-  }
-
-  // Require a reasonable fraction of emotions to be filled, else treat as failure
-  if (validCount < 10) {
-    console.error('[analyze-voice] only', validCount, 'valid emotions; raw content:', raw.slice(0, 500))
+  const hasCompleteValidScores = EMOTIONS_TO_RATE.every((name) => {
+    const value = parsed[name]
+    return typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 1
+  })
+  if (!hasCompleteValidScores) {
+    console.error('[analyze-voice] incomplete or invalid emotion scores:', raw.slice(0, 500))
     return null
   }
-  return emotions
-}
 
-function getMockEmotions(): Record<string, number> {
-  return Object.fromEntries(
-    ALL_EMOTIONS.map((name) => [name, Math.random() * 0.14 + 0.01])
-  )
+  // Map the validated subset onto the canonical 49-emotion space.
+  const emotions: Record<string, number> = {}
+  for (const name of ALL_EMOTIONS) {
+    const v = parsed[name]
+    emotions[name] = typeof v === 'number' ? v : 0
+  }
+  return emotions
 }
 
 export async function POST(req: NextRequest) {
@@ -142,29 +159,45 @@ export async function POST(req: NextRequest) {
   try {
     formData = await req.formData()
   } catch {
-    return NextResponse.json({ error: 'audio file required' }, { status: 400 })
+    return NextResponse.json(
+      { error: 'audio_file_required', retryable: false },
+      { status: 400 },
+    )
   }
   const audioFile = formData.get('audio') as Blob | null
 
-  let emotions: Record<string, number> | null = null
-
   if (!process.env.OPENAI_API_KEY) {
-    console.warn('[analyze-voice] OPENAI_API_KEY not set — using mock data')
-  } else if (!audioFile) {
-    console.warn('[analyze-voice] No audio file received — using mock data')
-  } else {
-    try {
-      console.log('[analyze-voice] Calling OpenAI, audio type:', audioFile.type, 'size:', audioFile.size)
-      emotions = await analyzeWithOpenAI(audioFile)
-      console.log('[analyze-voice] OpenAI result:', emotions ? `${Object.keys(emotions).length} emotions` : 'null (unusable response)')
-    } catch (err) {
-      console.error('[analyze-voice] OpenAI API error:', err)
-    }
+    console.error('[analyze-voice] OPENAI_API_KEY not set')
+    return NextResponse.json(
+      { error: 'analysis_not_configured', retryable: false },
+      { status: 503 },
+    )
   }
 
-  const usedMock = !emotions
-  if (usedMock) emotions = getMockEmotions()
-  console.log('[analyze-voice] Returning', usedMock ? 'MOCK' : 'REAL', 'data')
+  if (!audioFile) {
+    return NextResponse.json(
+      { error: 'audio_file_required', retryable: false },
+      { status: 400 },
+    )
+  }
 
-  return NextResponse.json({ emotions })
+  let emotions: Record<string, number> | null = null
+  try {
+    console.log('[analyze-voice] Calling OpenAI, audio type:', audioFile.type, 'size:', audioFile.size)
+    emotions = await analyzeWithOpenAI(audioFile)
+    console.log('[analyze-voice] OpenAI result:', emotions ? `${Object.keys(emotions).length} emotions` : 'null (unusable response)')
+  } catch (err) {
+    console.error('[analyze-voice] OpenAI API error:', err)
+  }
+
+  if (!emotions) {
+    return NextResponse.json(
+      { error: 'analysis_unavailable', retryable: true },
+      { status: 502 },
+    )
+  }
+
+  console.log('[analyze-voice] Returning REAL data')
+
+  return NextResponse.json({ emotions, source: 'openai', model: VOICE_ANALYSIS_MODEL })
 }

@@ -6,7 +6,7 @@ import { Share2, RotateCcw, Dumbbell, Compass } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { trackEvent } from '@/lib/analytics'
-import { type Persona, normalizeHumeScore, findBestPersona } from '@/lib/personas'
+import { type Persona, normalizeEmotionScore, findBestPersona } from '@/lib/personas'
 import PersonaRadarChart from '@/components/PersonaRadarChart'
 import { type AudioFeatures } from '@/lib/extractAudioFeatures'
 import LoginCTA from '@/components/LoginCTA'
@@ -16,6 +16,7 @@ import ConcernsModal from '@/components/training/ConcernsModal'
 import { useConcerns } from '@/hooks/useConcerns'
 import type { ConcernSlug } from '@/lib/curriculum'
 import ReportTeaser from '@/components/ReportTeaser'
+import { validateEmotionMap } from '@/lib/voiceAnalysis'
 
 // ── Tooltip ───────────────────────────────────────────────
 function Tooltip({ text }: { text: string }) {
@@ -244,12 +245,6 @@ function AudioFeaturesSection({ features, animate }: { features: AudioFeatures; 
   )
 }
 
-// ── Mock emotions (49개 중 48개 반환) ────────────────────
-function getMockEmotions(): Record<string, number> {
-  const names = Object.keys(EMOTION_KO)
-  return Object.fromEntries(names.map((n) => [n, Math.random() * 0.14 + 0.01]))
-}
-
 // ── Persona Action CTAs ───────────────────────────────────
 function PersonaActionSection({
   persona,
@@ -261,7 +256,7 @@ function PersonaActionSection({
   const router = useRouter()
 
   const belowEmotions = persona.emotions.filter((e) => {
-    const userScore = normalizeHumeScore(e, rawEmotions)
+    const userScore = normalizeEmotionScore(e, rawEmotions)
     const target = persona.targetScores[e] ?? 0
     return target - userScore > 10
   })
@@ -322,7 +317,7 @@ function PersonaGapSection({
 }) {
   const userScores: Record<string, number> = {}
   for (const e of persona.emotions) {
-    userScores[e] = normalizeHumeScore(e, rawEmotions)
+    userScores[e] = normalizeEmotionScore(e, rawEmotions)
   }
 
   const gaps = persona.emotions.map((e) => ({
@@ -444,6 +439,8 @@ export default function ResultClient() {
   const [revealed, setRevealed] = useState(false)
   const [persona, setPersona] = useState<Persona | null>(null)
   const [similarity, setSimilarity] = useState(0)
+  const [resultStatus, setResultStatus] = useState<'loading' | 'ready' | 'unavailable'>('loading')
+  const [analysisMeta, setAnalysisMeta] = useState<{ source: string; model?: string } | null>(null)
 
   // ── Concerns modal ──────────────────────────────────────
   const { concerns, loading: concernsLoading, save: saveConcerns } = useConcerns()
@@ -477,18 +474,33 @@ export default function ResultClient() {
   }, [stabilityScore, paceScore, expressivenessScore, concerns, concernsLoading, suggestedFromScores, autoOpened])
 
   useEffect(() => {
-    let raw: Record<string, number>
+    let raw: Record<string, number> | null = null
     // URL param이 있으면 공유 링크 → param 우선 사용
     const sharedData = searchParams.get('d')
     if (sharedData) {
-      raw = decodeEmotions(sharedData) ?? getMockEmotions()
+      raw = validateEmotionMap(decodeEmotions(sharedData))
+      if (raw) setAnalysisMeta({ source: '공유된 AI 분석' })
     } else {
       try {
         const stored = sessionStorage.getItem('voiceEmotions')
-        raw = stored ? JSON.parse(stored) : getMockEmotions()
+        raw = validateEmotionMap(stored ? JSON.parse(stored) : null)
+        const storedMeta = sessionStorage.getItem('voiceAnalysisMeta')
+        if (storedMeta) {
+          const meta = JSON.parse(storedMeta) as { source?: unknown; model?: unknown }
+          if (meta.source === 'openai') {
+            setAnalysisMeta({
+              source: 'OpenAI',
+              model: typeof meta.model === 'string' ? meta.model : undefined,
+            })
+          }
+        }
       } catch {
-        raw = getMockEmotions()
+        raw = null
       }
+    }
+    if (!raw) {
+      setResultStatus('unavailable')
+      return
     }
     const sorted = Object.entries(raw)
       .map(([name, score]) => ({ name, score }))
@@ -499,6 +511,7 @@ export default function ResultClient() {
     const { persona: matched, similarity: sim } = findBestPersona(raw)
     setPersona(matched)
     setSimilarity(sim)
+    setResultStatus('ready')
 
     try {
       const stored = sessionStorage.getItem('audioFeatures')
@@ -511,7 +524,7 @@ export default function ResultClient() {
     const t1 = setTimeout(() => setRevealed(true), 100)
     const t2 = setTimeout(() => setAnimate(true), 300)
     return () => { clearTimeout(t1); clearTimeout(t2) }
-  }, [])
+  }, [searchParams])
 
   const handleShare = async () => {
     const top3 = emotions.slice(0, 3).map((e) => EMOTION_KO[e.name] ?? e.name).join(', ')
@@ -555,7 +568,26 @@ export default function ResultClient() {
     }
   }
 
-  if (emotions.length === 0) return null
+  if (resultStatus === 'loading') return null
+
+  if (resultStatus === 'unavailable') {
+    return (
+      <div className="flex min-h-[calc(100vh-84px)] flex-col items-center justify-center px-6 text-center">
+        <div className="mb-5 text-5xl" aria-hidden="true">🎙️</div>
+        <h1 className="mb-2 text-xl font-bold text-foreground">표시할 음성 분석 결과가 없어요</h1>
+        <p className="mb-6 max-w-sm text-sm leading-relaxed text-muted-foreground">
+          임의의 결과는 보여드리지 않아요. 목소리를 다시 녹음해 실제 AI 분석을 진행해 주세요.
+        </p>
+        <Button
+          size="lg"
+          onClick={() => router.push('/record')}
+          className="h-12 rounded-2xl gradient-primary border-0 px-6 font-bold"
+        >
+          목소리 녹음하러 가기
+        </Button>
+      </div>
+    )
+  }
 
   return (
     <div
@@ -569,6 +601,11 @@ export default function ResultClient() {
           <Badge className="mb-3 bg-white/20 text-white border-0 text-xs backdrop-blur">
             목소리 페르소나 분석 완료
           </Badge>
+          {analysisMeta && (
+            <p className="mb-2 text-[11px] font-medium text-white/75">
+              {analysisMeta.source} 음성 분석{analysisMeta.model ? ` · ${analysisMeta.model}` : ''}
+            </p>
+          )}
           <h1 className="text-2xl font-black text-white mb-3">
             {persona ? `${persona.emoji} ${persona.name}` : '감정 분석 리포트'}
           </h1>

@@ -21,15 +21,13 @@ test.describe('주요 페이지 기본 로드', () => {
     await expect(page.locator('body')).not.toContainText('Internal Server Error')
   })
 
-  test('결과 페이지 - sessionStorage 없을 때 mock으로 렌더링', async ({ page }) => {
-    // sessionStorage 비어있는 상태로 /result 접근 (공유 링크 시나리오)
+  test('결과 페이지 - sessionStorage 없을 때 재녹음 안내 렌더링', async ({ page }) => {
+    // sessionStorage 비어있는 상태로 /result 직접 접근
     await page.goto('/result')
     // 500 에러나 흰 화면이 아닌 결과가 렌더링되어야 함
     await expect(page.locator('body')).not.toContainText('500')
     await expect(page.locator('body')).not.toContainText('Internal Server Error')
-    // 페르소나 섹션 렌더링 확인 (mock 데이터로라도)
-    await page.waitForTimeout(1000)
-    await expect(page.locator('body')).not.toBeEmpty()
+    await expect(page.getByRole('heading', { name: '표시할 음성 분석 결과가 없어요' })).toBeVisible()
   })
 
   test('트레이닝 페이지 로드', async ({ page }) => {

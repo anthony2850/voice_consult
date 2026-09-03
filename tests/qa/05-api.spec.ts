@@ -16,8 +16,7 @@ test.describe('API 엔드포인트 신뢰성', () => {
     expect(response.status()).not.toBe(500)
   })
 
-  test('analyze-voice: 정상 응답 포맷 확인 (mock 데이터)', async ({ request }) => {
-    // FormData 없이 요청 → mock 데이터로 응답해야 함 (또는 에러)
+  test('analyze-voice: 오디오 없는 multipart 요청은 오류 반환', async ({ request }) => {
     const response = await request.post('/api/analyze-voice', {
       multipart: {
         // 실제 오디오 없이 테스트
@@ -26,15 +25,11 @@ test.describe('API 엔드포인트 신뢰성', () => {
     const status = response.status()
     console.log('analyze-voice 응답 상태:', status)
 
-    if (status === 200) {
-      const body = await response.json()
-      console.log('응답 키:', Object.keys(body))
-      // emotions 필드가 있어야 함
-      expect(body).toHaveProperty('emotions')
-      expect(typeof body.emotions).toBe('object')
-    }
-    // 400/422는 허용 (올바른 에러 처리)
-    expect([200, 400, 422]).toContain(status)
+    expect(status).toBe(400)
+    await expect(response.json()).resolves.toMatchObject({
+      error: 'audio_file_required',
+      retryable: false,
+    })
   })
 
   test('generate-report: 인증 없이 접근 시 에러 반환', async ({ request }) => {

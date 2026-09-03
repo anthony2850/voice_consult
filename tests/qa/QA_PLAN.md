@@ -2,18 +2,18 @@
 
 ## 핵심 이슈 요약
 
-### [CRITICAL] 공유 링크 페르소나 불일치
+### [해결됨] 공유 링크 페르소나 불일치
 **재현 방법:**
 1. 음성 분석 완료 → 페르소나 A 배정
 2. 공유 버튼 → URL 복사 (`/result`)
 3. 친구가 해당 URL 클릭 → 다른 브라우저/세션
-4. 친구 화면에 페르소나 B 출력 (원본과 다름)
+4. 친구 화면에도 저장된 동일 분석 결과 출력
 
 **근본 원인:**
 - 감정 분석 결과가 `sessionStorage`에만 저장됨 (세션 로컬, 공유 불가)
 - 공유 URL에 감정 데이터 파라미터 없음
-- 새 세션에서 `/result` 접근 → `getMockEmotions()` (랜덤) fallback
-- 랜덤 감정 → 다른 페르소나 매칭
+- 새 세션에서 `/result`에 직접 접근하면 재녹음 안내를 표시
+- 공유는 Supabase 단축 URL, 저장 실패 시 분석 데이터 인코딩 URL을 사용
 
 **영향 범위:** 제품의 핵심 소셜 기능 전체
 
@@ -25,7 +25,7 @@
 |---|--------|------|------|
 | 1 | 🔴 Critical | 공유 링크에서 페르소나 불일치 | `ResultClient.tsx:585` |
 | 2 | 🔴 Critical | 결과 페이지 새로고침 시 페르소나 변경 | `ResultClient.tsx:558` |
-| 3 | 🟠 High | Hume API 실패 시 유저에게 알림 없이 mock 데이터 사용 | `analyze-voice/route.ts:85` |
+| 3 | ✅ 해결 | OpenAI API 실패 시 랜덤 mock 대신 재시도 가능한 오류 표시 | `analyze-voice/route.ts` |
 | 4 | 🟠 High | 유료 리포트 데이터가 sessionStorage에만 존재 (탭 닫으면 소멸) | `ReportClient.tsx` |
 | 5 | 🟠 High | 결제 후 결과 페이지로 돌아왔을 때 emotions가 달라질 수 있음 | `CheckoutClient.tsx:61` |
 | 6 | 🟡 Medium | audioFeatures sessionStorage 의존 (새로고침 시 소실) | `ResultClient.tsx:574` |
@@ -92,9 +92,9 @@ npx playwright show-report tests/qa-report
 - 장점: URL 짧음, 히스토리 영구 저장, 계정 연동 가능
 - 단점: 구현 공수 필요
 
-### 2순위: API 실패 시 사용자 알림 (이슈 #3)
-- Hume API 실패 시 "분석 실패, 다시 시도해주세요" 토스트 표시
-- 현재는 유저 몰래 mock 데이터로 대체됨
+### 2순위: API 실패 시 사용자 알림 (이슈 #3, 해결됨)
+- OpenAI API 실패 시 녹음 화면에 재시도 안내 표시
+- 랜덤 mock 데이터 생성 경로 제거
 
 ### 3순위: 유료 리포트 영속성 (이슈 #4, #5)
 - 결제 완료 시 Supabase에 emotions + 결제 ID 저장

@@ -58,7 +58,7 @@ export interface AudioFeatures {
 }
 
 export interface VoiceAnalysisData {
-  /** Hume AI 감정 분석 상위 5개 (score 내림차순) */
+  /** AI 음성 감정 분석 상위 5개 (score 내림차순) */
   emotions: VoiceEmotion[] | null
   /** 음향 피처: Pitch, dB, Jitter, Shimmer, 리듬 등 */
   audioFeatures: AudioFeatures | null

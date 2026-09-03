@@ -8,7 +8,7 @@ export interface Persona {
   emotions: string[]
   /**
    * Target percentile per emotion, 0–100 scale.
-   * Matches the output of `normalizeHumeScore` — i.e., "where this emotion
+   * Matches the output of `normalizeEmotionScore` — i.e., "where this emotion
    * ranks within the user's full 49-dim vector." Designed by hand per persona
    * (not derived from synthetic audio); the matching algorithm compares each
    * persona's targets against the user's per-emotion percentiles.
@@ -186,7 +186,7 @@ export const PERSONAS: Persona[] = [
  * full 49-emotion vector. This is how `targetScores` is interpreted at match
  * time — "how strong is this emotion relative to the user's other emotions."
  */
-export function normalizeHumeScore(
+export function normalizeEmotionScore(
   emotionName: string,
   allEmotions: Record<string, number>,
 ): number {
@@ -201,7 +201,7 @@ export function normalizeHumeScore(
 /**
  * Find the persona that best matches the user's raw emotions.
  * For each persona, compute the mean absolute distance between the user's
- * per-emotion percentile (normalizeHumeScore) and the persona's targetScores —
+ * per-emotion percentile (normalizeEmotionScore) and the persona's targetScores —
  * over only the emotions that persona uses. Pick the smallest distance.
  */
 export function findBestPersona(
@@ -212,7 +212,7 @@ export function findBestPersona(
 
   for (const persona of PERSONAS) {
     const distances = persona.emotions.map((e) => {
-      const userScore = normalizeHumeScore(e, allEmotions)
+      const userScore = normalizeEmotionScore(e, allEmotions)
       const target = persona.targetScores[e] ?? 0
       return Math.abs(userScore - target)
     })
