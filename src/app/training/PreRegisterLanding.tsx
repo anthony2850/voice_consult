@@ -27,14 +27,10 @@ export default function PreRegisterLanding() {
             내 목소리 분석 결과에 맞춘 5일 사이클 훈련.
             <br />지금 준비 중이에요 — 등록하면 오픈 소식을 가장 먼저 받아요.
           </p>
-          <div className="flex items-baseline gap-2 mt-4">
-            <span className="text-3xl font-black text-white">4,900</span>
-            <span className="text-white/80 text-sm">원 (정식 출시가)</span>
-          </div>
         </div>
       </div>
 
-      <div className="-mt-6 px-4 space-y-4">
+      <div className="relative z-10 -mt-6 px-4 space-y-4">
         {/* ── 커리큘럼 미리보기 ── */}
         <div className="glass rounded-3xl p-5">
           <h2 className="text-sm font-bold text-foreground mb-3">이런 훈련을 받게 돼요</h2>
