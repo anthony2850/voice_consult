@@ -1,7 +1,7 @@
 import Image from 'next/image'
-import { Mic, Sparkles } from 'lucide-react'
+import { Sparkles } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
-import StartRecordButton from '@/components/StartRecordButton'
+import StartRecordButton, { StartRecordMic } from '@/components/StartRecordButton'
 import HomeHero from '@/components/HomeHero'
 
 const SOCIAL_PROOF = [
@@ -37,15 +37,8 @@ export default function HomePage() {
         {/* main headline */}
         <HomeHero />
 
-        {/* microphone animation */}
-        <div className="relative flex items-center justify-center mb-8">
-          {/* pulse rings */}
-          <span className="absolute w-36 h-36 rounded-full gradient-primary opacity-10 animate-ping" />
-          <span className="absolute w-28 h-28 rounded-full gradient-primary opacity-15 animate-ping [animation-delay:0.3s]" />
-          <div className="relative z-10 w-20 h-20 rounded-full gradient-primary flex items-center justify-center shadow-2xl shadow-primary/40">
-            <Mic size={34} className="text-white" strokeWidth={2} />
-          </div>
-        </div>
+        {/* microphone animation — also tappable */}
+        <StartRecordMic />
 
         {/* social proof chips */}
         <div className="flex items-center gap-2 mb-8">
@@ -67,7 +60,7 @@ export default function HomePage() {
       <section className="px-5 pb-6">
         <div className="glass rounded-2xl px-5 py-5 text-center">
           <p className="text-[11px] text-muted-foreground mb-1.5">알고 계셨나요?</p>
-          <p className="text-5xl font-black gradient-text mb-2">38%</p>
+          <p className="text-5xl font-black text-foreground mb-2">38%</p>
           <p className="text-xs text-foreground/80 leading-relaxed">
             상대방의 인상과 호감을 결정할 때<br />
             <span className="text-foreground font-semibold">목소리가 영향을 미치는 비율</span>이에요
