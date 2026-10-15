@@ -1,13 +1,14 @@
 import Image from 'next/image'
-import { Sparkles } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import StartRecordButton, { StartRecordMic } from '@/components/StartRecordButton'
 import HomeHero from '@/components/HomeHero'
 
-const SOCIAL_PROOF = [
-  { emoji: '🎯', text: '98% 정확도' },
-  { emoji: '⚡', text: '30초 분석' },
-  { emoji: '🔒', text: '보이스 보안' },
+// What the analysis actually measures — keep in sync with lib/voiceScores.ts.
+const METRICS = [
+  { emoji: '〰️', name: '목소리 떨림', how: 'Jitter·Shimmer' },
+  { emoji: '⏱️', name: '말 속도', how: '초당 음절 수' },
+  { emoji: '🎵', name: '억양 변화', how: '피치 변화폭' },
+  { emoji: '🔊', name: '목소리 크기', how: '평균 음량' },
 ]
 
 export default function HomePage() {
@@ -28,43 +29,35 @@ export default function HomePage() {
 
       {/* ── Hero ───────────────────────────────────── */}
       <section className="flex-1 flex flex-col items-center justify-center px-5 pt-6 pb-8 text-center">
-        {/* floating badge */}
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full glass text-xs text-muted-foreground mb-6">
-          <Sparkles size={12} className="text-accent" />
-          <span>AI가 30만 개 목소리를 학습했어요</span>
+        <div className="px-3 py-1.5 rounded-full glass text-xs text-muted-foreground mb-6">
+          AI 보이스 코치
         </div>
 
-        {/* main headline */}
         <HomeHero />
 
         {/* microphone animation — also tappable */}
         <StartRecordMic />
 
-        {/* social proof chips */}
-        <div className="flex items-center gap-2 mb-8">
-          {SOCIAL_PROOF.map(({ emoji, text }) => (
-            <span
-              key={text}
-              className="flex items-center gap-1 px-2.5 py-1 rounded-full glass text-[11px] text-foreground/80 font-medium"
-            >
-              {emoji} {text}
-            </span>
-          ))}
-        </div>
-
         {/* CTA button */}
         <StartRecordButton />
       </section>
 
-      {/* ── Stats insight ──────────────────────────── */}
+      {/* ── What we measure ────────────────────────── */}
       <section className="px-5 pb-6">
-        <div className="glass rounded-2xl px-5 py-5 text-center">
-          <p className="text-[11px] text-muted-foreground mb-1.5">알고 계셨나요?</p>
-          <p className="text-5xl font-black text-foreground mb-2">38%</p>
-          <p className="text-xs text-foreground/80 leading-relaxed">
-            상대방의 인상과 호감을 결정할 때<br />
-            <span className="text-foreground font-semibold">목소리가 영향을 미치는 비율</span>이에요
+        <div className="glass rounded-2xl px-5 py-5">
+          <p className="text-sm font-bold text-foreground text-center mb-4">
+            4가지를 수치로 측정해요
           </p>
+          <div className="grid grid-cols-2 gap-2">
+            {METRICS.map(({ emoji, name, how }) => (
+              <div key={name} className="rounded-xl bg-secondary/60 px-3 py-2.5">
+                <p className="text-xs font-semibold text-foreground">
+                  <span className="mr-1">{emoji}</span>{name}
+                </p>
+                <p className="text-[11px] text-muted-foreground mt-0.5">{how}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
     </div>

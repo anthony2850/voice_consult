@@ -7,12 +7,12 @@ const GA_ID = process.env.NEXT_PUBLIC_GA_TRACKING_ID
 const PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID
 
 export const metadata: Metadata = {
-  title: 'Voice Emotion — 내 목소리 감정 분석',
-  description: '목소리 하나로 49가지 감정을 분석합니다. AI가 분석한 당신만의 Voice Emotion 리포트를 확인해 보세요.',
-  keywords: ['목소리', '감정분석', '음성분석', 'AI분석', 'Voice Emotion'],
+  title: 'MyTone — AI 보이스 코치',
+  description: '30초 녹음으로 목소리 떨림·말 속도·억양·크기를 수치로 진단하고, 아쉬운 부분을 매일 훈련으로 다듬는 AI 보이스 코치.',
+  keywords: ['목소리', '발성 훈련', '보이스 코치', '음성 분석', 'MyTone'],
   openGraph: {
-    title: 'Voice Emotion',
-    description: '목소리 하나로 알아보는 나의 감정 패턴',
+    title: 'MyTone — AI 보이스 코치',
+    description: '목소리를 수치로 진단하고 훈련하세요',
     type: 'website',
   },
 }
