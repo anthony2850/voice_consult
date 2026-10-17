@@ -45,8 +45,7 @@ export default function ConcernsModal({ open, initial, onClose, onSave, title = 
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X size={18} /></button>
         </div>
         <p className="text-xs text-muted-foreground leading-relaxed">
-          해당하는 고민을 모두 선택해주세요. 선택한 영역의 Day는 매일 더 깊은 훈련이 제공돼요.
-          보통 1-2개를 권장합니다.
+          지금 느끼는 고민을 골라 두세요. 훈련 트랙은 진단에서 한 가지를 확정해요.
         </p>
         <div className="space-y-2">
           {ALL.map((c) => {

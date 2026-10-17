@@ -1,33 +1,21 @@
 import { test, expect } from '@playwright/test'
 
-test.describe('Training tab redesign (Phase 2 — outcome-based)', () => {
-  test('training entry shows pre-register landing (fake door)', async ({ page }) => {
+test.describe('Training track (one concern, one ladder)', () => {
+  test('training entry asks guests to log in — no fake door, no price', async ({ page }) => {
     await page.goto('/training')
-    await expect(page.getByText('AI 발성 훈련 프로그램')).toBeVisible()
-    await expect(page.getByText('원 (정식 출시가)')).toBeVisible()
-    await expect(page.getByText('이런 훈련을 받게 돼요')).toBeVisible()
-    await expect(page.getByPlaceholder('이메일 주소를 입력해 주세요')).toBeVisible()
+    await expect(page.getByRole('heading', { name: '로그인이 필요해요' })).toBeVisible()
+    await expect(page.getByText(/4,900원|사전 ?예약|사전 ?등록/)).toHaveCount(0)
   })
 
-  test('session route renders the day header with theme + subtitle', async ({ page }) => {
-    await page.goto('/training/session/1')
-    await expect(page.getByText('Day 1 / 5')).toBeVisible()
-    await expect(page.getByText('안정')).toBeVisible()
-    await expect(page.getByText('당신의 진정성이 흔들림 없이 전달되도록')).toBeVisible()
+  test('diagnosis and session routes are gated the same way', async ({ page }) => {
+    await page.goto('/training/diagnose')
+    await expect(page.getByRole('heading', { name: '로그인이 필요해요' })).toBeVisible()
+    await page.goto('/training/session')
+    await expect(page.getByRole('heading', { name: '로그인이 필요해요' })).toBeVisible()
   })
 
-  test('Day 5 route shows outcome picker before exercises', async ({ page }) => {
-    await page.goto('/training/session/5')
-    await expect(page.getByText('어떤 영역을 한 번 더?')).toBeVisible()
-    // 4 outcome cards
-    await expect(page.getByText('안정', { exact: true })).toBeVisible()
-    await expect(page.getByText('전달력', { exact: true })).toBeVisible()
-    await expect(page.getByText('명료성', { exact: true })).toBeVisible()
-    await expect(page.getByText('표현력', { exact: true })).toBeVisible()
-  })
-
-  test('invalid day shows 404', async ({ page }) => {
-    const response = await page.goto('/training/session/99')
+  test('old day routes are gone', async ({ page }) => {
+    const response = await page.goto('/training/session/1')
     expect(response?.status()).toBe(404)
   })
 })

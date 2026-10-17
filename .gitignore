@@ -49,3 +49,6 @@ next-env.d.ts
 # python (Modal microservice in /modal)
 __pycache__/
 *.pyc
+
+# reference material (copyrighted, not for the public repo)
+/docs/reference/

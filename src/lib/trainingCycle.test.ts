@@ -1,77 +1,184 @@
 import { describe, it, expect } from 'vitest'
 import {
-  nextDayNum,
-  currentCycle,
-  isDeepDay,
+  meetsCriterion,
+  findBoundary,
+  startRungFromBoundary,
+  suggestConcernsFromDiagnosis,
+  allowStrongVariations,
+  nextRung,
+  sessionRungs,
+  pickVariation,
+  retentionVerdict,
   pickFromPool,
+  type Measure,
 } from './trainingCycle'
+import { TRACKS, type RungLevel } from './curriculum'
 
-describe('nextDayNum', () => {
-  it('returns 1 when no logs', () => {
-    expect(nextDayNum([])).toBe(1)
+function m(over: Partial<Measure> & { level?: RungLevel }): Measure {
+  return {
+    jitter_rel_pct: 1.0,
+    shimmer_rel_pct: 3.0,
+    jitter_source: 'praat',
+    onsets_per_second: 4.0,
+    db_mean: -24,
+    duration_sec: 5,
+    ...over,
+  }
+}
+
+describe('meetsCriterion', () => {
+  it('jitter: praat limit 3%, frame limit 50%', () => {
+    expect(meetsCriterion('jitter', m({ jitter_rel_pct: 2.9 }))).toBe(true)
+    expect(meetsCriterion('jitter', m({ jitter_rel_pct: 3.1 }))).toBe(false)
+    expect(meetsCriterion('jitter', m({ jitter_rel_pct: 40, jitter_source: 'frame' }))).toBe(true)
+    expect(meetsCriterion('jitter', m({ jitter_rel_pct: 60, jitter_source: 'frame' }))).toBe(false)
   })
 
-  it('returns 2 after 1 log', () => {
-    expect(nextDayNum([{ stage_num: 1, log_date: '2026-06-01' }])).toBe(2)
+  it('pace: 2.5–5.5 syllables/sec', () => {
+    expect(meetsCriterion('pace', m({ onsets_per_second: 2.4 }))).toBe(false)
+    expect(meetsCriterion('pace', m({ onsets_per_second: 4 }))).toBe(true)
+    expect(meetsCriterion('pace', m({ onsets_per_second: 5.6 }))).toBe(false)
   })
 
-  it('returns 5 after 4 logs', () => {
-    const logs = [1, 2, 3, 4].map((n) => ({ stage_num: n, log_date: `2026-06-0${n}` }))
-    expect(nextDayNum(logs)).toBe(5)
+  it('loudness: within 2 dB of baseline, default floor without baseline', () => {
+    const base = m({ db_mean: -20 })
+    expect(meetsCriterion('loudness', m({ db_mean: -21.5 }), base)).toBe(true)
+    expect(meetsCriterion('loudness', m({ db_mean: -23 }), base)).toBe(false)
+    expect(meetsCriterion('loudness', m({ db_mean: -29 }))).toBe(true)
+    expect(meetsCriterion('loudness', m({ db_mean: -31 }))).toBe(false)
   })
 
-  it('wraps from 5 to 1 after 5 logs (cycle complete)', () => {
-    const logs = [1, 2, 3, 4, 5].map((n) => ({ stage_num: n, log_date: `2026-06-0${n}` }))
-    expect(nextDayNum(logs)).toBe(1)
+  it('self: null until the user answers', () => {
+    expect(meetsCriterion('self', m({}))).toBeNull()
+    expect(meetsCriterion('self', m({}), null, true)).toBe(true)
+    expect(meetsCriterion('self', m({}), null, false)).toBe(false)
   })
+})
 
-  it('ignores stage_num values — only counts rows', () => {
-    // Even if past logs are inconsistent (legacy old-system rows), count drives slot.
-    const logs = [
-      { stage_num: 99, log_date: '2026-05-01' },
-      { stage_num: 99, log_date: '2026-05-02' },
+describe('findBoundary / startRungFromBoundary', () => {
+  it('returns the first rung that fails, in level order', () => {
+    const ms = [
+      m({ level: 4, jitter_rel_pct: 5 }),
+      m({ level: 1, jitter_rel_pct: 1 }),
+      m({ level: 3, jitter_rel_pct: 4 }),
+      m({ level: 2, jitter_rel_pct: 1 }),
     ]
-    expect(nextDayNum(logs)).toBe(3)
+    expect(findBoundary('jitter', ms)).toBe(3)
+    expect(startRungFromBoundary(3)).toBe(3)
+  })
+
+  it('returns null when every rung passes → start at 5', () => {
+    const ms = [1, 2, 3, 4].map((l) => m({ level: l as RungLevel }))
+    expect(findBoundary('jitter', ms)).toBeNull()
+    expect(startRungFromBoundary(null)).toBe(5)
   })
 })
 
-describe('currentCycle', () => {
-  it('returns 1 when no logs', () => {
-    expect(currentCycle([])).toBe(1)
+describe('suggestConcernsFromDiagnosis', () => {
+  it('puts measured problems first and diction last', () => {
+    const ms = [
+      m({ level: 1 }),
+      m({ level: 2 }),
+      m({ level: 3, jitter_rel_pct: 4 }),
+      m({ level: 4, jitter_rel_pct: 4, onsets_per_second: 6.5 }),
+    ]
+    const s = suggestConcernsFromDiagnosis(ms)
+    expect(s[0].concern).toBe('trembling')
+    expect(s[0].boundary).toBe(3)
+    expect(s[1].concern).toBe('fast')
+    expect(s[1].boundary).toBe(4)
+    expect(s[s.length - 1].concern).toBe('diction')
+    expect(s).toHaveLength(4)
   })
 
-  it('returns 1 during first 5 sessions', () => {
-    const logs = [1, 2, 3, 4].map((n) => ({ stage_num: n, log_date: `2026-06-0${n}` }))
-    expect(currentCycle(logs)).toBe(1)
+  it('flags small_voice when the real sentence is much quieter than the hum', () => {
+    const ms = [m({ level: 1, db_mean: -18 }), m({ level: 4, db_mean: -24 })]
+    const s = suggestConcernsFromDiagnosis(ms)
+    expect(s[0].concern).toBe('small_voice')
   })
 
-  it('returns 2 on the 6th session (after completing cycle 1)', () => {
-    const logs = [1, 2, 3, 4, 5].map((n) => ({ stage_num: n, log_date: `2026-06-0${n}` }))
-    expect(currentCycle(logs)).toBe(2)
-  })
-
-  it('returns 3 after 10 sessions', () => {
-    const logs = Array.from({ length: 10 }, (_, i) => ({
-      stage_num: (i % 5) + 1,
-      log_date: `2026-06-${String(i + 1).padStart(2, '0')}`,
-    }))
-    expect(currentCycle(logs)).toBe(3)
+  it('ignores pace on rungs 1–2 (no syllables there)', () => {
+    const ms = [m({ level: 1, onsets_per_second: 0.5 }), m({ level: 2, onsets_per_second: 0.8 }), m({ level: 3 }), m({ level: 4 })]
+    const s = suggestConcernsFromDiagnosis(ms)
+    expect(s.find((x) => x.concern === 'fast')?.boundary).toBeNull()
   })
 })
 
-describe('isDeepDay', () => {
-  it('false when concerns empty', () => {
-    expect(isDeepDay(['trembling'], [])).toBe(false)
-    expect(isDeepDay([], ['trembling'])).toBe(false)
+describe('allowStrongVariations', () => {
+  it('only when the baseline is clearly stable', () => {
+    expect(allowStrongVariations(null)).toBe(false)
+    expect(allowStrongVariations(m({ jitter_rel_pct: 1.5 }))).toBe(true)
+    expect(allowStrongVariations(m({ jitter_rel_pct: 2.5 }))).toBe(false)
   })
+})
 
-  it('true when any concern in user list matches day', () => {
-    expect(isDeepDay(['trembling'], ['trembling'])).toBe(true)
-    expect(isDeepDay(['small_voice'], ['small_voice', 'fast'])).toBe(true)
+describe('nextRung', () => {
+  it('goes up on success with low effort', () => {
+    expect(nextRung(3, { met: true, effort: 3, pain: false })).toBe(4)
   })
+  it('stays on success with high effort (버티는 범위)', () => {
+    expect(nextRung(3, { met: true, effort: 4, pain: false })).toBe(3)
+  })
+  it('stays on failure', () => {
+    expect(nextRung(3, { met: false, effort: 2, pain: false })).toBe(3)
+  })
+  it('goes down on pain or effort 5 regardless of result', () => {
+    expect(nextRung(3, { met: true, effort: 2, pain: true })).toBe(2)
+    expect(nextRung(3, { met: true, effort: 5, pain: false })).toBe(2)
+  })
+  it('clamps to 1..6', () => {
+    expect(nextRung(1, { met: false, effort: 5, pain: false })).toBe(1)
+    expect(nextRung(6, { met: true, effort: 1, pain: false })).toBe(6)
+  })
+})
 
-  it('false when no overlap', () => {
-    expect(isDeepDay(['diction'], ['fast'])).toBe(false)
+describe('sessionRungs', () => {
+  it('A is one below, B is current, clamped at 1', () => {
+    expect(sessionRungs(4)).toEqual({ a: 3, b: 4 })
+    expect(sessionRungs(1)).toEqual({ a: 1, b: 1 })
+  })
+})
+
+describe('pickVariation', () => {
+  it('rotates through the list by session index', () => {
+    const t = TRACKS.trembling
+    expect(pickVariation(t, 0, true).id).toBe(t.variations[0].id)
+    expect(pickVariation(t, 1, true).id).toBe(t.variations[1].id)
+    expect(pickVariation(t, t.variations.length, true).id).toBe(t.variations[0].id)
+  })
+  it('uses only weak variations when strong ones are not allowed', () => {
+    const t = TRACKS.trembling
+    for (let i = 0; i < 8; i++) expect(pickVariation(t, i, false).strength).toBe(1)
+  })
+})
+
+describe('retentionVerdict', () => {
+  it('first when there is no previous session', () => {
+    expect(retentionVerdict('jitter', null, m({}))).toBe('first')
+  })
+  it('na for self-judged tracks', () => {
+    expect(retentionVerdict('self', m({}), m({}))).toBe('na')
+  })
+  it('jitter: kept within 15%, partly within 50%, else reset', () => {
+    const prev = m({ jitter_rel_pct: 4 })
+    expect(retentionVerdict('jitter', prev, m({ jitter_rel_pct: 4.5 }))).toBe('kept')
+    expect(retentionVerdict('jitter', prev, m({ jitter_rel_pct: 5.5 }))).toBe('partly')
+    expect(retentionVerdict('jitter', prev, m({ jitter_rel_pct: 7 }))).toBe('reset')
+  })
+  it('jitter: anything inside the clinical limit counts as kept', () => {
+    expect(retentionVerdict('jitter', m({ jitter_rel_pct: 1 }), m({ jitter_rel_pct: 2.5 }))).toBe('kept')
+  })
+  it('loudness: within 2 dB kept, within 4 dB partly', () => {
+    const prev = m({ db_mean: -20 })
+    expect(retentionVerdict('loudness', prev, m({ db_mean: -21 }))).toBe('kept')
+    expect(retentionVerdict('loudness', prev, m({ db_mean: -23 }))).toBe('partly')
+    expect(retentionVerdict('loudness', prev, m({ db_mean: -26 }))).toBe('reset')
+  })
+  it('pace: compares distance from the range centre', () => {
+    const prev = m({ onsets_per_second: 4.2 })
+    expect(retentionVerdict('pace', prev, m({ onsets_per_second: 4.4 }))).toBe('kept')
+    expect(retentionVerdict('pace', prev, m({ onsets_per_second: 4.9 }))).toBe('partly')
+    expect(retentionVerdict('pace', prev, m({ onsets_per_second: 5.6 }))).toBe('reset')
   })
 })
 
@@ -80,10 +187,8 @@ describe('pickFromPool', () => {
     expect(pickFromPool(undefined)).toBeUndefined()
     expect(pickFromPool([])).toBeUndefined()
   })
-
   it('returns an element from the pool', () => {
     const pool = ['a', 'b', 'c']
-    const result = pickFromPool(pool)
-    expect(pool).toContain(result)
+    expect(pool).toContain(pickFromPool(pool))
   })
 })

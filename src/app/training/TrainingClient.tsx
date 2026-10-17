@@ -1,184 +1,202 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Flame, ChevronRight, Pencil } from 'lucide-react'
-import { getSupabase } from '@/lib/supabase'
+import { ChevronRight, Flame, RotateCcw } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
-import { CURRICULUM, CONCERN_LABELS } from '@/lib/curriculum'
-import { nextDayNum, currentCycle, type TrainingLog } from '@/lib/trainingCycle'
-import { useConcerns } from '@/hooks/useConcerns'
-import ConcernsModal from '@/components/training/ConcernsModal'
+import { useTrack } from '@/hooks/useTrack'
+import { SCENE_LABELS, SCENE_ORDER, SCENE_SCRIPTS, TRACKS, getRung, type Scene } from '@/lib/curriculum'
+import { retentionCopy, retentionVerdict } from '@/lib/trainingCycle'
+import PrinciplesCard from '@/components/training/PrinciplesCard'
+import RungLadder from '@/components/training/RungLadder'
 import { trackEvent } from '@/lib/analytics'
 
 function toDateStr(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
+function streakFrom(dates: string[], todayStr: string): number {
+  const unique = [...new Set(dates)].sort((a, b) => b.localeCompare(a))
+  if (unique.length === 0) return 0
+  const y = new Date(todayStr); y.setDate(y.getDate() - 1)
+  if (unique[0] !== todayStr && unique[0] !== toDateStr(y)) return 0
+  let count = 0
+  let expected = unique[0]
+  for (const date of unique) {
+    if (date === expected) {
+      count++
+      const d = new Date(expected); d.setDate(d.getDate() - 1); expected = toDateStr(d)
+    } else if (date < expected) break
+  }
+  return count
+}
+
 export default function TrainingClient() {
   const router = useRouter()
+  const { loading, profile, sessions, trackSessions, saveScene, clearTrack } = useTrack()
+  const [sceneSaving, setSceneSaving] = useState(false)
   const todayStr = useMemo(() => toDateStr(new Date()), [])
-  const [logs, setLogs] = useState<TrainingLog[]>([])
-  const { concerns, save: saveConcerns } = useConcerns()
-  const [editing, setEditing] = useState(false)
 
-  useEffect(() => {
-    async function load() {
-      const supabase = getSupabase()
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data } = await (supabase as any)
-        .from('user_training_logs')
-        .select('stage_num, log_date')
-        .eq('user_id', user.id)
-      if (data) setLogs(data as TrainingLog[])
-    }
-    load()
-  }, [])
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[calc(100vh-84px)]">
+        <div className="w-8 h-8 rounded-full border-4 border-primary border-t-transparent animate-spin" />
+      </div>
+    )
+  }
 
-  const streak = useMemo(() => {
-    const unique = [...new Set(logs.map((l) => l.log_date))].sort((a, b) => b.localeCompare(a))
-    if (unique.length === 0) return 0
-    const yesterday = new Date(todayStr)
-    yesterday.setDate(yesterday.getDate() - 1)
-    const yesterdayStr = toDateStr(yesterday)
-    if (unique[0] !== todayStr && unique[0] !== yesterdayStr) return 0
-    let count = 0
-    let expected = unique[0]
-    for (const date of unique) {
-      if (date === expected) {
-        count++
-        const d = new Date(expected)
-        d.setDate(d.getDate() - 1)
-        expected = toDateStr(d)
-      } else if (date < expected) break
-    }
-    return count
-  }, [logs, todayStr])
+  // ── 온보딩: 장면 → 진단 ────────────────────────────────────────────────────
+  if (!profile.trackConcern) {
+    return (
+      <div className="flex flex-col min-h-[calc(100vh-84px)] pb-8">
+        <div className="relative bg-gradient-to-br from-[#0093BA] to-[#00BECD] px-5 pt-10 pb-8 overflow-hidden">
+          <div className="absolute -top-10 -right-10 w-48 h-48 rounded-full bg-white/10 blur-3xl" />
+          <div className="relative z-10">
+            <Badge className="mb-3 bg-white/20 text-white border-0 text-xs backdrop-blur">훈련 시작</Badge>
+            <h1 className="text-2xl font-black text-white mb-1">어떤 상황에서 말하나요?</h1>
+            <p className="text-white/80 text-sm">그 상황의 문장으로 처음부터 끝까지 훈련해요.</p>
+          </div>
+        </div>
 
-  const cycle = useMemo(() => currentCycle(logs), [logs])
-  const todayDayNum = useMemo(() => nextDayNum(logs), [logs])
-  const todayDay = useMemo(() => CURRICULUM.find((d) => d.dayNum === todayDayNum)!, [todayDayNum])
-  const todayIsFocus = useMemo(
-    () => !!todayDay.matchingConcern && concerns.includes(todayDay.matchingConcern),
-    [todayDay, concerns],
-  )
-  const alreadyDoneToday = useMemo(
-    () => logs.some((l) => l.log_date === todayStr),
-    [logs, todayStr],
-  )
+        <div className="relative z-10 -mt-3 px-4 space-y-4">
+          <div className="grid grid-cols-2 gap-2">
+            {SCENE_ORDER.map((s: Scene) => {
+              const sel = profile.scene === s
+              return (
+                <button
+                  key={s}
+                  disabled={sceneSaving}
+                  onClick={async () => {
+                    setSceneSaving(true)
+                    try {
+                      await saveScene(s)
+                      trackEvent('training_scene_selected', { scene: s })
+                    } finally { setSceneSaving(false) }
+                  }}
+                  className={`text-left rounded-2xl p-4 transition-all active:scale-[0.98] ${
+                    sel ? 'bg-primary/15 border border-primary/50' : 'glass'
+                  }`}
+                >
+                  <span className="text-2xl">{SCENE_LABELS[s].emoji}</span>
+                  <p className="text-sm font-bold text-foreground mt-1">{SCENE_LABELS[s].label}</p>
+                  <p className="text-[11px] text-muted-foreground">{SCENE_LABELS[s].hint}</p>
+                </button>
+              )
+            })}
+          </div>
+
+          {profile.scene && (
+            <div className="rounded-2xl bg-secondary/60 px-4 py-3">
+              <p className="text-[11px] font-semibold text-muted-foreground mb-1">트랙 내내 쓸 기준 문장</p>
+              <p className="text-sm text-foreground leading-relaxed">&ldquo;{SCENE_SCRIPTS[profile.scene].short}&rdquo;</p>
+            </div>
+          )}
+
+          <PrinciplesCard />
+
+          <button
+            disabled={!profile.scene}
+            onClick={() => {
+              trackEvent('training_diagnosis_cta', { scene: profile.scene ?? 'none' })
+              router.push('/training/diagnose')
+            }}
+            className="w-full h-13 px-4 py-3.5 rounded-2xl gradient-primary text-gray-900 text-sm font-bold flex items-center justify-center gap-2 shadow-lg shadow-[#FFD700]/30 active:scale-[0.98] transition-transform disabled:opacity-50"
+          >
+            진단 시작하기 — 4계단, 약 3분
+            <ChevronRight size={16} className="opacity-70" />
+          </button>
+          <p className="text-[11px] text-muted-foreground text-center">
+            어느 계단에서 흔들리는지 찾아요. 점수는 보여주지 않아요.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  // ── 트랙 대시보드 ──────────────────────────────────────────────────────────
+  const track = TRACKS[profile.trackConcern]
+  const rung = profile.trackRung ?? 1
+  const current = getRung(rung)
+  const scene = profile.scene ?? 'daily'
+  const last = trackSessions[0] ?? null
+  const prev = trackSessions[1] ?? null
+  const lastVerdict = last ? retentionVerdict(track.metric, prev?.performance ?? null, last.retention) : null
+  const streak = streakFrom(sessions.map((s) => s.session_date), todayStr)
+  const doneToday = sessions.some((s) => s.session_date === todayStr && s.kind === 'session')
 
   return (
     <div className="flex flex-col min-h-[calc(100vh-84px)] pb-8">
-      {/* Header */}
-      <div className="relative bg-gradient-to-br from-[#0093BA] to-[#00BECD] px-5 pt-10 pb-6 overflow-hidden">
+      <div className="relative bg-gradient-to-br from-[#0093BA] to-[#00BECD] px-5 pt-10 pb-8 overflow-hidden">
         <div className="absolute -top-10 -right-10 w-48 h-48 rounded-full bg-white/10 blur-3xl" />
-        <div className="absolute -bottom-10 -left-10 w-48 h-48 rounded-full bg-white/10 blur-3xl" />
         <div className="relative z-10">
-          <Badge className="mb-3 bg-white/20 text-white border-0 text-xs backdrop-blur">훈련 트랙</Badge>
-          <h1 className="text-2xl font-black text-white mb-1">Voice Training</h1>
-          <p className="text-white/80 text-xs mb-3">Cycle {cycle} · 5일 코스 진행 중</p>
-          <div className="flex items-center gap-2">
+          <Badge className="mb-3 bg-white/20 text-white border-0 text-xs backdrop-blur">
+            {SCENE_LABELS[scene].emoji} {SCENE_LABELS[scene].label} 트랙
+          </Badge>
+          <h1 className="text-2xl font-black text-white mb-1">{track.emoji} {track.label}</h1>
+          <p className="text-white/85 text-sm">{rung}단 · {current.title}</p>
+          <div className="flex items-center gap-2 mt-3">
             <div className="flex items-center gap-1.5 bg-white/15 rounded-full px-3 py-1">
               <Flame size={14} className="text-orange-300" />
               <span className="text-white text-xs font-bold">{streak}일 연속</span>
+            </div>
+            <div className="bg-white/15 rounded-full px-3 py-1">
+              <span className="text-white text-xs font-bold">{trackSessions.length}번째 세션까지</span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Today's day card */}
-      <div className="px-4 pt-6">
-        <button
-          onClick={() => {
-            trackEvent('training_today_clicked', {
-              day_num: todayDay.dayNum,
-              outcome: todayDay.outcome,
-              focus: todayIsFocus,
-            })
-            router.push(`/training/session/${todayDay.dayNum}`)
-          }}
-          className="w-full text-left rounded-3xl bg-secondary/60 hover:bg-secondary active:scale-[0.98] transition-all p-5"
-        >
-          <p className="text-[11px] font-semibold text-primary uppercase tracking-wide mb-1">
-            오늘의 단계 · Day {todayDay.dayNum} / 5
-          </p>
-          <div className="flex items-center gap-2 mb-2">
-            <span className="text-2xl">{todayDay.emoji}</span>
-            <p className="text-base font-bold text-foreground">{todayDay.theme}</p>
-          </div>
-          <p className="text-[11px] text-muted-foreground leading-snug mb-1">{todayDay.subtitle}</p>
-          {todayIsFocus && (
-            <p className="text-[11px] font-semibold text-orange-400 mb-1">⚡ 당신이 가장 빛날 단계예요</p>
-          )}
-          {alreadyDoneToday && (
-            <p className="text-[11px] text-emerald-400 font-semibold">✓ 오늘 이미 완료 · 다시 진행 가능</p>
-          )}
-        </button>
-      </div>
-
-      {/* Other days */}
-      <div className="px-4 pt-4">
-        <p className="text-[11px] font-semibold text-muted-foreground mb-2">다른 단계 둘러보기</p>
-        <div className="grid grid-cols-2 gap-2">
-          {CURRICULUM.filter((d) => d.dayNum !== todayDay.dayNum).map((d) => (
-            <button
-              key={d.dayNum}
-              onClick={() => router.push(`/training/session/${d.dayNum}`)}
-              className="flex items-center gap-2 rounded-2xl bg-secondary/40 hover:bg-secondary/70 p-3 active:scale-95 transition-all"
-            >
-              <span className="text-lg">{d.emoji}</span>
-              <div className="text-left">
-                <p className="text-[10px] text-muted-foreground">Day {d.dayNum}</p>
-                <p className="text-xs font-semibold text-foreground">{d.theme}</p>
-              </div>
-            </button>
-          ))}
+      <div className="relative z-10 -mt-3 px-4 space-y-4">
+        <div className="rounded-2xl bg-primary/10 border border-primary/30 px-4 py-3">
+          <p className="text-[11px] font-semibold text-primary mb-0.5">이 트랙에서 들을 것 하나</p>
+          <p className="text-sm font-bold text-foreground">{track.keyInfo}</p>
         </div>
-      </div>
 
-      {/* My concerns */}
-      <div className="px-4 pt-6">
-        <button
-          onClick={() => setEditing(true)}
-          className="w-full flex items-center justify-between p-3 rounded-2xl bg-secondary/30 active:scale-[0.98] transition-all"
-        >
-          <div className="text-left">
-            <p className="text-[10px] text-muted-foreground">현재 고민</p>
-            <p className="text-xs font-semibold text-foreground">
-              {concerns.length === 0 ? '아직 선언 안 함' : concerns.map((c) => CONCERN_LABELS[c]).join(', ')}
-            </p>
-          </div>
-          <Pencil size={14} className="text-muted-foreground" />
-        </button>
-      </div>
-
-      {/* Voice-check CTA */}
-      <div className="px-4 mt-6">
         <button
           onClick={() => {
-            trackEvent('voice_check_cta_clicked', { source: 'training_landing' })
-            router.push('/training/voice-check')
+            trackEvent('training_session_cta', { concern: track.concern, rung })
+            router.push('/training/session')
           }}
-          className="w-full flex items-center gap-3 p-4 rounded-2xl border border-primary/40 bg-primary/10 active:scale-[0.98] transition-all"
+          className="w-full h-13 px-4 py-3.5 rounded-2xl gradient-primary text-gray-900 text-sm font-bold flex items-center justify-center gap-2 shadow-lg shadow-[#FFD700]/30 active:scale-[0.98] transition-transform"
         >
-          <span className="w-9 h-9 rounded-xl gradient-primary flex items-center justify-center shrink-0 text-base">🎤</span>
-          <div className="flex-1 text-left">
-            <p className="text-sm font-bold text-primary">훈련 후 목소리 변화 측정</p>
-            <p className="text-[11px] text-muted-foreground">전후 목소리 품질이 얼마나 달라졌는지 확인해요</p>
+          오늘 세션 시작 — 약 5분
+          <ChevronRight size={16} className="opacity-70" />
+        </button>
+        {doneToday && (
+          <p className="text-[11px] text-emerald-500 text-center -mt-2">✓ 오늘 이미 한 번 했어요. 한 번 더 해도 돼요.</p>
+        )}
+
+        {last && lastVerdict && (
+          <div className="glass rounded-3xl p-5 space-y-1.5">
+            <p className="text-[11px] font-semibold text-muted-foreground">지난 세션에서 남은 것</p>
+            <p className="text-sm text-foreground leading-relaxed">{retentionCopy(lastVerdict, last.voice_use ?? 'normal')}</p>
           </div>
-          <ChevronRight size={16} className="text-primary shrink-0" />
+        )}
+
+        <div className="glass rounded-3xl p-5 space-y-3">
+          <p className="text-sm font-bold text-foreground">전이 사다리</p>
+          <RungLadder current={rung} />
+          <p className="text-[11px] text-muted-foreground">
+            매 세션 한 계단 아래(성공 경험)와 현재 계단(도전)을 해요. 기준 안에 들고 힘들지 않았으면 올라가요.
+          </p>
+        </div>
+
+        <details className="glass rounded-3xl px-5 py-4">
+          <summary className="text-sm font-bold text-foreground cursor-pointer list-none">학습 원리 다시 보기</summary>
+          <div className="mt-3"><PrinciplesCard title="" /></div>
+        </details>
+
+        <button
+          onClick={async () => {
+            if (!window.confirm('트랙을 끝내고 다시 진단할까요? 지금까지의 기록은 남아요.')) return
+            trackEvent('training_track_reset', { concern: track.concern, sessions: trackSessions.length })
+            await clearTrack()
+          }}
+          className="w-full flex items-center justify-center gap-1.5 py-2 text-xs text-muted-foreground hover:text-foreground"
+        >
+          <RotateCcw size={12} /> 다른 고민으로 다시 진단하기
         </button>
       </div>
-
-      <ConcernsModal
-        open={editing}
-        initial={concerns}
-        onClose={() => setEditing(false)}
-        onSave={saveConcerns}
-        title="고민 수정"
-      />
     </div>
   )
 }
