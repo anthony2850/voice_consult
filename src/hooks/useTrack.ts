@@ -40,11 +40,6 @@ const EMPTY_PROFILE: TrackProfile = {
   scene: null, trackConcern: null, trackRung: null, trackStartedAt: null, baseline: null,
 }
 
-function todayStr(): string {
-  const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
-
 export function useTrack() {
   const [loading, setLoading] = useState(true)
   const [userId, setUserId] = useState<string | null>(null)
@@ -144,27 +139,19 @@ export function useTrack() {
     return ok
   }, [upsertProfile])
 
-  /** 관찰일지 저장 + 아카이브 달력용 user_training_logs 1행 */
-  const insertSession = useCallback(async (row: NewSessionRow, calendarTheme: string) => {
+  /** 관찰일지 저장 */
+  const insertSession = useCallback(async (row: NewSessionRow) => {
     const supabase = getSupabase()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return false
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const db = supabase as any
-    const { error } = await db.from('training_sessions').insert({ user_id: user.id, ...row })
+    const { data, error } = await (supabase as any)
+      .from('training_sessions').insert({ user_id: user.id, ...row }).select().single()
     if (error) {
       console.error('[useTrack] session save failed:', error)
       return false
     }
-    // Archive calendar still reads this table; a duplicate day (23505) is fine.
-    const { error: logErr } = await db.from('user_training_logs').insert({
-      user_id: user.id,
-      log_date: todayStr(),
-      stage_num: row.rung ?? 1,
-      theme: calendarTheme,
-      score: 100,
-    })
-    if (logErr && logErr.code !== '23505') console.error('[useTrack] calendar log failed:', logErr)
+    if (data) setSessions((cur) => [data as TrainingSessionRow, ...cur])
     return true
   }, [])
 

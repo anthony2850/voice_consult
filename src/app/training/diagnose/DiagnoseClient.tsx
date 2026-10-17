@@ -89,7 +89,7 @@ export default function DiagnoseClient() {
         kind: 'diagnosis', concern: picked, scene, rung: startRung, session_index: 0,
         voice_use: null, variation_id: null, retention: null, performance: null,
         rung_measures: measures, effort: null, pain: false, met_criterion: null, next_rung: startRung,
-      }, `진단 · ${track.label}`)
+      })
       trackEvent('diagnosis_completed', { concern: picked, start_rung: startRung, boundary: s?.boundary ?? 'none' })
       router.replace('/training')
     } else {

@@ -109,7 +109,7 @@ export default function SessionClient() {
         voice_use: voiceUse, variation_id: variation!.id,
         retention, performance, rung_measures: rungMeasures,
         effort, pain, met_criterion: met, next_rung: next,
-      }, `${track!.label} ${current}단계`)
+      })
       if (ok && next !== current) await setTrackRung(next)
       trackEvent('training_session_completed', {
         concern: track!.concern, rung: current, next_rung: next, met: met ?? 'na', effort, pain, verdict,
