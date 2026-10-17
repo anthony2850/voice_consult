@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { getSupabase } from '@/lib/supabase'
 import type { ConcernSlug, RungLevel, Scene } from '@/lib/curriculum'
-import type { Measure, VoiceUse } from '@/lib/trainingCycle'
+import { planTrackSwitch, type Measure, type SwitchPlan, type VoiceUse } from '@/lib/trainingCycle'
 
 export interface TrackProfile {
   scene: Scene | null
@@ -168,15 +168,28 @@ export function useTrack() {
     return true
   }, [])
 
-  /** 현재 트랙에 속한 세션만, 최신순 */
+  /**
+   * 현재 트랙(상황 × 고민)의 세션만, 최신순. 트랙을 바꿨다 돌아와도 기록이 이어진다.
+   * 상황마다 기준 문장이 달라서, 시작/마무리 녹음 비교는 같은 상황끼리만 한다.
+   */
   const trackSessions = useMemo(() => {
-    if (!profile.trackConcern || !profile.trackStartedAt) return []
-    const since = profile.trackStartedAt
-    return sessions.filter((s) => s.kind === 'session' && s.concern === profile.trackConcern && s.created_at >= since)
-  }, [sessions, profile.trackConcern, profile.trackStartedAt])
+    if (!profile.trackConcern || !profile.scene) return []
+    return sessions.filter((s) => s.kind === 'session' && s.concern === profile.trackConcern && s.scene === profile.scene)
+  }, [sessions, profile.trackConcern, profile.scene])
+
+  /** 트랙을 바꿀 때 진단이 필요한지, 어느 단계에서 시작할지 */
+  const planSwitch = useCallback(
+    (next: { scene: Scene; concern: ConcernSlug }): SwitchPlan => planTrackSwitch(next.concern, next.scene, sessions),
+    [sessions],
+  )
+
+  /** 진단 없이 트랙을 바꾼다 (resume·reuse, 또는 재진단을 건너뛴 경우) */
+  const switchTrack = useCallback(async (
+    next: { scene: Scene; concern: ConcernSlug }, rung: RungLevel, baseline: Measure | null,
+  ) => startTrack({ concern: next.concern, rung, baseline, scene: next.scene }), [startTrack])
 
   return {
     loading, userId, profile, sessions, trackSessions,
-    refresh, saveScene, startTrack, setTrackRung, clearTrack, insertSession,
+    refresh, saveScene, startTrack, planSwitch, switchTrack, setTrackRung, clearTrack, insertSession,
   }
 }

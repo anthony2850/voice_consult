@@ -1,11 +1,12 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
 import { useTrack } from '@/hooks/useTrack'
 import {
-  CONCERN_LABELS, DIAGNOSIS_LEVELS, TRACKS, getRung, type ConcernSlug, type RungLevel,
+  CONCERN_LABELS, CONCERN_ORDER, DIAGNOSIS_LEVELS, SCENE_LABELS, SCENE_ORDER, TRACKS, getRung,
+  type ConcernSlug, type RungLevel, type Scene,
 } from '@/lib/curriculum'
 import {
   startRungFromBoundary, suggestConcernsFromDiagnosis, type DiagnosisSuggestion, type Measure,
@@ -18,32 +19,38 @@ type Phase = 'intro' | 'climb' | 'choose' | 'saving'
 
 export default function DiagnoseClient() {
   const router = useRouter()
+  const params = useSearchParams()
   const { loading, profile, startTrack, insertSession } = useTrack()
+  // 트랙 전환에서 왔으면 바꾸려는 상황·고민이 쿼리로 온다. 진단을 마쳐야 트랙이 바뀐다.
+  const qScene = params.get('scene')
+  const qConcern = params.get('concern')
+  const targetScene: Scene | null = SCENE_ORDER.includes(qScene as Scene) ? (qScene as Scene) : profile.scene
+  const targetConcern: ConcernSlug | null = CONCERN_ORDER.includes(qConcern as ConcernSlug) ? (qConcern as ConcernSlug) : null
   const [phase, setPhase] = useState<Phase>('intro')
   const [levelIdx, setLevelIdx] = useState(0)
   const [measures, setMeasures] = useState<Measure[]>([])
   const [analyzing, setAnalyzing] = useState(false)
   const [failNote, setFailNote] = useState<string | null>(null)
-  const [picked, setPicked] = useState<ConcernSlug | null>(null)
+  const [picked, setPicked] = useState<ConcernSlug | null>(targetConcern)
 
   // 장면이 없으면 훈련 홈에서 고르게 한다.
   useEffect(() => {
-    if (!loading && !profile.scene) router.replace('/training')
-  }, [loading, profile.scene, router])
+    if (!loading && !targetScene) router.replace('/training')
+  }, [loading, targetScene, router])
 
   const suggestions = useMemo<DiagnosisSuggestion[]>(
     () => (phase === 'choose' || phase === 'saving' ? suggestConcernsFromDiagnosis(measures) : []),
     [phase, measures],
   )
 
-  if (loading || !profile.scene) {
+  if (loading || !targetScene) {
     return (
       <div className="flex items-center justify-center min-h-[calc(100vh-84px)]">
         <div className="w-8 h-8 rounded-full border-4 border-primary border-t-transparent animate-spin" />
       </div>
     )
   }
-  const scene = profile.scene
+  const scene = targetScene
   const level = DIAGNOSIS_LEVELS[levelIdx]
   const rung = getRung(level)
 
@@ -96,9 +103,9 @@ export default function DiagnoseClient() {
         <div className="absolute -top-10 -right-10 w-48 h-48 rounded-full bg-white/10 blur-3xl" />
         <div className="relative z-10">
           <p className="text-white/80 text-xs mb-1">진단</p>
-          <h1 className="text-xl font-black text-white">어느 계단에서 흔들리는지 찾아요</h1>
+          <h1 className="text-xl font-black text-white">어디서부터 어려워지는지 찾아요</h1>
           <p className="text-white/80 text-xs mt-2 leading-relaxed">
-            허밍부터 실제 문장까지 4계단. 점수는 보여주지 않고, 끝나면 고민을 제안해요.
+            쉬운 소리부터 실제 문장까지 4번 녹음해요. 점수는 보여주지 않고, 끝나면 연습할 고민을 추천해요.
           </p>
         </div>
       </div>
@@ -109,19 +116,22 @@ export default function DiagnoseClient() {
             <ArrowLeft size={14} />나가기
           </button>
           {phase === 'climb' && (
-            <p className="text-xs font-semibold text-muted-foreground tabular-nums">{levelIdx + 1} / {DIAGNOSIS_LEVELS.length}단</p>
+            <p className="text-xs font-semibold text-muted-foreground tabular-nums">{levelIdx + 1} / {DIAGNOSIS_LEVELS.length}</p>
           )}
         </div>
 
         {phase === 'intro' && (
           <div className="glass rounded-3xl p-6 space-y-4">
-            <p className="text-base font-bold text-foreground">4계단을 올라요</p>
+            <p className="text-base font-bold text-foreground">4번 녹음해요. 점점 실제 말하기에 가까워져요</p>
             <ol className="space-y-1.5">
               {DIAGNOSIS_LEVELS.map((l) => {
                 const r = getRung(l)
-                return <li key={l} className="text-sm text-foreground">• {l}단 {r.title} <span className="text-muted-foreground">— +{r.adds}</span></li>
+                return <li key={l} className="text-sm text-foreground">• {l}단계 {r.title} <span className="text-muted-foreground">— {r.adds}</span></li>
               })}
             </ol>
+            <p className="text-xs text-foreground">
+              {SCENE_LABELS[scene].emoji} <span className="font-semibold">{SCENE_LABELS[scene].label}</span> 문장으로 재요.
+            </p>
             <p className="text-xs text-muted-foreground leading-relaxed">
               잘하려고 애쓰지 않아도 돼요. 평소 그대로가 가장 정확한 진단이에요. 조용한 곳에서, 마이크에서 한 뼘 정도 떨어져 주세요.
             </p>
@@ -139,7 +149,7 @@ export default function DiagnoseClient() {
             {failNote && <p className="text-xs text-red-500 px-1">{failNote}</p>}
             <RecordStep
               key={rung.id}
-              eyebrow={`${level}단 · ${rung.keeps}`}
+              eyebrow={`${level}단계`}
               title={rung.title}
               instructions={rung.instructions}
               script={rung.script(scene, 0)}
@@ -148,7 +158,7 @@ export default function DiagnoseClient() {
               targetSec={rung.targetSec}
               analyzing={analyzing}
               onRecorded={handleRecorded}
-              doneLabel={levelIdx + 1 < DIAGNOSIS_LEVELS.length ? '다음 계단' : '진단 결과 보기'}
+              doneLabel={levelIdx + 1 < DIAGNOSIS_LEVELS.length ? '다음 녹음' : '진단 결과 보기'}
               silentNote="점수는 보여주지 않아요"
             />
           </>
@@ -159,7 +169,7 @@ export default function DiagnoseClient() {
             <div className="glass rounded-3xl p-5 space-y-1">
               <p className="text-sm font-bold text-foreground">이 트랙에서 집중할 고민을 하나 골라요</p>
               <p className="text-xs text-muted-foreground leading-relaxed">
-                측정에서 드러난 순서로 놓았어요. 한 번에 하나만 깊게 해요. 끝나면 다른 고민으로 넘어갈 수 있어요.
+                녹음에서 먼저 드러난 순서로 놓았어요. 한 번에 하나만 집중해서 연습해요. 나중에 다른 고민으로 바꿀 수 있어요.
               </p>
             </div>
             <div className="space-y-2">
@@ -184,7 +194,7 @@ export default function DiagnoseClient() {
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">{s.reason}</p>
                     {s.boundary !== null && (
-                      <p className="text-[11px] text-foreground mt-1">시작 계단: {s.boundary}단 {getRung(s.boundary).title}</p>
+                      <p className="text-[11px] text-foreground mt-1">여기서 시작해요: {s.boundary}단계 {getRung(s.boundary).title}</p>
                     )}
                   </button>
                 )

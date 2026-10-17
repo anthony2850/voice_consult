@@ -7,7 +7,7 @@ interface Props {
   compact?: boolean
 }
 
-/** 전이 사다리 — 현재 계단을 강조해 보여준다. */
+/** 훈련 단계 — 현재 단계를 강조해 보여준다. */
 export default function RungLadder({ current, compact = false }: Props) {
   return (
     <ol className="space-y-1.5">
@@ -34,7 +34,7 @@ export default function RungLadder({ current, compact = false }: Props) {
                 {r.title}
               </p>
               {!compact && state === 'now' && (
-                <p className="text-[11px] text-muted-foreground truncate">+ {r.adds}</p>
+                <p className="text-[11px] text-muted-foreground truncate">{r.adds}</p>
               )}
             </div>
           </li>

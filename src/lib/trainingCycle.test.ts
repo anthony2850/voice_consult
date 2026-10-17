@@ -9,6 +9,7 @@ import {
   sessionRungs,
   pickVariation,
   retentionVerdict,
+  planTrackSwitch,
   pickFromPool,
   type Measure,
 } from './trainingCycle'
@@ -179,6 +180,37 @@ describe('retentionVerdict', () => {
     expect(retentionVerdict('pace', prev, m({ onsets_per_second: 4.4 }))).toBe('kept')
     expect(retentionVerdict('pace', prev, m({ onsets_per_second: 4.9 }))).toBe('partly')
     expect(retentionVerdict('pace', prev, m({ onsets_per_second: 5.6 }))).toBe('reset')
+  })
+})
+
+describe('planTrackSwitch', () => {
+  const now = new Date('2026-10-20T00:00:00Z')
+  const diag = (scene: string, created_at: string) => ({
+    kind: 'diagnosis' as const, created_at, concern: 'fast' as const, scene, next_rung: 3 as const,
+    rung_measures: [m({ level: 1 }), m({ level: 2 }), m({ level: 3, jitter_rel_pct: 4 }), m({ level: 4, jitter_rel_pct: 4, db_mean: -19 })],
+  })
+  const sess = (concern: 'fast' | 'trembling', scene: string, next: RungLevel) =>
+    ({ kind: 'session' as const, created_at: '2026-10-19T00:00:00Z', concern, scene, next_rung: next, rung_measures: null })
+
+  it('returning to a track resumes where it left off', () => {
+    const p = planTrackSwitch('fast', 'interview', [sess('fast', 'interview', 5), diag('interview', '2026-10-18T00:00:00Z')], now)
+    expect(p).toMatchObject({ kind: 'resume', rung: 5 })
+  })
+  it('switching concern in the same scene reuses a fresh diagnosis', () => {
+    const p = planTrackSwitch('trembling', 'interview', [sess('fast', 'interview', 4), diag('interview', '2026-10-18T00:00:00Z')], now)
+    expect(p).toMatchObject({ kind: 'reuse', rung: 3 })
+    if (p.kind === 'reuse') expect(p.baseline?.db_mean).toBe(-19)
+  })
+  it('a diagnosis older than 14 days is suggested again but still gives a fallback rung', () => {
+    const p = planTrackSwitch('trembling', 'interview', [diag('interview', '2026-10-01T00:00:00Z')], now)
+    expect(p).toMatchObject({ kind: 'suggest-rediagnose', rung: 3, ageDays: 19 })
+  })
+  it('a scene never diagnosed requires a diagnosis, even if another scene has one', () => {
+    expect(planTrackSwitch('fast', 'call', [sess('fast', 'interview', 4), diag('interview', '2026-10-18T00:00:00Z')], now))
+      .toEqual({ kind: 'diagnose' })
+  })
+  it('diction is independent of diagnosis and starts at 4', () => {
+    expect(planTrackSwitch('diction', 'call', [], now)).toMatchObject({ kind: 'reuse', rung: 4 })
   })
 })
 

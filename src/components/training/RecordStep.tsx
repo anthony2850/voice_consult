@@ -71,7 +71,7 @@ export default function RecordStep({
 
       {keyInfo && (
         <div className="rounded-2xl bg-primary/10 border border-primary/30 px-4 py-3">
-          <p className="text-[11px] font-semibold text-primary mb-0.5">지금 들을 것 하나</p>
+          <p className="text-[11px] font-semibold text-primary mb-0.5">녹음할 때 확인할 것</p>
           <p className="text-sm font-bold text-foreground">{keyInfo}</p>
         </div>
       )}
@@ -87,10 +87,10 @@ export default function RecordStep({
 
       {variation && (
         <div className="rounded-2xl bg-secondary/60 px-4 py-3 space-y-1">
-          <p className="text-[11px] font-semibold text-muted-foreground">오늘의 변형 · {variation.label}</p>
-          <p className="text-xs text-foreground"><span className="text-muted-foreground">바꿀 것</span> {variation.change}</p>
-          <p className="text-xs text-foreground"><span className="text-muted-foreground">그대로</span> {variation.hold}</p>
-          <p className="text-xs text-foreground"><span className="text-muted-foreground">볼 것</span> {variation.observe}</p>
+          <p className="text-[11px] font-semibold text-muted-foreground">오늘은 이렇게 해 봐요 · {variation.label}</p>
+          <p className="text-xs text-foreground"><span className="text-muted-foreground">방법</span> {variation.change}</p>
+          <p className="text-xs text-foreground"><span className="text-muted-foreground">유지</span> {variation.hold}</p>
+          <p className="text-xs text-foreground"><span className="text-muted-foreground">확인</span> {variation.observe}</p>
         </div>
       )}
 

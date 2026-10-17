@@ -109,7 +109,7 @@ export default function SessionClient() {
         voice_use: voiceUse, variation_id: variation!.id,
         retention, performance, rung_measures: rungMeasures,
         effort, pain, met_criterion: met, next_rung: next,
-      }, `${track!.label} ${current}단`)
+      }, `${track!.label} ${current}단계`)
       if (ok && next !== current) await setTrackRung(next)
       trackEvent('training_session_completed', {
         concern: track!.concern, rung: current, next_rung: next, met: met ?? 'na', effort, pain, verdict,
@@ -129,7 +129,7 @@ export default function SessionClient() {
         <div className="absolute -top-10 -right-10 w-48 h-48 rounded-full bg-white/10 blur-3xl" />
         <div className="relative z-10">
           <p className="text-white/80 text-xs mb-1">{track.emoji} {track.label} 트랙 · {sessionIndex + 1}번째 세션</p>
-          <h1 className="text-xl font-black text-white">{current}단 · {getRung(current).title}</h1>
+          <h1 className="text-xl font-black text-white">{current}단계 · {getRung(current).title}</h1>
           <p className="text-white/80 text-xs mt-2">{track.keyInfo}</p>
         </div>
       </div>
@@ -169,9 +169,9 @@ export default function SessionClient() {
 
         {step === 'retention' && (
           <RecordStep
-            eyebrow="파지 체크"
+            eyebrow="시작 녹음"
             title={sessionIndex === 0 ? '기준 문장을 평소대로 한 번' : '지난 세션의 문장을 그대로 한 번'}
-            instructions={['안내 없이, 평소처럼 한 번만 읽어요.', '이 녹음은 지난 세션 끝과 비교하는 용도예요.']}
+            instructions={['연습 전에 평소처럼 한 번만 읽어요.', '지난번 마무리 녹음과 비교해서, 연습한 게 남아 있는지 봐요.']}
             script={baseScript}
             maxSec={12}
             analyzing={analyzing}
@@ -185,7 +185,7 @@ export default function SessionClient() {
           return (
             <RecordStep
               key={`a-${r.id}`}
-              eyebrow={`운동 1 · ${rungs.a}단 (성공 경험)`}
+              eyebrow={`연습 1 · ${rungs.a}단계 (몸 풀기)`}
               title={r.title}
               keyInfo={track.keyInfo}
               instructions={r.instructions}
@@ -208,7 +208,7 @@ export default function SessionClient() {
           return (
             <RecordStep
               key={`b-${r.id}`}
-              eyebrow={`운동 2 · ${rungs.b}단 (도전)`}
+              eyebrow={`연습 2 · ${rungs.b}단계 (도전)`}
               title={r.title}
               keyInfo={track.keyInfo}
               instructions={r.instructions}
@@ -228,10 +228,10 @@ export default function SessionClient() {
 
         {step === 'performance' && (
           <RecordStep
-            eyebrow="수행 체크"
+            eyebrow="마무리 녹음"
             title="기준 문장을 다시 한 번"
             keyInfo={track.keyInfo}
-            instructions={['운동 전과 같은 문장이에요.', '오늘 끝의 상태를 기록해요. 다음 세션 시작에서 이것과 비교해요.']}
+            instructions={['시작 녹음과 같은 문장이에요.', '연습한 뒤의 목소리를 기록해요. 다음 세션 시작 녹음과 비교할 거예요.']}
             script={baseScript}
             lastWord={track.lastWord}
             maxSec={12}
@@ -247,9 +247,9 @@ export default function SessionClient() {
         {step === 'selfJudge' && (
           <div className="glass rounded-3xl p-6 space-y-4">
             <div>
-              <p className="text-[11px] font-semibold text-primary uppercase tracking-wide">귀로 판단</p>
+              <p className="text-[11px] font-semibold text-primary uppercase tracking-wide">직접 들어 보기</p>
               <p className="text-base font-bold text-foreground">{track.keyInfo}</p>
-              <p className="text-xs text-muted-foreground mt-1">녹음을 듣고 판단해요. 당신의 귀가 이 트랙의 측정기예요.</p>
+              <p className="text-xs text-muted-foreground mt-1">발음은 앱이 잴 수 없어서 직접 들어 보고 판단해요.</p>
             </div>
             {performanceUrl && <audio controls src={performanceUrl} className="w-full h-10" />}
             <div className="grid grid-cols-2 gap-2">
@@ -262,9 +262,9 @@ export default function SessionClient() {
         {step === 'cost' && (
           <div className="glass rounded-3xl p-6 space-y-4">
             <div>
-              <p className="text-[11px] font-semibold text-primary uppercase tracking-wide">비용</p>
+              <p className="text-[11px] font-semibold text-primary uppercase tracking-wide">목 상태</p>
               <p className="text-base font-bold text-foreground">방금 말할 때 목이 얼마나 힘들었나요?</p>
-              <p className="text-xs text-muted-foreground mt-1">결과와 별개로 봐요. 소리는 좋았어도 힘들었다면 계단을 올리지 않아요.</p>
+              <p className="text-xs text-muted-foreground mt-1">소리가 좋았어도 목이 힘들었다면 다음 단계로 올라가지 않아요.</p>
             </div>
             <div className="grid grid-cols-5 gap-1.5">
               {([1, 2, 3, 4, 5] as const).map((n) => (
@@ -306,9 +306,9 @@ export default function SessionClient() {
                 <p className="text-sm font-bold text-foreground">{METRIC_INFO[metric].name}</p>
                 <div className="grid grid-cols-3 gap-2 text-center">
                   {[
-                    { label: '지난 세션 끝', m: lastSession?.performance ?? null },
+                    { label: '지난번 마무리', m: lastSession?.performance ?? null },
                     { label: '오늘 시작', m: retention },
-                    { label: '오늘 끝', m: performance },
+                    { label: '오늘 마무리', m: performance },
                   ].map(({ label, m }) => (
                     <div key={label} className="rounded-2xl bg-secondary/60 px-2 py-3">
                       <p className="text-[10px] text-muted-foreground mb-1">{label}</p>
@@ -318,19 +318,19 @@ export default function SessionClient() {
                   ))}
                 </div>
                 <p className="text-[11px] text-muted-foreground leading-relaxed">
-                  {metric === 'jitter' ? '1.00이 기준선이에요. 그 아래면 기준 안.' : metric === 'pace' ? '2.5~5.5가 범위예요.' : '진단 때 크기에서 2dB 안이면 유지.'}
-                  {' '}오늘 끝이 오른 건 워밍업일 수 있어요. 오늘 시작이 지난 끝에 가까운 게 학습이에요.
+                  {metric === 'jitter' ? '1.00 이하면 떨림이 괜찮은 범위예요. 낮을수록 고른 목소리예요.' : metric === 'pace' ? '2.5~5.5가 듣기 편한 빠르기예요.' : '진단 때보다 2dB 넘게 작아지지 않았으면 유지한 거예요.'}
+                  {' '}오늘 마무리가 좋아진 건 방금 연습한 효과일 수 있어요. 진짜 실력은 다음 세션의 시작 녹음에서 보여요.
                 </p>
               </div>
             )}
 
             <div className="glass rounded-3xl p-5 space-y-2">
-              <p className="text-[11px] font-semibold text-muted-foreground">남은 것</p>
+              <p className="text-[11px] font-semibold text-muted-foreground">지난번 연습이 남아 있었나</p>
               <p className="text-sm text-foreground leading-relaxed">{retentionCopy(verdict, voiceUse ?? 'normal')}</p>
             </div>
 
             <div className="glass rounded-3xl p-5 space-y-2">
-              <p className="text-[11px] font-semibold text-muted-foreground">오늘 수행과 다음 계단</p>
+              <p className="text-[11px] font-semibold text-muted-foreground">오늘 결과와 다음 단계</p>
               <p className="text-sm text-foreground leading-relaxed">{performanceCopy(met, next, current)}</p>
               {pain && <p className="text-xs text-red-500">통증이 있었어요. 오늘은 여기까지 하고, 내일도 아프면 쉬어 가세요.</p>}
             </div>

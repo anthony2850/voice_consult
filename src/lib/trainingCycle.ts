@@ -59,10 +59,10 @@ export function metricValue(metric: Metric, m: Measure): number {
 }
 
 export const METRIC_INFO: Record<Metric, { name: string; unit: string; lowerIsBetter: boolean }> = {
-  jitter: { name: '떨림 (기준 대비)', unit: '×', lowerIsBetter: true },
-  pace: { name: '초당 음절', unit: '/초', lowerIsBetter: false },
-  loudness: { name: '평균 음량', unit: 'dB', lowerIsBetter: false },
-  self: { name: '또렷함 (자가 판단)', unit: '', lowerIsBetter: false },
+  jitter: { name: '목소리 떨림', unit: '', lowerIsBetter: true },
+  pace: { name: '말 빠르기 (1초에 말한 글자 수)', unit: '글자/초', lowerIsBetter: false },
+  loudness: { name: '목소리 크기', unit: 'dB', lowerIsBetter: false },
+  self: { name: '발음 또렷함 (직접 판단)', unit: '', lowerIsBetter: false },
 }
 
 /**
@@ -125,18 +125,18 @@ export function suggestConcernsFromDiagnosis(measures: Measure[]): DiagnosisSugg
 
   const jitterBoundary = findBoundary('jitter', measures)
   if (jitterBoundary !== null) {
-    out.push({ concern: 'trembling', boundary: jitterBoundary, reason: `${jitterBoundary}단에서 소리가 흔들리기 시작했어요.` })
+    out.push({ concern: 'trembling', boundary: jitterBoundary, reason: `${jitterBoundary}단계부터 목소리가 떨리기 시작했어요.` })
   }
 
   const paceBoundary = findBoundary('pace', measures.filter((m) => (m.level ?? 0) >= 3))
   if (paceBoundary !== null) {
-    out.push({ concern: 'fast', boundary: paceBoundary, reason: `${paceBoundary}단에서 속도가 범위를 벗어났어요.` })
+    out.push({ concern: 'fast', boundary: paceBoundary, reason: `${paceBoundary}단계부터 말이 적당한 빠르기를 벗어났어요.` })
   }
 
   const first = byLevel.get(1)
   const base = byLevel.get(4)
   if (first && base && base.db_mean < first.db_mean - 4) {
-    out.push({ concern: 'small_voice', boundary: 4, reason: '허밍보다 실제 문장에서 소리가 작아졌어요.' })
+    out.push({ concern: 'small_voice', boundary: 4, reason: '허밍보다 실제 문장을 말할 때 목소리가 많이 작아졌어요.' })
   }
 
   for (const c of CONCERN_ORDER) {
@@ -144,11 +144,61 @@ export function suggestConcernsFromDiagnosis(measures: Measure[]): DiagnosisSugg
       out.push({
         concern: c,
         boundary: null,
-        reason: c === 'diction' ? '발음은 귀로 판단해요. 녹음을 듣고 고를 수 있어요.' : '측정에서는 기준 안이었어요.',
+        reason: c === 'diction' ? '발음은 측정 대신 직접 들어 보고 판단해요.' : '녹음에서는 괜찮은 범위였어요.',
       })
     }
   }
   return out
+}
+
+export interface PastSession {
+  kind: 'diagnosis' | 'session'
+  created_at: string
+  concern: ConcernSlug | null
+  scene: string | null
+  next_rung: RungLevel | null
+  rung_measures: Measure[] | null
+}
+
+/** 진단을 다시 권하는 기준(일). 2주 트랙 길이에 맞춘다. */
+export const DIAGNOSIS_FRESH_DAYS = 14
+
+export type SwitchPlan =
+  /** 하던 트랙으로 돌아옴 — 하던 단계부터 */
+  | { kind: 'resume'; rung: RungLevel; baseline: Measure | null }
+  /** 같은 상황의 최근 진단이 있음 — 그 결과로 시작 */
+  | { kind: 'reuse'; rung: RungLevel; baseline: Measure | null }
+  /** 같은 상황의 진단이 오래됨 — 다시 재 보길 권하되 건너뛸 수 있음 */
+  | { kind: 'suggest-rediagnose'; rung: RungLevel; baseline: Measure | null; ageDays: number }
+  /** 이 상황으로는 진단한 적 없음 — 문장이 달라 진단이 필요 */
+  | { kind: 'diagnose' }
+
+/**
+ * 트랙(상황 × 고민)을 바꿀 때 무엇을 할지 정한다. sessions는 최신순.
+ * 진단 한 번은 같은 녹음으로 네 고민을 모두 재므로 고민만 바꿀 때는 다시 하지 않는다.
+ * 진단 2·4단계는 상황의 문장을 쓰므로, 상황이 바뀌면 그 상황의 진단이 있어야 한다.
+ */
+export function planTrackSwitch(
+  concern: ConcernSlug,
+  scene: string,
+  sessions: PastSession[],
+  now: Date = new Date(),
+): SwitchPlan {
+  const diagnosis = sessions.find((s) => s.kind === 'diagnosis' && s.scene === scene && s.rung_measures && s.rung_measures.length > 0)
+  const baseline = diagnosis?.rung_measures?.find((m) => m.level === 4) ?? null
+
+  const sameTrack = sessions.find((s) => s.kind === 'session' && s.concern === concern && s.scene === scene && s.next_rung)
+  if (sameTrack?.next_rung) return { kind: 'resume', rung: sameTrack.next_rung, baseline }
+
+  if (concern === 'diction') return { kind: 'reuse', rung: 4, baseline }
+
+  if (!diagnosis?.rung_measures) return { kind: 'diagnose' }
+
+  const s = suggestConcernsFromDiagnosis(diagnosis.rung_measures).find((x) => x.concern === concern)
+  const rung = startRungFromBoundary(s?.boundary ?? null)
+  const ageDays = Math.floor((now.getTime() - new Date(diagnosis.created_at).getTime()) / 86_400_000)
+  if (ageDays > DIAGNOSIS_FRESH_DAYS) return { kind: 'suggest-rediagnose', rung, baseline, ageDays }
+  return { kind: 'reuse', rung, baseline }
 }
 
 /** 진단 4단에서 흔들림이 크면 약한 변형만 쓴다 (8교시 30쪽). */
@@ -235,28 +285,28 @@ export type VoiceUse = 'low' | 'normal' | 'high'
 export function retentionCopy(verdict: RetentionVerdict, voiceUse: VoiceUse): string {
   switch (verdict) {
     case 'first':
-      return '첫 기준점이에요. 다음 세션 시작에서 오늘 끝과 비교해요.'
+      return '첫 기록이에요. 다음 세션의 시작 녹음을 오늘 마무리 녹음과 비교해요.'
     case 'kept':
-      return '지난 세션 끝의 상태가 남아 있어요. 이게 학습으로 남은 거예요.'
+      return '지난번 마무리 때의 목소리가 오늘 시작에도 그대로 나왔어요. 연습한 게 몸에 남은 거예요.'
     case 'partly':
-      return '일부가 남았어요. 다음 날 첫 시도는 낮게 나오기 쉬워요. 정상이에요. 세션 끝에 다시 올라오는지 봐요.'
+      return '절반쯤 남아 있어요. 쉬고 난 뒤 첫 녹음은 원래 조금 낮게 나와요. 정상이에요. 오늘 마무리 녹음에서 다시 올라오는지 봐요.'
     case 'reset':
       return voiceUse === 'high'
-        ? '지난 세션 끝과 거리가 있어요. 오늘 목을 많이 썼다고 했죠. 그 영향일 가능성이 커요. 당신 탓이 아니라 조건의 문제예요.'
-        : '지난 세션 끝과 거리가 있어요. 조건이 달랐을 수 있어요. 지금 상태이지 한계가 아니에요.'
+        ? '지난번 마무리와 차이가 있어요. 오늘 목을 많이 썼다고 했죠. 그 영향일 가능성이 커요. 실력이 줄어든 게 아니에요.'
+        : '지난번 마무리와 차이가 있어요. 컨디션이나 주변 환경이 달랐을 수 있어요. 실력이 줄어든 게 아니에요.'
     case 'na':
-      return '발음은 귀로 판단해요. 녹음을 들어보고 글자가 구분되는지 보세요.'
+      return '발음은 직접 들어 보고 판단해요. 녹음에서 모든 글자를 알아들을 수 있는지 확인해 보세요.'
   }
 }
 
 /** 세션 끝 문구: 오늘 끝의 상승을 "학습"이라 부르지 않는다 (9교시 6쪽). */
 export function performanceCopy(met: boolean | null, next: RungLevel, current: RungLevel): string {
-  const move = next > current ? '다음 세션은 한 계단 위에서 시작해요.'
-    : next < current ? '다음 세션은 한 계단 아래에서 시작해요. 조건을 바꾸는 거예요.'
-    : '다음 세션도 같은 계단에서 해요.'
-  if (met === true) return `오늘 기준 안에 들어왔어요. 지금 올라간 건 워밍업일 수 있어요. 남았는지는 다음 세션 시작에서 봐요. ${move}`
-  if (met === false) return `오늘은 기준 밖이었어요. 조건을 조금 바꿔서 다시 시도하는 게 다음 순서예요. ${move}`
-  return `녹음을 들어보고 판단했어요. ${move}`
+  const move = next > current ? '다음 세션은 한 단계 올라가요.'
+    : next < current ? '다음 세션은 한 단계 낮춰서 해요. 목을 쉬게 하면서 다시 다지는 거예요.'
+    : '다음 세션도 같은 단계를 해요.'
+  if (met === true) return `오늘 마무리 녹음이 목표 안에 들어왔어요. 다만 방금 연습해서 몸이 풀린 효과일 수 있어서, 실력으로 남았는지는 다음 세션 시작에서 확인해요. ${move}`
+  if (met === false) return `오늘은 목표에 조금 못 미쳤어요. 말하는 방식을 조금 바꿔 같은 단계를 다시 해 보면 돼요. ${move}`
+  return `녹음을 직접 듣고 판단했어요. ${move}`
 }
 
 // ─── 공용 ────────────────────────────────────────────────────────────────────
