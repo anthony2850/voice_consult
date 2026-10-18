@@ -297,12 +297,6 @@ export default function RecordClient() {
       ) : (
         <div className="glass rounded-2xl p-4 mb-6">
           <p className="text-[11px] text-muted-foreground mb-2 font-semibold">읽어 주세요</p>
-          {/* 녹음 중에는 숨긴다. 문단 바로 위에 있으면 이 문구까지 소리 내어 읽어 녹음에 섞인다. */}
-          {state === 'idle' && (
-            <p className="text-[13px] text-foreground/80 leading-relaxed bg-primary/10 rounded-xl px-3 py-2.5 mb-3">
-              평소에 말 할 법하지 않은 문장이죠? 오글거리더라도 언제 이런 말 해보겠어요. 꾹 참고 한 번 읽어봅시다!
-            </p>
-          )}
           <p className="text-[15px] text-foreground leading-relaxed">{READING_SCRIPT.join(' ')}</p>
           <p className="text-[11px] text-muted-foreground mt-3">
             다 읽은 뒤 &ldquo;아~&rdquo;를 3초 길게 내면 끝나요
