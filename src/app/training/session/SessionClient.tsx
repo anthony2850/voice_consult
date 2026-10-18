@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft } from 'lucide-react'
 import { useTrack } from '@/hooks/useTrack'
 import { SCENE_SCRIPTS, TRACKS, getRung, type RungLevel } from '@/lib/curriculum'
 import {
@@ -12,6 +11,7 @@ import {
 import { measureBlob } from '@/lib/trainingMeasure'
 import RecordStep from '@/components/training/RecordStep'
 import { trackEvent } from '@/lib/analytics'
+import { PageHeader, Pill } from '@/components/ds'
 
 type Step = 'status' | 'retention' | 'exerciseA' | 'exerciseB' | 'performance' | 'selfJudge' | 'cost' | 'result' | 'saved'
 
@@ -126,30 +126,21 @@ export default function SessionClient() {
 
   return (
     <div className="min-h-[calc(100vh-84px)]">
-      <div className="relative bg-gradient-to-br from-[#0093BA] to-[#00BECD] px-5 pt-10 pb-6 overflow-hidden">
-        <div className="absolute -top-10 -right-10 w-48 h-48 rounded-full bg-white/10 blur-3xl" />
-        <div className="relative z-10">
-          <p className="text-white/80 text-xs mb-1">{track.emoji} {track.label} 트랙, {sessionIndex + 1}번째 세션</p>
-          <h1 className="text-xl font-black text-white">{current}단계: {getRung(current).title}</h1>
-          <p className="text-white/80 text-xs mt-2">{track.keyInfo}</p>
-        </div>
-      </div>
+      <PageHeader
+        back={{ label: '나가기', onClick: () => router.push('/training/track') }}
+        eyebrow={`${track.label} 트랙, ${sessionIndex + 1}번째 세션`}
+        title={`${current}단계: ${getRung(current).title}`}
+        sub={track.keyInfo}
+        chips={step !== 'saved' && <Pill tone="data">{stepNo} / {stepTotal}</Pill>}
+      />
 
-      <div className="px-4 pt-4 pb-8 space-y-4">
-        <div className="flex items-center justify-between">
-          <button onClick={() => router.push('/training/track')} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground">
-            <ArrowLeft size={14} />나가기
-          </button>
-          {step !== 'saved' && (
-            <p className="text-xs font-semibold text-muted-foreground tabular-nums">{stepNo} / {stepTotal}</p>
-          )}
-        </div>
-        {failNote && <p className="text-xs text-red-500 px-1">{failNote}</p>}
+      <div className="px-5 pt-4 pb-8 space-y-4">
+        {failNote && <p className="text-[13px] text-caution px-1">{failNote}</p>}
 
         {step === 'status' && (
           <div className="glass rounded-3xl p-6 space-y-4">
             <div>
-              <p className="text-[11px] font-semibold text-primary uppercase tracking-wide">오늘 상태</p>
+              <p className="eyebrow">오늘 상태</p>
               <p className="text-base font-bold text-foreground">오늘 목을 얼마나 썼나요?</p>
               <p className="text-xs text-muted-foreground mt-1">결과를 읽을 때 같이 봐요. 피곤한 날의 낮은 값은 학습 실패가 아니에요.</p>
             </div>
@@ -158,7 +149,7 @@ export default function SessionClient() {
                 <button
                   key={o.value}
                   onClick={() => { setVoiceUse(o.value); trackEvent('training_session_started', { concern: track.concern, rung: current, voice_use: o.value }); advance('status') }}
-                  className="w-full flex items-center justify-between rounded-2xl bg-secondary/60 hover:bg-secondary px-4 py-3 text-left active:scale-[0.98] transition-all"
+                  className="w-full flex items-center justify-between rounded-2xl bg-card hover:bg-card/80 px-4 py-3 text-left active:scale-[0.98] transition-all"
                 >
                   <span className="text-sm font-semibold text-foreground">{o.label}</span>
                   <span className="text-[11px] text-muted-foreground">{o.hint}</span>
@@ -248,14 +239,14 @@ export default function SessionClient() {
         {step === 'selfJudge' && (
           <div className="glass rounded-3xl p-6 space-y-4">
             <div>
-              <p className="text-[11px] font-semibold text-primary uppercase tracking-wide">직접 들어 보기</p>
+              <p className="eyebrow">직접 들어 보기</p>
               <p className="text-base font-bold text-foreground">{track.keyInfo}</p>
               <p className="text-xs text-muted-foreground mt-1">발음은 앱이 잴 수 없어서 직접 들어 보고 판단해요.</p>
             </div>
             {performanceUrl && <audio controls src={performanceUrl} className="w-full h-10" />}
             <div className="grid grid-cols-2 gap-2">
-              <button onClick={() => { setSelfOk(true); advance('selfJudge') }} className="h-12 rounded-2xl bg-emerald-500/15 border border-emerald-500/40 text-sm font-bold text-emerald-600">네, 다 들렸어요</button>
-              <button onClick={() => { setSelfOk(false); advance('selfJudge') }} className="h-12 rounded-2xl bg-secondary/60 text-sm font-bold text-foreground">아니요, 뭉개진 데가 있어요</button>
+              <button onClick={() => { setSelfOk(true); advance('selfJudge') }} className="h-12 rounded-2xl bg-good-tint border border-good/40 text-sm font-bold text-good">네, 다 들렸어요</button>
+              <button onClick={() => { setSelfOk(false); advance('selfJudge') }} className="h-12 rounded-2xl bg-card text-sm font-bold text-foreground">아니요, 뭉개진 데가 있어요</button>
             </div>
           </div>
         )}
@@ -263,7 +254,7 @@ export default function SessionClient() {
         {step === 'cost' && (
           <div className="glass rounded-3xl p-6 space-y-4">
             <div>
-              <p className="text-[11px] font-semibold text-primary uppercase tracking-wide">목 상태</p>
+              <p className="eyebrow">목 상태</p>
               <p className="text-base font-bold text-foreground">방금 말할 때 목이 얼마나 힘들었나요?</p>
               <p className="text-xs text-muted-foreground mt-1">소리가 좋았어도 목이 힘들었다면 다음 단계로 올라가지 않아요.</p>
             </div>
@@ -272,7 +263,7 @@ export default function SessionClient() {
                 <button
                   key={n}
                   onClick={() => setEffort(n)}
-                  className={`h-12 rounded-xl text-sm font-bold transition-all ${effort === n ? 'gradient-primary text-primary-foreground' : 'bg-secondary/60 text-foreground'}`}
+                  className={`h-12 rounded-xl text-sm font-bold transition-all ${effort === n ? 'gradient-primary text-primary-foreground' : 'bg-card text-foreground'}`}
                 >
                   {n}
                 </button>
@@ -283,17 +274,17 @@ export default function SessionClient() {
             </div>
             <button
               onClick={() => setPain((p) => !p)}
-              className={`w-full flex items-center justify-between rounded-2xl px-4 py-3 text-left ${pain ? 'bg-red-500/10 border border-red-500/40' : 'bg-secondary/60'}`}
+              className={`w-full flex items-center justify-between rounded-2xl px-4 py-3 text-left ${pain ? 'bg-caution-tint border border-caution/40' : 'bg-card'}`}
             >
               <span className="text-sm font-semibold text-foreground">목에 통증이나 따끔함이 있었어요</span>
-              <span className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${pain ? 'border-red-500 bg-red-500' : 'border-border'}`}>
+              <span className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${pain ? 'border-caution bg-caution' : 'border-border'}`}>
                 {pain && <span className="text-white text-[10px]">✓</span>}
               </span>
             </button>
             <button
               disabled={!effort}
               onClick={() => advance('cost')}
-              className="w-full h-12 rounded-2xl gradient-primary text-primary-foreground text-sm font-bold active:scale-95 transition-transform disabled:opacity-50"
+              className="w-full h-14 rounded-full bg-primary text-primary-foreground text-[16px] font-bold active:scale-95 transition-transform disabled:opacity-50"
             >
               결과 보기
             </button>
@@ -311,7 +302,7 @@ export default function SessionClient() {
                     { label: '오늘 시작', m: retention },
                     { label: '오늘 마무리', m: performance },
                   ].map(({ label, m }) => (
-                    <div key={label} className="rounded-2xl bg-secondary/60 px-2 py-3">
+                    <div key={label} className="rounded-2xl bg-card px-2 py-3">
                       <p className="text-[10px] text-muted-foreground mb-1">{label}</p>
                       <p className="text-lg font-black tabular-nums text-foreground">{fmt(metric, m)}</p>
                       <p className="text-[10px] text-muted-foreground">{METRIC_INFO[metric].unit}</p>
@@ -333,21 +324,21 @@ export default function SessionClient() {
             <div className="glass rounded-3xl p-5 space-y-2">
               <p className="text-[11px] font-semibold text-muted-foreground">오늘 결과와 다음 단계</p>
               <p className="text-sm text-foreground leading-relaxed">{performanceCopy(met, next, current)}</p>
-              {pain && <p className="text-xs text-red-500">통증이 있었어요. 오늘은 여기까지 하고, 내일도 아프면 쉬어 가세요.</p>}
+              {pain && <p className="text-[13px] text-caution">통증이 있었어요. 오늘은 여기까지 하고, 내일도 아프면 쉬어 가세요.</p>}
             </div>
 
             {step === 'result' ? (
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="w-full h-12 rounded-2xl gradient-primary text-primary-foreground text-sm font-bold active:scale-95 transition-transform disabled:opacity-70"
+                className="w-full h-14 rounded-full bg-primary text-primary-foreground text-[16px] font-bold active:scale-95 transition-transform disabled:opacity-70"
               >
                 {saving ? '저장 중…' : '기록하고 마치기'}
               </button>
             ) : (
               <button
                 onClick={() => router.push('/training/track')}
-                className="w-full h-12 rounded-2xl bg-secondary text-foreground text-sm font-bold active:scale-95 transition-transform"
+                className="w-full h-14 rounded-full border-2 border-border bg-card text-foreground text-[16px] font-bold active:scale-95 transition-transform"
               >
                 트랙으로 돌아가기
               </button>

@@ -2,11 +2,10 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, ChevronRight } from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
 import { SCENE_LABELS, SCENE_ORDER, SCENE_SCRIPTS, type Scene } from '@/lib/curriculum'
 import PrinciplesCard from '@/components/training/PrinciplesCard'
 import { trackEvent } from '@/lib/analytics'
+import { OptionCard, PageHeader, PrimaryButton, SCENE_ICON } from '@/components/ds'
 
 /**
  * 새 트랙 시작: 상황 고르기 → 진단.
@@ -18,63 +17,47 @@ export default function StartClient() {
 
   return (
     <div className="flex flex-col min-h-[calc(100vh-84px)] pb-8">
-      <div className="relative bg-gradient-to-br from-[#0093BA] to-[#00BECD] px-5 pt-6 pb-8 overflow-hidden">
-        <div className="absolute -top-10 -right-10 w-48 h-48 rounded-full bg-white/10 blur-3xl" />
-        <div className="relative z-10">
-          <button
-            onClick={() => router.push('/training')}
-            className="flex items-center gap-1 text-xs text-white/80 hover:text-white mb-4"
-          >
-            <ArrowLeft size={14} /> 내 훈련
-          </button>
-          <Badge className="mb-3 bg-white/20 text-white border-0 text-xs backdrop-blur">새 트랙</Badge>
-          <h1 className="text-2xl font-black text-white mb-1">어떤 상황에서 말하나요?</h1>
-          <p className="text-white/80 text-sm">그 상황의 문장으로 처음부터 끝까지 훈련해요.</p>
-        </div>
-      </div>
+      <PageHeader
+        back={{ label: '내 훈련', onClick: () => router.push('/training') }}
+        eyebrow="새 트랙"
+        title="어떤 상황에서 말하나요?"
+        sub="그 상황의 문장으로 처음부터 끝까지 훈련해요."
+      />
 
-      <div className="px-4 pt-4 space-y-4">
-        <div className="grid grid-cols-2 gap-2">
-          {SCENE_ORDER.map((s) => {
-            const sel = scene === s
-            return (
-              <button
-                key={s}
-                onClick={() => { setScene(s); trackEvent('training_scene_selected', { scene: s }) }}
-                className={`text-left rounded-2xl p-4 transition-all active:scale-[0.98] ${
-                  sel ? 'bg-primary/15 border border-primary/50' : 'glass'
-                }`}
-              >
-                <span className="text-2xl">{SCENE_LABELS[s].emoji}</span>
-                <p className="text-sm font-bold text-foreground mt-1">{SCENE_LABELS[s].label}</p>
-                <p className="text-[11px] text-muted-foreground">{SCENE_LABELS[s].hint}</p>
-              </button>
-            )
-          })}
+      <div className="px-5 pt-4 space-y-4">
+        <div className="space-y-3" role="radiogroup" aria-label="상황">
+          {SCENE_ORDER.map((s) => (
+            <OptionCard
+              key={s}
+              icon={SCENE_ICON[s]}
+              title={SCENE_LABELS[s].label}
+              sub={SCENE_LABELS[s].hint}
+              selected={scene === s}
+              onSelect={() => { setScene(s); trackEvent('training_scene_selected', { scene: s }) }}
+            />
+          ))}
         </div>
 
         {scene && (
-          <div className="rounded-2xl bg-secondary/60 px-4 py-3">
-            <p className="text-[11px] font-semibold text-muted-foreground mb-1">훈련 내내 연습할 문장</p>
-            <p className="text-sm text-foreground leading-relaxed">&ldquo;{SCENE_SCRIPTS[scene].short}&rdquo;</p>
-          </div>
+          <section className="rounded-[28px] border-2 border-border px-5 py-4">
+            <p className="eyebrow">훈련 내내 연습할 문장</p>
+            <p className="mt-1.5 text-[15px] text-foreground leading-relaxed">&ldquo;{SCENE_SCRIPTS[scene].short}&rdquo;</p>
+          </section>
         )}
 
         <PrinciplesCard />
 
-        <button
+        <PrimaryButton
           disabled={!scene}
           onClick={() => {
             if (!scene) return
             trackEvent('training_diagnosis_cta', { scene })
             router.push(`/training/diagnose?scene=${scene}`)
           }}
-          className="w-full h-13 px-4 py-3.5 rounded-2xl gradient-primary text-gray-900 text-sm font-bold flex items-center justify-center gap-2 shadow-lg shadow-[#FFD700]/30 active:scale-[0.98] transition-transform disabled:opacity-50"
         >
-          진단 시작하기 — 녹음 4번, 약 3분
-          <ChevronRight size={16} className="opacity-70" />
-        </button>
-        <p className="text-[11px] text-muted-foreground text-center">
+          진단 시작하기, 녹음 4번 약 3분
+        </PrimaryButton>
+        <p className="-mt-1 text-[13px] text-muted-foreground text-center leading-relaxed">
           쉬운 소리부터 실제 문장까지 차례로 녹음해서, 어디서부터 어려워지는지 찾아요. 고민은 진단 결과를 보고 골라요.
         </p>
       </div>

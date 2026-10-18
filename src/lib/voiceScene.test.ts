@@ -99,7 +99,7 @@ describe('whySentence', () => {
     expect(whySentence({ id: 'crush', cues: [{ key: 'emotion', emotion: 'Romance' }] }))
       .toBe('목소리에 설렘이 묻어나서 썸 타는 중인 사람처럼 들려요.')
     expect(whySentence({ id: 'clock-out', cues: [{ key: 'slow' }, { key: 'emotion', emotion: 'Tiredness' }] }))
-      .toBe('말이 느긋하고 목소리에 피곤함이 묻어나서 퇴근만 기다리는 신입사원처럼 들려요.')
+      .toBe('말이 느긋하고 피곤함이 묻어나서 퇴근만 기다리는 신입사원처럼 들려요.')
   })
   it('has a plain fallback with no cues', () => {
     expect(whySentence({ id: 'sunday', cues: [] })).toBe('오늘 목소리는 일요일 아침 늦잠 자고 일어난 사람처럼 들려요.')

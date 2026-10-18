@@ -18,7 +18,7 @@ export default function VoiceMap({ energy, mood, id, second }: {
   const top = `${inside(((1 - energy) / 2) * 100) - 4}%`
   return (
     <figure className="m-0">
-      <div className="relative aspect-[4/3] w-full rounded-2xl bg-secondary/50 overflow-hidden" role="img"
+      <div className="relative aspect-[4/3] w-full rounded-2xl bg-card overflow-hidden" role="img"
         aria-label={`목소리 지도: 에너지 ${energy > 0 ? '들뜸' : '차분'}, 기분 ${mood > 0 ? '맑음' : '흐림'} 쪽. ${p.name}`}>
         <div className="absolute left-1/2 top-0 bottom-0 w-px bg-border" aria-hidden="true" />
         <div className="absolute top-1/2 left-0 right-0 h-px bg-border" aria-hidden="true" />

@@ -57,20 +57,6 @@ export function suggestConcerns(s: VoiceScores): ConcernSlug[] {
 }
 
 // ── Labels ─────────────────────────────────────────────────
-export function getScoreColor(score: number): string {
-  if (score >= 80) return 'text-emerald-600'
-  if (score >= 60) return 'text-[#0093BA]'
-  if (score >= 40) return 'text-amber-600'
-  return 'text-rose-600'
-}
-
-export function getScoreBarColor(score: number): string {
-  if (score >= 80) return 'bg-emerald-500'
-  if (score >= 60) return 'bg-[#00BECD]'
-  if (score >= 40) return 'bg-amber-500'
-  return 'bg-rose-500'
-}
-
 export function getStabilityDesc(score: number): string {
   if (score >= 80) return '떨림이 거의 없고 균일한 목소리예요'
   if (score >= 60) return '대체로 안정적인 목소리예요'
@@ -99,8 +85,3 @@ export function getPitchToneLabel(hz: number): string {
   return '높은 편'
 }
 
-export function getPitchToneColor(hz: number): string {
-  if (hz <= 220) return 'text-blue-600'
-  if (hz <= 349) return 'text-emerald-600'
-  return 'text-[#0093BA]'
-}

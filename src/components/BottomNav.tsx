@@ -17,7 +17,7 @@ export default function BottomNav() {
   return (
     <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[480px] z-50">
       {/* glassmorphism bar */}
-      <div className="glass border-t border-border/60 pb-[env(safe-area-inset-bottom,0px)]">
+      <div className="bg-background border-t border-border pb-[env(safe-area-inset-bottom,0px)]">
         <ul className="flex items-center justify-around h-16">
           {NAV_ITEMS.map(({ href, label, icon: Icon, activeOn }) => {
             const active = activeOn.some((p) => pathname === p || pathname.startsWith(p + '/'))
@@ -28,23 +28,17 @@ export default function BottomNav() {
                   className="flex flex-col items-center gap-1 py-2 group"
                 >
                   <span
-                    className={`
-                      flex items-center justify-center w-10 h-10 rounded-2xl transition-all duration-200
-                      ${active
-                        ? 'gradient-primary shadow-lg shadow-primary/30 scale-105'
-                        : 'text-muted-foreground group-hover:text-foreground'
-                      }
-                    `}
+                    className={`flex items-center justify-center w-10 h-10 rounded-2xl transition-all duration-200 ${active ? 'bg-primary' : 'text-muted-foreground group-hover:text-foreground' }`}
                   >
                     <Icon
                       size={20}
-                      className={active ? 'text-white' : ''}
+                      className={active ? 'text-primary-foreground' : ''}
                       strokeWidth={active ? 2.5 : 2}
                     />
                   </span>
                   <span
                     className={`text-[10px] font-medium transition-colors ${
-                      active ? 'text-primary' : 'text-muted-foreground'
+                      active ? 'text-foreground font-bold' : 'text-muted-foreground'
                     }`}
                   >
                     {label}

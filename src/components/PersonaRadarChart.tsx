@@ -69,7 +69,7 @@ export default function PersonaRadarChart({
         ctx.lineWidth = 1
         ctx.stroke()
         if (l === gridLevels) {
-          ctx.fillStyle = 'rgba(139,92,246,0.04)'
+          ctx.fillStyle = 'rgba(255,255,255,0.6)'
           ctx.fill()
         }
       }
@@ -115,9 +115,9 @@ export default function PersonaRadarChart({
         else ctx.lineTo(p.x, p.y)
       }
       ctx.closePath()
-      ctx.fillStyle = 'rgba(16,185,129,0.20)'
+      ctx.fillStyle = 'rgba(45,58,140,0.16)'
       ctx.fill()
-      ctx.strokeStyle = 'rgba(16,185,129,0.80)'
+      ctx.strokeStyle = 'rgba(45,58,140,0.9)'
       ctx.lineWidth = 2
       ctx.stroke()
 
@@ -128,12 +128,12 @@ export default function PersonaRadarChart({
         const p = getPoint(angle, val, 100)
         ctx.beginPath()
         ctx.arc(p.x, p.y, 3.5, 0, 2 * Math.PI)
-        ctx.fillStyle = 'rgb(16,185,129)'
+        ctx.fillStyle = 'rgb(45,58,140)'
         ctx.fill()
       }
 
       // ── Labels ──────────────────────────────────────────
-      ctx.font = `bold ${Math.round(size * 0.033)}px -apple-system, system-ui, sans-serif`
+      ctx.font = `700 ${Math.round(size * 0.036)}px 'Wanted Sans Variable', -apple-system, system-ui, sans-serif`
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
 
@@ -142,7 +142,7 @@ export default function PersonaRadarChart({
         const lx = cx + labelR * Math.cos(angle)
         const ly = cy + labelR * Math.sin(angle)
         const label = EMOTION_KO[axes[i]] ?? axes[i]
-        ctx.fillStyle = 'rgba(220,220,240,0.9)'
+        ctx.fillStyle = '#5E6278'
         ctx.fillText(label, lx, ly)
       }
     }

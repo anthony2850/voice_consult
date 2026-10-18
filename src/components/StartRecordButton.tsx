@@ -14,7 +14,7 @@ export default function StartRecordButton() {
     >
       <Button
         size="lg"
-        className="w-full h-14 text-base font-bold rounded-2xl gradient-primary border-0 shadow-2xl shadow-primary/40 active:scale-95 transition-transform"
+        className="w-full h-14 text-[16px] font-bold rounded-full bg-primary text-primary-foreground hover:bg-primary border-0 active:scale-95 transition-transform"
       >
         <Mic size={20} className="mr-2" />
         내 목소리 분석하기
@@ -35,10 +35,10 @@ export function StartRecordMic() {
       onClick={() => trackEvent('click_start_record', { source: 'mic' })}
     >
       {/* pulse rings */}
-      <span className="absolute w-36 h-36 rounded-full gradient-primary opacity-10 animate-ping" />
-      <span className="absolute w-28 h-28 rounded-full gradient-primary opacity-15 animate-ping [animation-delay:0.3s]" />
-      <span className="relative z-10 w-20 h-20 rounded-full gradient-primary flex items-center justify-center shadow-2xl shadow-primary/40">
-        <Mic size={34} className="text-white" strokeWidth={2} />
+      <span className="absolute w-28 h-28 rounded-full bg-primary/25 animate-ping [animation-duration:2.4s]" />
+      <span className="absolute w-24 h-24 rounded-full bg-primary/30" />
+      <span className="relative z-10 w-20 h-20 rounded-full bg-primary flex items-center justify-center">
+        <Mic size={34} className="text-primary-foreground" strokeWidth={2} />
       </span>
     </Link>
   )

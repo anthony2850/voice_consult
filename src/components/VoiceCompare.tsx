@@ -48,11 +48,11 @@ function AudioPlayer({ blob, label }: { blob: Blob; label: string }) {
       <button
         onClick={toggle}
         aria-label={playing ? '일시정지' : `${label} 듣기`}
-        className="w-9 h-9 rounded-full gradient-primary flex items-center justify-center shrink-0 shadow-lg shadow-primary/30 active:scale-90 transition-transform"
+        className="w-9 h-9 rounded-full gradient-primary flex items-center justify-center shrink-0 active:scale-90 transition-transform"
       >
         {playing
-          ? <Pause size={14} className="text-white fill-white" />
-          : <Play size={14} className="text-white fill-white ml-0.5" />
+          ? <Pause size={14} className="text-primary-foreground fill-current" />
+          : <Play size={14} className="text-primary-foreground fill-current ml-0.5" />
         }
       </button>
       <div className="flex-1">
@@ -78,7 +78,7 @@ function EmotionMiniBar({ emotion, maxScore }: { emotion: VoiceEmotion; maxScore
       <div className="flex-1 h-1.5 rounded-full bg-border overflow-hidden">
         <div className="h-full rounded-full gradient-primary" style={{ width: `${pct}%` }} />
       </div>
-      <span className="text-[10px] text-primary tabular-nums w-8 text-right">
+      <span className="text-[10px] text-brand-text tabular-nums w-8 text-right">
         {(emotion.score * 100).toFixed(0)}%
       </span>
     </div>
@@ -89,7 +89,7 @@ function EmotionMiniBar({ emotion, maxScore }: { emotion: VoiceEmotion; maxScore
 function DeltaIcon({ delta }: { delta: number; higherIsBetter?: boolean }) {
   if (Math.abs(delta) < 0.01) return <Minus size={10} className="text-muted-foreground" />
   return delta > 0
-    ? <TrendingUp size={10} className="text-emerald-600" />
+    ? <TrendingUp size={10} className="text-good" />
     : <TrendingDown size={10} className="text-rose-600" />
 }
 
@@ -102,7 +102,7 @@ function DeltaBadge({ before, after, unit = '', digits = 1 }: {
 }) {
   const delta = after - before
   const sign = delta > 0 ? '+' : ''
-  const color = Math.abs(delta) < 0.01 ? 'text-muted-foreground' : delta > 0 ? 'text-emerald-600' : 'text-rose-600'
+  const color = Math.abs(delta) < 0.01 ? 'text-muted-foreground' : delta > 0 ? 'text-good' : 'text-rose-600'
   return (
     <span className={`text-[10px] font-semibold tabular-nums ${color}`}>
       {sign}{delta.toFixed(digits)}{unit}
@@ -241,7 +241,7 @@ function SingleRecordState({ record }: { record: VoiceRecord }) {
       <RecordCard record={record} label="첫 번째 목소리" accent="violet" />
       <div className="glass rounded-3xl p-4 text-center border border-dashed border-border">
         <p className="text-xs text-muted-foreground">
-          다음 분석 후 <span className="text-primary font-semibold">Before vs After</span> 비교가 가능해요
+          다음 분석 후 <span className="text-brand-text font-semibold">Before vs After</span> 비교가 가능해요
         </p>
       </div>
     </div>
@@ -275,7 +275,7 @@ export default function VoiceCompare() {
       {/* 섹션 헤더 */}
       <div className="flex items-center gap-2">
         <div className="w-7 h-7 rounded-lg gradient-primary flex items-center justify-center shrink-0">
-          <Mic size={14} className="text-white" />
+          <Mic size={14} className="text-primary-foreground" />
         </div>
         <div>
           <h2 className="text-sm font-bold text-foreground">목소리 변화 비교</h2>
@@ -311,8 +311,8 @@ export default function VoiceCompare() {
           <div className="flex items-center gap-3">
             <div className="flex-1 h-px bg-border" />
             <div className="flex flex-col items-center gap-0.5">
-              <ArrowDown size={16} className="text-primary" />
-              <span className="text-[10px] font-bold text-primary">변화</span>
+              <ArrowDown size={16} className="text-brand-text" />
+              <span className="text-[10px] font-bold text-brand-text">변화</span>
             </div>
             <div className="flex-1 h-px bg-border" />
           </div>

@@ -82,7 +82,7 @@ export default function StreakPopup({ streak, logDates, onClose }: Props) {
       {/* CTA */}
       <button
         onClick={onClose}
-        className="w-full h-14 rounded-2xl gradient-primary text-primary-foreground font-bold text-base shadow-xl shadow-primary/30 active:scale-95 transition-transform"
+        className="w-full h-14 rounded-full gradient-primary text-primary-foreground font-bold text-[16px] active:scale-95 transition-transform"
       >
         계속하기
       </button>

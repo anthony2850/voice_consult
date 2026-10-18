@@ -32,16 +32,16 @@ const READING_SCRIPT = [
 ]
 
 const VOCAL_TIPS = [
-  { emoji: '🎯', tip: '복식호흡을 하면 목소리에 깊이가 생겨요. 배에서 소리를 밀어올리듯 발성해보세요.' },
-  { emoji: '💧', tip: '녹음 전 미지근한 물 한 모금이 성대를 풀어줘요. 차가운 음료는 피하세요.' },
-  { emoji: '📐', tip: '턱을 약간 당기고 시선을 정면보다 살짝 위로 향하면 공명이 잘 돼요.' },
-  { emoji: '🐢', tip: '말 속도를 평소보다 10% 느리게 해보세요. 듣는 사람이 신뢰감을 더 느껴요.' },
-  { emoji: '🌊', tip: '문장 끝을 내려서 마무리하면 자신감 있는 인상을 줘요.' },
-  { emoji: '🎵', tip: '중요한 단어를 강조할 때 살짝 높은 음으로 올리면 집중도가 높아져요.' },
-  { emoji: '🧘', tip: '발성 전 "음~" 허밍 5초로 성대를 워밍업하면 목이 덜 쉬어요.' },
-  { emoji: '😊', tip: '살짝 미소를 지으면서 말하면 목소리 톤이 자연스럽게 밝아져요.' },
-  { emoji: '🔊', tip: '가슴에 손을 얹고 말할 때 진동이 느껴지면 흉성 공명이 잘 되는 거예요.' },
-  { emoji: '⏸️', tip: '말 중간 0.5초 간격을 두면 듣는 사람에게 흡인력 있는 목소리로 느껴져요.' },
+  { tip: '복식호흡을 하면 목소리에 깊이가 생겨요. 배에서 소리를 밀어올리듯 발성해보세요.' },
+  { tip: '녹음 전 미지근한 물 한 모금이 성대를 풀어줘요. 차가운 음료는 피하세요.' },
+  { tip: '턱을 약간 당기고 시선을 정면보다 살짝 위로 향하면 공명이 잘 돼요.' },
+  { tip: '말 속도를 평소보다 10% 느리게 해보세요. 듣는 사람이 신뢰감을 더 느껴요.' },
+  { tip: '문장 끝을 내려서 마무리하면 자신감 있는 인상을 줘요.' },
+  { tip: '중요한 단어를 강조할 때 살짝 높은 음으로 올리면 집중도가 높아져요.' },
+  { tip: '발성 전 "음~" 허밍 5초로 성대를 워밍업하면 목이 덜 쉬어요.' },
+  { tip: '살짝 미소를 지으면서 말하면 목소리 톤이 자연스럽게 밝아져요.' },
+  { tip: '가슴에 손을 얹고 말할 때 진동이 느껴지면 흉성 공명이 잘 되는 거예요.' },
+  { tip: '말 중간 0.5초 간격을 두면 듣는 사람에게 흡인력 있는 목소리로 느껴져요.' },
 ]
 
 function formatTime(s: number) {
@@ -182,24 +182,25 @@ export default function RecordClient() {
   // ── 분석 중 로딩 화면 ──────────────────────────────────
   if (analyzing) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-84px)] px-5 text-center">
-        <div className="relative mb-8">
-          <span className="absolute inset-0 rounded-full gradient-primary opacity-20 animate-ping scale-150" />
-          <div className="relative w-20 h-20 rounded-full gradient-primary flex items-center justify-center shadow-2xl shadow-primary/40">
-            <Sparkles size={32} className="text-white animate-spin" style={{ animationDuration: '2s' }} />
-          </div>
+      <div className="flex flex-col min-h-[calc(100vh-84px)] px-5 pt-16 pb-8 text-center">
+        <p className="eyebrow">분석 중</p>
+        <h2 className="mt-2 text-[32px] leading-[1.18] font-black tracking-[-0.03em] text-foreground">목소리를<br />읽고 있어요</h2>
+        <p className="mt-3 text-[15px] text-muted-foreground">감정과 억양, 말 속도, 떨림을 재고 있어요. 몇 초면 끝나요.</p>
+        <div className="mx-auto mt-10 relative w-24 h-24 flex items-center justify-center" aria-hidden="true">
+          <span className="absolute inset-0 rounded-full bg-primary/30 animate-ping [animation-duration:2s]" />
+          <span className="relative w-20 h-20 rounded-full bg-primary flex items-center justify-center">
+            <Sparkles size={30} className="text-primary-foreground" />
+          </span>
         </div>
-        <h2 className="text-xl font-bold text-foreground mb-2">AI가 분석 중이에요</h2>
-        <p className="text-sm text-muted-foreground mb-6">목소리의 감정, 톤, 에너지 패턴을 읽고 있어요</p>
-        <div className="w-full max-w-[300px] bg-muted rounded-2xl px-4 py-3 mb-6 text-center">
-          <p className="text-xs font-semibold text-primary mb-1">발성 꿀팁 {currentTip.emoji}</p>
-          <p className="text-sm text-foreground leading-relaxed">{currentTip.tip}</p>
-        </div>
-        <div className="w-full max-w-[280px]">
-          <div className="h-2 rounded-full bg-border overflow-hidden">
-            <div className="h-full gradient-primary rounded-full transition-all duration-300" style={{ width: `${analyzeProgress}%` }} />
+        <section className="mt-10 rounded-[28px] bg-secondary px-5 py-5 text-left">
+          <p className="eyebrow">발성 꿀팁</p>
+          <p className="mt-1.5 text-[15px] text-foreground leading-relaxed">{currentTip.tip}</p>
+        </section>
+        <div className="mt-auto pt-8">
+          <div className="h-3 rounded-full bg-secondary overflow-hidden" role="progressbar" aria-label="분석 진행" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.floor(analyzeProgress)}>
+            <div className="h-full bg-accent rounded-full transition-all duration-300" style={{ width: `${analyzeProgress}%` }} />
           </div>
-          <p className="text-xs text-muted-foreground mt-2">{Math.floor(analyzeProgress)}%</p>
+          <p className="text-[13px] font-semibold text-muted-foreground mt-2 tabular-nums">{Math.floor(analyzeProgress)}%</p>
         </div>
       </div>
     )
@@ -211,9 +212,9 @@ export default function RecordClient() {
 
       {/* Header */}
       <div className="mb-6">
-        <p className="text-xs font-semibold text-primary mb-1">STEP 1</p>
-        <h1 className="text-xl font-bold text-foreground">목소리 녹음</h1>
-        <p className="text-sm text-muted-foreground mt-1">
+        <p className="eyebrow mb-2">목소리 페르소나</p>
+        <h1 className="text-[28px] leading-[1.2] font-black tracking-[-0.03em] text-foreground">목소리 녹음</h1>
+        <p className="text-[15px] text-muted-foreground mt-2 leading-relaxed">
           {state === 'idle'    && '아래 문단을 평소 목소리로 읽고, 마지막에 "아~"를 3초 내요'}
           {phase === 'read'    && '다 읽으면 아래 버튼을 눌러 주세요'}
           {phase === 'vowel'   && '"아~"를 편한 높이로 길게 내 주세요'}
@@ -318,7 +319,7 @@ export default function RecordClient() {
           <Button
             size="lg"
             onClick={start}
-            className="w-full h-14 text-base font-bold rounded-2xl gradient-primary border-0 shadow-xl shadow-primary/30 active:scale-95 transition-transform"
+            className="w-full h-14 text-[16px] font-bold rounded-full gradient-primary border-0 active:scale-95 transition-transform"
           >
             <Mic size={20} className="mr-2" />
             녹음 시작
@@ -329,7 +330,7 @@ export default function RecordClient() {
           <Button
             size="lg"
             onClick={() => markAndStopAfter(VOWEL_MS)}
-            className="w-full h-14 text-base font-bold rounded-2xl gradient-primary border-0 shadow-xl shadow-primary/30 active:scale-95 transition-transform"
+            className="w-full h-14 text-[16px] font-bold rounded-full gradient-primary border-0 active:scale-95 transition-transform"
           >
             다 읽었어요, 이제 &ldquo;아~&rdquo;
             <ChevronRight size={18} className="ml-1" />
@@ -385,7 +386,7 @@ export default function RecordClient() {
               size="lg"
               onClick={handleProceed}
               disabled={speechSec < MIN_SPEECH_SECONDS}
-              className="w-full h-14 text-base font-bold rounded-2xl gradient-primary border-0 shadow-xl shadow-primary/30 active:scale-95 transition-transform disabled:opacity-40"
+              className="w-full h-14 text-[16px] font-bold rounded-full gradient-primary border-0 active:scale-95 transition-transform disabled:opacity-40"
             >
               이 목소리로 분석하기
               <ChevronRight size={18} className="ml-1" />

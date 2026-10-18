@@ -222,10 +222,11 @@ const CUE_TEXT: Record<Exclude<CueKey, 'emotion'>, [string, string]> = {
   steady: ['목소리가 안정적이고', '목소리가 안정적이어서'],
 }
 
-function cuePhrase(c: Cue, last: boolean): string {
+function cuePhrase(c: Cue, last: boolean, first: boolean): string {
   if (c.key === 'emotion') {
     const w = emotionWord(c.emotion ?? '')
-    return `목소리에 ${w}${iGa(w)} 묻어나${last ? '서' : '고'}`
+    // 앞 단서가 이미 "목소리가…"로 시작하면 "목소리"를 되풀이하지 않는다
+    return `${first ? '목소리에 ' : ''}${w}${iGa(w)} 묻어나${last ? '서' : '고'}`
   }
   return CUE_TEXT[c.key][last ? 1 : 0]
 }
@@ -234,7 +235,7 @@ function cuePhrase(c: Cue, last: boolean): string {
 export function whySentence(r: Pick<SceneResult, 'id' | 'cues'>): string {
   const name = getPersona(r.id).name
   if (r.cues.length === 0) return `오늘 목소리는 ${name}처럼 들려요.`
-  const parts = r.cues.map((c, i) => cuePhrase(c, i === r.cues.length - 1))
+  const parts = r.cues.map((c, i) => cuePhrase(c, i === r.cues.length - 1, i === 0))
   return `${parts.join(' ')} ${name}처럼 들려요.`
 }
 

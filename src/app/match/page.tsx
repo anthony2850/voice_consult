@@ -16,7 +16,7 @@ export default function MatchPage() {
       <Button
         size="lg"
         onClick={() => router.push('/record')}
-        className="h-12 rounded-2xl gradient-primary border-0 shadow-xl shadow-primary/30 gap-2"
+        className="h-12 rounded-2xl gradient-primary border-0 gap-2"
       >
         <Mic size={16} />
         내 목소리 분석하기

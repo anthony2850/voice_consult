@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Dumbbell, ChevronLeft } from 'lucide-react'
+import { Activity, AudioWaveform, ChevronLeft, Dumbbell, Gauge, Mic, type LucideIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { trackEvent } from '@/lib/analytics'
 import { pickScene, type SceneResult } from '@/lib/voiceScene'
@@ -10,42 +10,40 @@ import { validateEmotionMap } from '@/lib/voiceAnalysis'
 import PersonaRadarChart from '@/components/PersonaRadarChart'
 import { type AudioFeatures } from '@/lib/extractAudioFeatures'
 import ConcernsModal from '@/components/training/ConcernsModal'
+import { PageHeader } from '@/components/ds'
 import { useConcerns } from '@/hooks/useConcerns'
 import {
   calcVoiceScores,
   suggestConcerns,
   CONCERN_THRESHOLD,
-  getScoreColor,
-  getScoreBarColor,
   getStabilityDesc,
   getPaceDesc,
   getExpressivenessDesc,
   getPitchToneLabel,
-  getPitchToneColor,
 } from '@/lib/voiceScores'
 
 // ── Score Card ────────────────────────────────────────────
 function ScoreCard({
-  emoji, title, score, description, detail, animate,
+  icon: Icon, title, score, description, detail, animate,
 }: {
-  emoji: string; title: string; score: number; description: string; detail?: string; animate: boolean
+  icon: LucideIcon; title: string; score: number; description: string; detail?: string; animate: boolean
 }) {
   return (
-    <div className="glass rounded-3xl p-5">
-      <div className="flex items-center gap-2 mb-4">
-        <span className="text-base">{emoji}</span>
-        <h2 className="text-sm font-bold text-foreground">{title}</h2>
-        <span className={`ml-auto text-3xl font-black tabular-nums ${getScoreColor(score)}`}>{score}</span>
+    <section className="rounded-[28px] bg-secondary p-6">
+      <div className="flex items-center gap-2.5 mb-4">
+        <Icon size={20} className="text-accent shrink-0" aria-hidden="true" />
+        <h2 className="text-[16px] font-bold text-foreground">{title}</h2>
+        <span className={`ml-auto text-[32px] leading-none font-black tracking-[-0.03em] tabular-nums text-foreground`}>{score}</span>
       </div>
-      <div className="w-full bg-border rounded-full h-2.5 overflow-hidden mb-3">
+      <div className="w-full bg-card rounded-full h-3 overflow-hidden mb-3">
         <div
-          className={`h-full rounded-full transition-all duration-700 ease-out ${getScoreBarColor(score)}`}
+          className={`h-full rounded-full transition-all duration-700 ease-out bg-accent`}
           style={{ width: animate ? `${score}%` : '0%' }}
         />
       </div>
-      <p className="text-xs text-muted-foreground">{description}</p>
-      {detail && <p className="text-[10px] text-muted-foreground/60 mt-1">{detail}</p>}
-    </div>
+      <p className="text-[14px] text-foreground/80">{description}</p>
+      {detail && <p className="text-[12px] text-muted-foreground mt-1">{detail}</p>}
+    </section>
   )
 }
 
@@ -144,7 +142,7 @@ export default function VoiceDetailClient() {
   if (!loaded || !scores || !weakest) {
     return (
       <div className="flex min-h-[calc(100vh-84px)] flex-col items-center justify-center px-6 text-center">
-        <div className="mb-5 text-5xl" aria-hidden="true">🎙️</div>
+        <div className="mb-5 w-16 h-16 rounded-full bg-secondary flex items-center justify-center" aria-hidden="true"><Mic size={28} className="text-accent" /></div>
         <h1 className="mb-2 text-xl font-bold text-foreground">표시할 목소리 진단이 없어요</h1>
         <p className="mb-6 max-w-sm text-sm leading-relaxed text-muted-foreground">
           목소리를 녹음하면 안정감, 전달력, 표현력을 측정해 드려요.
@@ -167,38 +165,26 @@ export default function VoiceDetailClient() {
     : `${weakest.short}이 가장 아쉬워요`
 
   const userScores: Record<string, number> = {}
-  for (const a of AXES) userScores[a.label] = scores[a.key]
+  // 그래프 이름표는 짧은 이름 — 긴 이름은 양옆이 화면 밖으로 잘린다
+  for (const a of AXES) userScores[a.short] = scores[a.key]
 
   return (
     <div className="flex flex-col min-h-[calc(100vh-84px)] pb-8">
-      {/* ── Header ── */}
-      <div className="relative bg-gradient-to-br from-[#0093BA] to-[#00BECD] px-5 pt-8 pb-8 overflow-hidden">
-        <div className="absolute -top-10 -right-10 w-48 h-48 rounded-full bg-white/10 blur-3xl" />
-        <div className="relative z-10">
-          <button
-            onClick={() => router.push('/result')}
-            className="flex items-center gap-1 text-white/80 text-xs mb-4 active:opacity-70"
-          >
-            <ChevronLeft size={14} />
-            페르소나 결과
-          </button>
-          <p className="text-white/80 text-xs font-medium mb-1">내 목소리 진단</p>
-          <h1 className="text-2xl font-black text-white">{summary}</h1>
-        </div>
-      </div>
+      <PageHeader
+        back={{ label: '페르소나 결과', onClick: () => router.push('/result') }}
+        eyebrow="내 목소리 진단"
+        title={summary}
+      />
 
-      <div className="relative z-10 mt-4 px-4 space-y-4">
+      <div className="mt-4 px-5 space-y-4">
         {/* Radar */}
-        <div className="glass rounded-3xl p-5">
-          <div className="flex items-center gap-2 mb-4">
-            <span className="text-base">📊</span>
-            <h2 className="text-sm font-bold text-foreground">목소리 품질 분석</h2>
-          </div>
-          <PersonaRadarChart axes={AXES.map((a) => a.label)} userScores={userScores} animate={animate} />
-        </div>
+        <section className="rounded-[28px] bg-secondary p-6">
+          <h2 className="text-[16px] font-bold text-foreground mb-4">목소리 품질 분석</h2>
+          <PersonaRadarChart axes={AXES.map((a) => a.short)} userScores={userScores} animate={animate} />
+        </section>
 
         <ScoreCard
-          emoji="🎤"
+          icon={AudioWaveform}
           title="목소리 안정감"
           score={scores.stability}
           description={getStabilityDesc(scores.stability)}
@@ -206,7 +192,7 @@ export default function VoiceDetailClient() {
           animate={animate}
         />
         <ScoreCard
-          emoji="🗣️"
+          icon={Gauge}
           title="말하기 여유 및 전달력"
           score={scores.pace}
           description={getPaceDesc(scores.pace, features.rhythm.onsets_per_second)}
@@ -214,7 +200,7 @@ export default function VoiceDetailClient() {
           animate={animate}
         />
         <ScoreCard
-          emoji="✨"
+          icon={Activity}
           title="생동감 및 표현력"
           score={scores.expressiveness}
           description={getExpressivenessDesc(scores.expressiveness)}
@@ -223,11 +209,10 @@ export default function VoiceDetailClient() {
         />
 
         {/* Raw numbers, collapsed by default */}
-        <details className="glass rounded-3xl px-5 py-4 group">
-          <summary className="flex items-center gap-2 cursor-pointer list-none text-sm font-bold text-foreground">
-            <span className="text-base">🎵</span>
+        <details className="rounded-[28px] bg-secondary px-6 py-5 group">
+          <summary className="flex items-center gap-2 cursor-pointer list-none text-[16px] font-bold text-foreground">
             피치 상세 수치
-            <span className={`ml-auto text-xs font-bold ${getPitchToneColor(features.pitch.mean_hz)}`}>
+            <span className={`ml-auto text-xs font-bold text-accent`}>
               {getPitchToneLabel(features.pitch.mean_hz)}
             </span>
             <ChevronLeft size={14} className="-rotate-90 group-open:rotate-90 transition-transform text-muted-foreground" />
@@ -243,7 +228,7 @@ export default function VoiceDetailClient() {
         {/* ── Single CTA ── */}
         <button
           onClick={handleTrain}
-          className="w-full h-13 px-4 py-3.5 rounded-2xl gradient-primary text-gray-900 text-sm font-bold flex items-center justify-center gap-2 shadow-lg shadow-[#FFD700]/30 active:scale-[0.98] transition-transform"
+          className="w-full h-14 px-4 rounded-full gradient-primary text-primary-foreground text-[16px] font-bold flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
         >
           <Dumbbell size={16} className="shrink-0" />
           <span>{allGood ? '내 목소리 더 다듬기' : `${weakest.short} 보완 훈련 시작하기`}</span>

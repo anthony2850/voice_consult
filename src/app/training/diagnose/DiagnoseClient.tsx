@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { ArrowLeft, AudioWaveform, Gauge, MessageCircle, Volume1, type LucideIcon } from 'lucide-react'
+import { AudioWaveform, Gauge, MessageCircle, Volume1, type LucideIcon } from 'lucide-react'
 import { useTrack } from '@/hooks/useTrack'
 import {
   CONCERN_LABELS, CONCERN_ORDER, DIAGNOSIS_LEVELS, SCENE_LABELS, SCENE_ORDER, TRACKS, getRung,
@@ -12,7 +12,7 @@ import {
   JITTER_LIMIT, PACE_RANGE, startRungFromBoundary, suggestConcernsFromDiagnosis, type DiagnosisSuggestion, type Measure,
 } from '@/lib/trainingCycle'
 import { PRACTICE_TIME } from '@/lib/plan'
-import { Checklist, Display, Eyebrow, MetricRow, OptionCard, Pill, PrimaryButton, ProgressBar, SpecialButton, SurfaceCard } from '@/components/ds'
+import { Checklist, Display, Eyebrow, MetricRow, OptionCard, PageHeader, Pill, PrimaryButton, ProgressBar, SpecialButton, SurfaceCard } from '@/components/ds'
 import { measureBlob } from '@/lib/trainingMeasure'
 import RecordStep from '@/components/training/RecordStep'
 import { trackEvent } from '@/lib/analytics'
@@ -226,54 +226,42 @@ export default function DiagnoseClient() {
 
   return (
     <div className="min-h-[calc(100vh-84px)]">
-      <div className="relative bg-gradient-to-br from-[#0093BA] to-[#00BECD] px-5 pt-10 pb-6 overflow-hidden">
-        <div className="absolute -top-10 -right-10 w-48 h-48 rounded-full bg-white/10 blur-3xl" />
-        <div className="relative z-10">
-          <p className="text-white/80 text-xs mb-1">진단</p>
-          <h1 className="text-xl font-black text-white">어디서부터 어려워지는지 찾아요</h1>
-          <p className="text-white/80 text-xs mt-2 leading-relaxed">
-            쉬운 소리부터 실제 문장까지 4번 녹음해요. 점수는 보여주지 않고, 끝나면 연습할 고민을 추천해요.
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        back={{ label: '나가기', onClick: () => router.push('/training') }}
+        eyebrow={`진단, ${SCENE_LABELS[scene].label} 상황`}
+        title="어디서부터 어려워지는지 찾아요"
+        sub="쉬운 소리부터 실제 문장까지 4번 녹음해요. 점수는 보여주지 않고, 끝나면 연습할 고민을 추천해요."
+        chips={phase === 'climb' && <Pill tone="data">{levelIdx + 1} / {DIAGNOSIS_LEVELS.length}</Pill>}
+      />
 
-      <div className="px-4 pt-4 pb-8 space-y-4">
-        <div className="flex items-center justify-between">
-          <button onClick={() => router.push('/training')} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground">
-            <ArrowLeft size={14} />나가기
-          </button>
-          {phase === 'climb' && (
-            <p className="text-xs font-semibold text-muted-foreground tabular-nums">{levelIdx + 1} / {DIAGNOSIS_LEVELS.length}</p>
-          )}
-        </div>
-
+      <div className="px-5 pt-4 pb-8 space-y-4">
         {phase === 'intro' && (
-          <div className="glass rounded-3xl p-6 space-y-4">
-            <p className="text-base font-bold text-foreground">4번 녹음해요. 점점 실제 말하기에 가까워져요</p>
-            <ol className="space-y-1.5">
+          <section className="rounded-[28px] bg-secondary p-6 space-y-5">
+            <p className="text-[17px] font-black text-foreground">점점 실제 말하기에 가까워져요</p>
+            <ol className="space-y-3">
               {DIAGNOSIS_LEVELS.map((l) => {
                 const r = getRung(l)
-                return <li key={l} className="text-sm text-foreground">• {l}단계 {r.title} <span className="text-muted-foreground">— {r.adds}</span></li>
+                return (
+                  <li key={l} className="flex gap-3">
+                    <span className="w-7 h-7 shrink-0 rounded-full bg-primary text-primary-foreground text-[13px] font-black flex items-center justify-center tabular-nums">{l}</span>
+                    <span className="min-w-0">
+                      <span className="block text-[15px] font-bold text-foreground">{r.title}</span>
+                      <span className="block text-[13px] text-muted-foreground">{r.adds}</span>
+                    </span>
+                  </li>
+                )
               })}
             </ol>
-            <p className="text-xs text-foreground">
-              {SCENE_LABELS[scene].emoji} <span className="font-semibold">{SCENE_LABELS[scene].label}</span> 문장으로 재요.
-            </p>
-            <p className="text-xs text-muted-foreground leading-relaxed">
+            <p className="text-[13px] text-muted-foreground leading-relaxed">
               잘하려고 애쓰지 않아도 돼요. 평소 그대로가 가장 정확한 진단이에요. 조용한 곳에서, 마이크에서 한 뼘 정도 떨어져 주세요.
             </p>
-            <button
-              onClick={() => { trackEvent('diagnosis_started', { scene }); setPhase('climb') }}
-              className="w-full h-12 rounded-2xl gradient-primary text-primary-foreground text-sm font-bold active:scale-95 transition-transform"
-            >
-              시작
-            </button>
-          </div>
+            <PrimaryButton onClick={() => { trackEvent('diagnosis_started', { scene }); setPhase('climb') }}>시작</PrimaryButton>
+          </section>
         )}
 
         {phase === 'climb' && (
           <>
-            {failNote && <p className="text-xs text-red-500 px-1">{failNote}</p>}
+            {failNote && <p className="text-[13px] text-caution px-1">{failNote}</p>}
             <RecordStep
               key={rung.id}
               eyebrow={`${level}단계`}

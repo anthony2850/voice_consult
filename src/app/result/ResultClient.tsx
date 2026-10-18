@@ -234,7 +234,7 @@ export default function ResultClient() {
                 trackEvent('result_voice_detail_clicked', { persona_id: persona.id })
                 router.push('/result/voice')
               }}
-              className="w-full h-13 px-4 py-3.5 rounded-2xl gradient-primary text-gray-900 text-sm font-bold flex items-center justify-center gap-2 shadow-lg shadow-[#FFD700]/30 active:scale-[0.98] transition-transform"
+              className="w-full h-14 px-4 rounded-full gradient-primary text-primary-foreground text-[16px] font-bold flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
             >
               <span>이 페르소나를 만든 수치 보기</span>
               <ChevronRight size={16} className="shrink-0 opacity-70" />
@@ -246,7 +246,7 @@ export default function ResultClient() {
                 trackEvent('shared_result_try_clicked', { persona_id: persona.id })
                 router.push('/record')
               }}
-              className="w-full h-13 px-4 py-3.5 rounded-2xl gradient-primary text-gray-900 text-sm font-bold flex items-center justify-center gap-2 shadow-lg shadow-[#FFD700]/30 active:scale-[0.98] transition-transform"
+              className="w-full h-14 px-4 rounded-full gradient-primary text-primary-foreground text-[16px] font-bold flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
             >
               <Mic size={16} className="shrink-0" />
               <span>내 목소리는 어떤 페르소나일까?</span>

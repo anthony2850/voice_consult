@@ -3,9 +3,9 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { User, LogOut, ChevronRight, Dumbbell, Archive } from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
 import { getSupabase } from '@/lib/supabase'
 import { LegalLinks } from '@/components/legal/LegalPage'
+import { PageHeader, Pill } from '@/components/ds'
 import type { User as SupabaseUser } from '@supabase/supabase-js'
 
 export default function MyPageClient() {
@@ -32,75 +32,51 @@ export default function MyPageClient() {
 
   return (
     <div className="flex flex-col min-h-[calc(100vh-84px)] pb-8">
-      {/* Hero */}
-      <div className="relative bg-gradient-to-br from-[#0093BA] to-[#00BECD] px-5 pt-10 pb-6 overflow-hidden">
-        <div className="absolute -top-10 -right-10 w-48 h-48 rounded-full bg-white/10 blur-3xl" />
-        <div className="absolute -bottom-10 -left-10 w-48 h-48 rounded-full bg-white/10 blur-3xl" />
-        <div className="relative z-10">
-          <Badge className="mb-3 bg-white/20 text-white border-0 text-xs backdrop-blur">
-            마이페이지
-          </Badge>
-          <h1 className="text-3xl font-black text-white mb-2">My Profile</h1>
-          <p className="text-white/70 text-sm">내 계정 정보와 활동을 확인하세요</p>
-        </div>
-      </div>
+      <PageHeader title="마이페이지" sub="내 계정과 기록을 확인해요." />
 
-      <div className="mt-4 px-4 space-y-4">
+      <div className="mt-4 px-5 space-y-4">
         {/* Profile card */}
-        <div className="glass rounded-3xl p-6 flex items-center gap-4">
+        <section className="rounded-[28px] bg-secondary p-6 flex items-center gap-4">
           {avatarUrl ? (
-            <img
-              src={avatarUrl}
-              alt={fullName}
-              className="w-16 h-16 rounded-full object-cover"
-            />
+            <img src={avatarUrl} alt={fullName} className="w-16 h-16 rounded-full object-cover" />
           ) : (
-            <div className="w-16 h-16 rounded-full bg-secondary flex items-center justify-center flex-shrink-0">
+            <div className="w-16 h-16 rounded-full bg-card flex items-center justify-center flex-shrink-0">
               <User size={28} className="text-muted-foreground" />
             </div>
           )}
           <div className="flex-1 min-w-0">
-            <p className="text-base font-bold text-foreground truncate">{fullName}</p>
-            <p className="text-xs text-muted-foreground truncate mt-0.5">{email}</p>
-            {providerLabel && (
-              <span className="inline-block mt-1.5 text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
-                {providerLabel} 로그인
-              </span>
-            )}
+            <p className="text-[18px] font-black text-foreground truncate">{fullName}</p>
+            <p className="text-[13px] text-muted-foreground truncate mt-0.5">{email}</p>
+            {providerLabel && <span className="inline-block mt-2"><Pill>{providerLabel} 로그인</Pill></span>}
           </div>
-        </div>
+        </section>
 
         {/* Menu items */}
-        <div className="glass rounded-3xl overflow-hidden">
-          <button
-            onClick={() => router.push('/archive')}
-            className="w-full flex items-center gap-3 px-5 py-4 hover:bg-white/5 active:bg-white/10 transition-colors border-b border-border/40"
-          >
-            <Archive size={18} className="text-primary" />
-            <span className="flex-1 text-sm font-medium text-left">분석 기록 보기</span>
-            <ChevronRight size={16} className="text-muted-foreground" />
-          </button>
-          <button
-            onClick={() => router.push('/training')}
-            className="w-full flex items-center gap-3 px-5 py-4 hover:bg-white/5 active:bg-white/10 transition-colors"
-          >
-            <Dumbbell size={18} className="text-primary" />
-            <span className="flex-1 text-sm font-medium text-left">훈련 플랜</span>
-            <ChevronRight size={16} className="text-muted-foreground" />
-          </button>
-        </div>
+        <section className="rounded-[28px] bg-secondary p-2">
+          {[
+            { href: '/archive', icon: Archive, label: '훈련 기록 보기' },
+            { href: '/training', icon: Dumbbell, label: '내 훈련' },
+          ].map(({ href, icon: Icon, label }) => (
+            <button
+              key={href}
+              onClick={() => router.push(href)}
+              className="w-full flex items-center gap-3 px-4 py-4 rounded-2xl active:bg-card transition-colors"
+            >
+              <Icon size={20} className="text-accent" aria-hidden="true" />
+              <span className="flex-1 text-[15px] font-semibold text-left text-foreground">{label}</span>
+              <ChevronRight size={18} className="text-muted-foreground" />
+            </button>
+          ))}
+        </section>
 
-        {/* Coming soon */}
-        <div className="glass rounded-3xl p-5 border border-border/60 text-center">
-          <p className="text-xs text-muted-foreground">🚀 구매 내역, 설정 등<br />더 많은 기능이 곧 추가될 예정이에요</p>
-        </div>
+        <p className="text-[13px] text-muted-foreground text-center leading-relaxed">구독 관리와 설정은 곧 추가될 예정이에요.</p>
 
         {/* Logout */}
         <button
           onClick={handleSignOut}
-          className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl text-sm text-muted-foreground hover:text-red-500 hover:bg-red-500/5 active:scale-95 transition-all"
+          className="w-full flex items-center justify-center gap-2 h-14 rounded-full border-2 border-border text-[15px] font-semibold text-muted-foreground active:bg-secondary transition-colors"
         >
-          <LogOut size={16} />
+          <LogOut size={17} />
           로그아웃
         </button>
 

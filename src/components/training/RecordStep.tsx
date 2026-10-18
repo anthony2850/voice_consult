@@ -63,31 +63,31 @@ export default function RecordStep({
   const reviewing = recorder.state === 'recorded'
 
   return (
-    <div className="glass rounded-3xl p-6 space-y-4">
+    <section className="rounded-[28px] bg-secondary p-6 space-y-4">
       <div className="space-y-1">
-        {eyebrow && <p className="text-[11px] font-semibold text-primary uppercase tracking-wide">{eyebrow}</p>}
-        <p className="text-base font-bold text-foreground">{title}</p>
+        {eyebrow && <p className="eyebrow">{eyebrow}</p>}
+        <p className="text-[19px] font-black tracking-[-0.02em] text-foreground">{title}</p>
       </div>
 
       {keyInfo && (
-        <div className="rounded-2xl bg-primary/10 border border-primary/30 px-4 py-3">
-          <p className="text-[11px] font-semibold text-primary mb-0.5">녹음할 때 확인할 것</p>
-          <p className="text-sm font-bold text-foreground">{keyInfo}</p>
+        <div className="rounded-2xl bg-card px-4 py-3">
+          <p className="eyebrow mb-1">녹음할 때 확인할 것</p>
+          <p className="text-[15px] font-bold text-foreground">{keyInfo}</p>
         </div>
       )}
 
       <ul className="space-y-1.5">
         {instructions.map((line, i) => (
-          <li key={i} className="text-sm text-foreground leading-relaxed">• {line}</li>
+          <li key={i} className="flex gap-2 text-[14px] text-foreground leading-relaxed"><span aria-hidden="true" className="mt-2 w-1.5 h-1.5 shrink-0 rounded-full bg-accent" />{line}</li>
         ))}
         {targetSec && (
-          <li className="text-sm text-foreground leading-relaxed">• 목표 {targetSec}초, 최대 {maxSec}초예요. 길게 버티는 게 목적이 아니에요.</li>
+          <li className="flex gap-2 text-[14px] text-foreground leading-relaxed"><span aria-hidden="true" className="mt-2 w-1.5 h-1.5 shrink-0 rounded-full bg-accent" />목표 {targetSec}초, 최대 {maxSec}초예요. 길게 버티는 게 목적이 아니에요.</li>
         )}
       </ul>
 
       {variation && (
-        <div className="rounded-2xl bg-secondary/60 px-4 py-3 space-y-1">
-          <p className="text-[11px] font-semibold text-muted-foreground">오늘은 이렇게 해 봐요: {variation.label}</p>
+        <div className="rounded-2xl bg-card px-4 py-3 space-y-1">
+          <p className="eyebrow">오늘은 이렇게 해 봐요: {variation.label}</p>
           <p className="text-xs text-foreground"><span className="text-muted-foreground">방법</span> {variation.change}</p>
           <p className="text-xs text-foreground"><span className="text-muted-foreground">유지</span> {variation.hold}</p>
           <p className="text-xs text-foreground"><span className="text-muted-foreground">확인</span> {variation.observe}</p>
@@ -95,9 +95,9 @@ export default function RecordStep({
       )}
 
       {script && (
-        <div className="rounded-2xl bg-secondary/60 p-4">
-          <p className="text-[11px] font-semibold text-muted-foreground mb-1">{scriptLabel}</p>
-          <p className="text-sm text-foreground leading-relaxed">&ldquo;{script}&rdquo;</p>
+        <div className="rounded-2xl bg-card p-4">
+          <p className="eyebrow mb-1">{scriptLabel}</p>
+          <p className="text-[16px] text-foreground leading-relaxed">&ldquo;{script}&rdquo;</p>
         </div>
       )}
 
@@ -110,7 +110,7 @@ export default function RecordStep({
           <button
             onClick={beginWithPrep}
             aria-label="녹음 시작"
-            className="w-14 h-14 rounded-full gradient-primary flex items-center justify-center shadow-lg shadow-primary/30 active:scale-95 transition-transform"
+            className="w-16 h-16 rounded-full bg-primary flex items-center justify-center active:scale-95 transition-transform"
           >
             <Mic size={22} className="text-primary-foreground" />
           </button>
@@ -121,7 +121,7 @@ export default function RecordStep({
       {prepLeft !== null && (
         <div className="flex flex-col items-center gap-2 py-2">
           <p className="text-xs text-muted-foreground">준비</p>
-          <p className="text-5xl font-black tabular-nums text-primary">{prepLeft}</p>
+          <p className="text-6xl font-black tabular-nums text-foreground">{prepLeft}</p>
         </div>
       )}
 
@@ -132,7 +132,7 @@ export default function RecordStep({
           <button
             onClick={() => recorder.stop()}
             aria-label="녹음 중지"
-            className="w-14 h-14 rounded-full bg-red-500 flex items-center justify-center shadow-lg active:scale-95 transition-transform"
+            className="w-16 h-16 rounded-full bg-foreground flex items-center justify-center shadow-lg active:scale-95 transition-transform"
           >
             <Square size={20} className="text-white fill-white" />
           </button>
@@ -152,19 +152,19 @@ export default function RecordStep({
           <div className="flex gap-2">
             <button
               onClick={() => recorder.reset()}
-              className="flex-1 flex items-center justify-center gap-1.5 h-10 rounded-2xl bg-secondary/60 text-xs text-muted-foreground hover:text-foreground transition-colors"
+              className="flex-1 flex items-center justify-center gap-1.5 h-12 rounded-full bg-card text-[14px] font-semibold text-muted-foreground hover:text-foreground transition-colors"
             >
               <RotateCcw size={13} />다시 녹음
             </button>
             <button
               onClick={() => recorder.audioBlob && onRecorded(recorder.audioBlob)}
-              className="flex-1 h-10 rounded-2xl gradient-primary text-primary-foreground text-sm font-bold active:scale-95 transition-transform"
+              className="flex-1 h-12 rounded-full bg-primary text-primary-foreground text-[15px] font-bold active:scale-95 transition-transform"
             >
               {doneLabel}
             </button>
           </div>
         </div>
       )}
-    </div>
+    </section>
   )
 }

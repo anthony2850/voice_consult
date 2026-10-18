@@ -4,7 +4,11 @@
  * MyTone 디자인 시스템 부품 (2026-10-18).
  * 규칙은 src/app/globals.css 머리 주석 참고. 한 화면에 하나만 말하고, 색은 버튼과 머리말에만.
  */
-import { Check } from 'lucide-react'
+import {
+  AudioWaveform, Briefcase, Check, ChevronLeft, Gauge, MessageCircle, MessagesSquare, Phone, Presentation, Volume1,
+  type LucideIcon,
+} from 'lucide-react'
+import type { ConcernSlug, Scene } from '@/lib/curriculum'
 
 export { OptionCard, PrimaryButton, HoldButton } from '@/components/onboarding/OnboardingParts'
 
@@ -100,3 +104,33 @@ export function SpecialButton({ children, onClick, disabled }: { children: React
     </button>
   )
 }
+
+/**
+ * 화면 머리 영역 — 예전 청록 그라데이션 머리를 대신한다. 흰 바탕, 왼쪽 정렬, 아주 굵은 제목.
+ * 한 가지에 집중하는 화면(온보딩, 기준점)은 Display를 가운데 정렬로 쓴다.
+ */
+export function PageHeader({ back, eyebrow, title, sub, chips }: {
+  back?: { label: string; onClick: () => void }
+  eyebrow?: React.ReactNode
+  title: React.ReactNode
+  sub?: React.ReactNode
+  chips?: React.ReactNode
+}) {
+  return (
+    <header className="px-5 pt-6 pb-2">
+      {back && (
+        <button type="button" onClick={back.onClick} className="-ml-2 mb-3 h-10 px-2 flex items-center gap-0.5 rounded-full text-[14px] font-semibold text-muted-foreground active:bg-secondary">
+          <ChevronLeft size={20} aria-hidden="true" />{back.label}
+        </button>
+      )}
+      {eyebrow && <Eyebrow className="mb-2">{eyebrow}</Eyebrow>}
+      <h1 className="text-[28px] leading-[1.2] font-black tracking-[-0.03em] text-foreground">{title}</h1>
+      {sub && <p className="mt-2 text-[15px] leading-relaxed text-muted-foreground">{sub}</p>}
+      {chips && <div className="mt-4 flex flex-wrap items-center gap-2">{chips}</div>}
+    </header>
+  )
+}
+
+/** 상황과 고민의 선 아이콘 (이모지 대신) */
+export const SCENE_ICON: Record<Scene, LucideIcon> = { interview: Briefcase, presentation: Presentation, call: Phone, daily: MessagesSquare }
+export const CONCERN_ICON: Record<ConcernSlug, LucideIcon> = { trembling: AudioWaveform, small_voice: Volume1, fast: Gauge, diction: MessageCircle }
