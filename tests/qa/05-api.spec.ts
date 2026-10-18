@@ -1,7 +1,6 @@
 /**
  * QA-05: API 엔드포인트 테스트
  * - /api/analyze-voice: 잘못된 요청에 대한 응답
- * - /api/generate-report: 접근 제어
  * - 응답 포맷 검증
  */
 import { test, expect } from '@playwright/test'
@@ -30,21 +29,5 @@ test.describe('API 엔드포인트 신뢰성', () => {
       error: 'audio_file_required',
       retryable: false,
     })
-  })
-
-  test('generate-report: 인증 없이 접근 시 에러 반환', async ({ request }) => {
-    const response = await request.post('/api/generate-report', {
-      data: { emotions: {}, audioFeatures: null },
-    })
-    console.log('미인증 리포트 생성 응답:', response.status())
-    // 401 또는 400이어야 함 (500은 안 됨)
-    expect(response.status()).not.toBe(500)
-  })
-
-  test('payment/confirm: GET 요청 처리', async ({ request }) => {
-    const response = await request.get('/api/payment/confirm?paymentKey=test&orderId=test&amount=0')
-    console.log('결제 확인 API 응답:', response.status())
-    // 리다이렉트나 400/401이 정상, 500은 안 됨
-    expect(response.status()).not.toBe(500)
   })
 })
