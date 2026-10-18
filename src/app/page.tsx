@@ -2,6 +2,7 @@ import Image from 'next/image'
 import { Badge } from '@/components/ui/badge'
 import StartRecordButton, { StartRecordMic } from '@/components/StartRecordButton'
 import HomeHero from '@/components/HomeHero'
+import { LegalLinks } from '@/components/legal/LegalPage'
 
 // What the analysis actually measures — keep in sync with lib/voiceScores.ts.
 const METRICS = [
@@ -60,6 +61,8 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      <LegalLinks className="pb-4" />
     </div>
   )
 }

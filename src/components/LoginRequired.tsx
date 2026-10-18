@@ -5,6 +5,7 @@ import Image from 'next/image'
 import { getSupabase } from '@/lib/supabase'
 import { savePendingGuestData } from '@/lib/guest-migration'
 import { trackEvent } from '@/lib/analytics'
+import Link from 'next/link'
 
 function signIn(provider: 'google' | 'kakao') {
   trackEvent('login_clicked', { method: provider, source: 'login_required' })
@@ -99,6 +100,12 @@ export default function LoginRequired({ children }: { children: React.ReactNode 
             카카오로 로그인하기
           </button>
         </div>
+
+        <p className="text-[11px] text-muted-foreground text-center mt-4 leading-relaxed">
+          로그인하면 만 14세 이상이며{' '}
+          <Link href="/terms" className="underline underline-offset-2">이용약관</Link>과{' '}
+          <Link href="/privacy" className="underline underline-offset-2">개인정보처리방침</Link>에<br />동의한 것으로 봐요.
+        </p>
 
       </div>
     )

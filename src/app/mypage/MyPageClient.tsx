@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { User, LogOut, ChevronRight, Dumbbell, Archive } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { getSupabase } from '@/lib/supabase'
+import { LegalLinks } from '@/components/legal/LegalPage'
 import type { User as SupabaseUser } from '@supabase/supabase-js'
 
 export default function MyPageClient() {
@@ -102,6 +103,8 @@ export default function MyPageClient() {
           <LogOut size={16} />
           로그아웃
         </button>
+
+        <LegalLinks />
       </div>
     </div>
   )
