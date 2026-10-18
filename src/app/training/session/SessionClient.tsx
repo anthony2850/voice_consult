@@ -111,8 +111,9 @@ export default function SessionClient() {
         effort, pain, met_criterion: met, next_rung: next,
       })
       if (ok && next !== current) await setTrackRung(next)
+      // 힘든 정도·통증은 건강 관련 자가 응답이라 분석 도구(GA·Meta)로 보내지 않는다. DB에만 저장.
       trackEvent('training_session_completed', {
-        concern: track!.concern, rung: current, next_rung: next, met: met ?? 'na', effort, pain, verdict,
+        concern: track!.concern, rung: current, next_rung: next, met: met ?? 'na', verdict,
       })
       setStep('saved')
     } finally {
