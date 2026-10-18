@@ -137,7 +137,7 @@ export default function SessionClient() {
 
       <div className="px-4 pt-4 pb-8 space-y-4">
         <div className="flex items-center justify-between">
-          <button onClick={() => router.push('/training')} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground">
+          <button onClick={() => router.push('/training/track')} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground">
             <ArrowLeft size={14} />나가기
           </button>
           {step !== 'saved' && (
@@ -346,10 +346,10 @@ export default function SessionClient() {
               </button>
             ) : (
               <button
-                onClick={() => router.push('/training')}
+                onClick={() => router.push('/training/track')}
                 className="w-full h-12 rounded-2xl bg-secondary text-foreground text-sm font-bold active:scale-95 transition-transform"
               >
-                훈련 홈으로
+                트랙으로 돌아가기
               </button>
             )}
           </div>

@@ -101,12 +101,6 @@ export function useTrack() {
     return true
   }, [])
 
-  const saveScene = useCallback(async (scene: Scene) => {
-    const ok = await upsertProfile({ scene })
-    if (ok) setProfile((p) => ({ ...p, scene }))
-    return ok
-  }, [upsertProfile])
-
   const startTrack = useCallback(async (args: {
     concern: ConcernSlug; rung: RungLevel; baseline: Measure | null; scene: Scene
   }) => {
@@ -177,6 +171,6 @@ export function useTrack() {
 
   return {
     loading, userId, profile, sessions, trackSessions,
-    refresh, saveScene, startTrack, planSwitch, switchTrack, setTrackRung, clearTrack, insertSession,
+    refresh, startTrack, planSwitch, switchTrack, setTrackRung, clearTrack, insertSession,
   }
 }

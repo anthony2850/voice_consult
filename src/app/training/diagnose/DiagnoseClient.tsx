@@ -33,9 +33,9 @@ export default function DiagnoseClient() {
   const [failNote, setFailNote] = useState<string | null>(null)
   const [picked, setPicked] = useState<ConcernSlug | null>(targetConcern)
 
-  // 장면이 없으면 훈련 홈에서 고르게 한다.
+  // 장면이 없으면 새 트랙 화면에서 고르게 한다.
   useEffect(() => {
-    if (!loading && !targetScene) router.replace('/training')
+    if (!loading && !targetScene) router.replace('/training/start')
   }, [loading, targetScene, router])
 
   const suggestions = useMemo<DiagnosisSuggestion[]>(
@@ -91,7 +91,7 @@ export default function DiagnoseClient() {
         rung_measures: measures, effort: null, pain: false, met_criterion: null, next_rung: startRung,
       })
       trackEvent('diagnosis_completed', { concern: picked, start_rung: startRung, boundary: s?.boundary ?? 'none' })
-      router.replace('/training')
+      router.replace('/training/track')
     } else {
       setPhase('choose')
     }
