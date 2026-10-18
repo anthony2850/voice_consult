@@ -272,7 +272,7 @@ export default function SessionClient() {
                 <button
                   key={n}
                   onClick={() => setEffort(n)}
-                  className={`h-12 rounded-xl text-sm font-bold transition-all ${effort === n ? 'gradient-primary text-white' : 'bg-secondary/60 text-foreground'}`}
+                  className={`h-12 rounded-xl text-sm font-bold transition-all ${effort === n ? 'gradient-primary text-primary-foreground' : 'bg-secondary/60 text-foreground'}`}
                 >
                   {n}
                 </button>
@@ -293,7 +293,7 @@ export default function SessionClient() {
             <button
               disabled={!effort}
               onClick={() => advance('cost')}
-              className="w-full h-12 rounded-2xl gradient-primary text-white text-sm font-bold active:scale-95 transition-transform disabled:opacity-50"
+              className="w-full h-12 rounded-2xl gradient-primary text-primary-foreground text-sm font-bold active:scale-95 transition-transform disabled:opacity-50"
             >
               결과 보기
             </button>
@@ -340,7 +340,7 @@ export default function SessionClient() {
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="w-full h-12 rounded-2xl gradient-primary text-white text-sm font-bold active:scale-95 transition-transform disabled:opacity-70"
+                className="w-full h-12 rounded-2xl gradient-primary text-primary-foreground text-sm font-bold active:scale-95 transition-transform disabled:opacity-70"
               >
                 {saving ? '저장 중…' : '기록하고 마치기'}
               </button>

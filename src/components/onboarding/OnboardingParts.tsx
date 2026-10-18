@@ -23,7 +23,7 @@ export function OnboardingShell({ step, total, onBack, children, footer, align =
           {Array.from({ length: total }, (_, i) => (
             <span
               key={i}
-              className={`h-1.5 rounded-full transition-all duration-300 ${i === step ? 'w-6 bg-primary' : i < step ? 'w-1.5 bg-primary' : 'w-1.5 bg-border'}`}
+              className={`h-1.5 rounded-full transition-all duration-300 ${i === step ? 'w-6 bg-accent' : i < step ? 'w-1.5 bg-accent' : 'w-1.5 bg-border'}`}
             />
           ))}
         </div>
@@ -39,7 +39,7 @@ export function OnboardingShell({ step, total, onBack, children, footer, align =
 export function OnboardingTitle({ children, sub }: { children: React.ReactNode; sub?: React.ReactNode }) {
   return (
     <div className="text-center mb-8">
-      <h1 className="text-[28px] leading-[1.25] font-extrabold tracking-tight text-foreground whitespace-pre-line">{children}</h1>
+      <h1 className="text-[30px] leading-[1.2] font-black tracking-[-0.03em] text-foreground whitespace-pre-line">{children}</h1>
       {sub && <p className="mt-3 text-[15px] leading-relaxed text-muted-foreground">{sub}</p>}
     </div>
   )
@@ -61,20 +61,20 @@ export function OptionCard({ icon: Icon, title, sub, badge, selected, onSelect }
       aria-checked={selected}
       onClick={onSelect}
       className={`w-full flex items-center gap-4 rounded-[20px] px-5 py-4 text-left border-2 transition-colors ${
-        selected ? 'bg-white border-primary shadow-[0_2px_12px_rgba(0,0,0,0.04)]' : 'bg-secondary/70 border-transparent active:bg-secondary'
+        selected ? 'bg-white border-accent' : 'bg-secondary border-transparent active:bg-border/60'
       }`}
     >
-      <Icon size={24} strokeWidth={1.8} className={selected ? 'text-foreground' : 'text-foreground/60'} aria-hidden="true" />
+      <Icon size={24} strokeWidth={1.8} className={selected ? 'text-accent' : 'text-foreground/55'} aria-hidden="true" />
       <span className="flex-1 min-w-0">
         <span className="block text-[16px] font-semibold text-foreground leading-snug">{title}</span>
         {sub && <span className="block text-[13px] text-muted-foreground mt-0.5 leading-snug">{sub}</span>}
       </span>
-      {badge && <span className="shrink-0 text-[11px] font-bold px-2.5 py-1 rounded-full bg-primary text-gray-900">{badge}</span>}
+      {badge && <span className="shrink-0 text-[11px] font-bold px-2.5 py-1 rounded-full bg-primary text-primary-foreground">{badge}</span>}
       <span
         aria-hidden="true"
-        className={`shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center ${selected ? 'border-primary bg-primary' : 'border-border'}`}
+        className={`shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center ${selected ? 'border-accent bg-accent' : 'border-border'}`}
       >
-        {selected && <span className="w-2.5 h-2.5 rounded-full bg-gray-900" />}
+        {selected && <span className="w-2.5 h-2.5 rounded-full bg-white" />}
       </span>
     </button>
   )
@@ -86,7 +86,7 @@ export function PrimaryButton({ children, disabled, onClick }: { children: React
       type="button"
       disabled={disabled}
       onClick={onClick}
-      className="w-full h-14 rounded-full bg-primary text-gray-900 text-[17px] font-bold active:scale-[0.98] transition-transform disabled:opacity-40 disabled:active:scale-100"
+      className="w-full h-14 rounded-full bg-primary text-primary-foreground text-[17px] font-bold active:scale-[0.98] transition-transform disabled:opacity-40 disabled:active:scale-100"
     >
       {children}
     </button>
@@ -142,7 +142,7 @@ export function HoldButton({ children, onDone, holdMs = 900, disabled }: {
       onKeyDown={(e) => {
         if ((e.key === 'Enter' || e.key === ' ') && !done.current) { e.preventDefault(); done.current = true; onDone() }
       }}
-      className="relative w-full h-14 rounded-full overflow-hidden bg-primary/25 text-gray-900 text-[17px] font-bold select-none touch-none disabled:opacity-40"
+      className="relative w-full h-14 rounded-full overflow-hidden bg-primary/30 text-primary-foreground text-[17px] font-bold select-none touch-none disabled:opacity-40"
     >
       <span aria-hidden="true" className="absolute inset-0 bg-primary origin-left" style={{ transform: `scaleX(${progress})` }} />
       <span className="relative">{children}</span>

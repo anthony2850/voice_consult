@@ -23,7 +23,7 @@ export default function RungLadder({ current, compact = false }: Props) {
             <span
               className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0 ${
                 state === 'done' ? 'bg-emerald-500 text-white'
-                : state === 'now' ? 'gradient-primary text-white'
+                : state === 'now' ? 'gradient-primary text-primary-foreground'
                 : 'bg-border text-muted-foreground'
               }`}
             >

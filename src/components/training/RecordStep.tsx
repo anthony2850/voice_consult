@@ -112,7 +112,7 @@ export default function RecordStep({
             aria-label="녹음 시작"
             className="w-14 h-14 rounded-full gradient-primary flex items-center justify-center shadow-lg shadow-primary/30 active:scale-95 transition-transform"
           >
-            <Mic size={22} className="text-white" />
+            <Mic size={22} className="text-primary-foreground" />
           </button>
           <p className="text-[11px] text-muted-foreground">{prepSec ? `누르면 ${prepSec}초 뒤 바로 시작돼요` : '누르면 바로 녹음돼요'}</p>
         </div>
@@ -158,7 +158,7 @@ export default function RecordStep({
             </button>
             <button
               onClick={() => recorder.audioBlob && onRecorded(recorder.audioBlob)}
-              className="flex-1 h-10 rounded-2xl gradient-primary text-white text-sm font-bold active:scale-95 transition-transform"
+              className="flex-1 h-10 rounded-2xl gradient-primary text-primary-foreground text-sm font-bold active:scale-95 transition-transform"
             >
               {doneLabel}
             </button>

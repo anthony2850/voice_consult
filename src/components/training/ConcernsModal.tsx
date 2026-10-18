@@ -71,7 +71,7 @@ export default function ConcernsModal({ open, initial, onClose, onSave, title = 
         <button
           onClick={handleSave}
           disabled={saving}
-          className="w-full h-12 rounded-2xl gradient-primary text-white text-sm font-bold active:scale-95 transition-transform disabled:opacity-70"
+          className="w-full h-12 rounded-2xl gradient-primary text-primary-foreground text-sm font-bold active:scale-95 transition-transform disabled:opacity-70"
         >
           {saving ? '저장 중…' : '저장하기'}
         </button>

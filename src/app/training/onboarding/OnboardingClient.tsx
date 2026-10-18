@@ -177,23 +177,23 @@ export default function OnboardingClient() {
           </div>
         }
       >
-        <p className="text-[13px] font-bold tracking-wide text-[#A67C00]">왜 효과가 있나요</p>
-        <h1 className="mt-2 text-[30px] leading-[1.2] font-extrabold tracking-tight">
-          목소리도 연습하면<br /><span className="text-[#C99700]">바뀌어요</span>
+        <p className="eyebrow">왜 효과가 있나요</p>
+        <h1 className="mt-2 text-[32px] leading-[1.18] font-black tracking-[-0.03em]">
+          목소리도 연습하면<br /><span className="text-accent">바뀌어요</span>
         </h1>
         <p className="mt-4 text-[15px] leading-relaxed text-foreground/80">
           연습 직후에 잘 되는 것과 실력이 남는 것은 달라요. 그래서 MyTone은 쉬고 난 뒤의 첫 녹음으로 실력을 확인하고, 그 결과로 다음 단계를 정해요.
         </p>
 
-        <figure className="mt-6 rounded-3xl bg-secondary/70 p-5 m-0">
+        <figure className="mt-6 rounded-[28px] bg-secondary p-5 m-0">
           <p className="text-[12px] font-bold tracking-wide text-muted-foreground">2주 동안 생기는 일</p>
           <svg viewBox="0 0 300 160" className="mt-3 w-full h-auto" role="img" aria-label="단계를 올리며 연습하면 쉬고 난 뒤 첫 녹음이 점점 좋아지고, 같은 연습만 반복하면 금방 제자리에 머무는 그림">
             <line x1="24" y1="128" x2="292" y2="128" stroke="currentColor" className="text-border" strokeWidth="1.5" />
             <line x1="24" y1="12" x2="24" y2="128" stroke="currentColor" className="text-border" strokeWidth="1.5" />
-            <path d="M24 118 C 90 112, 150 92, 282 40" fill="none" stroke="#E0A800" strokeWidth="4" strokeLinecap="round" />
+            <path d="M24 118 C 90 112, 150 92, 282 40" fill="none" stroke="#2D3A8C" strokeWidth="4" strokeLinecap="round" />
             <path d="M24 118 C 80 104, 140 100, 282 98" fill="none" stroke="currentColor" className="text-muted-foreground" strokeWidth="2.5" strokeDasharray="6 6" strokeLinecap="round" />
-            <circle cx="282" cy="40" r="5" fill="#E0A800" />
-            <text x="128" y="38" fontSize="12" fontWeight="700" fill="#A67C00">단계를 올리며 연습</text>
+            <circle cx="282" cy="40" r="5" fill="#2D3A8C" />
+            <text x="128" y="38" fontSize="12" fontWeight="700" fill="#2D3A8C">단계를 올리며 연습</text>
             <text x="150" y="118" fontSize="12" fill="currentColor" className="text-muted-foreground">같은 연습만 반복</text>
             <text x="24" y="148" fontSize="11" fill="currentColor" className="text-muted-foreground">첫날</text>
             <text x="292" y="148" fontSize="11" textAnchor="end" fill="currentColor" className="text-muted-foreground">2주 뒤</text>
@@ -203,8 +203,8 @@ export default function OnboardingClient() {
           </figcaption>
         </figure>
 
-        <section className="mt-4 rounded-3xl bg-white border border-border p-5">
-          <p className="text-[12px] font-bold tracking-wide text-[#A67C00]">내 계획</p>
+        <section className="mt-4 rounded-[28px] bg-white border border-border p-5">
+          <p className="eyebrow">내 계획</p>
           <dl className="mt-3 space-y-2.5 text-[15px]">
             {[
               ['상황', SCENE_LABELS[answers.scene].label],
@@ -234,8 +234,8 @@ export default function OnboardingClient() {
         <Link href="/privacy" className="underline underline-offset-2">개인정보처리방침</Link>에 동의한 것으로 봐요.
       </p>
     }>
-      <div className="mx-auto mb-6 w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center" aria-hidden="true">
-        <Check size={30} className="text-[#A67C00]" />
+      <div className="mx-auto mb-6 w-16 h-16 rounded-full bg-primary/30 flex items-center justify-center" aria-hidden="true">
+        <Check size={30} className="text-brand-text" />
       </div>
       <OnboardingTitle sub="진단 결과와 훈련 기록이 계정에 남아요. 다른 기기에서도 이어서 할 수 있어요.">{'계획이 준비됐어요.\n저장하려면 로그인해 주세요'}</OnboardingTitle>
       <div className="space-y-3">

@@ -1,22 +1,26 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, AudioWaveform, Gauge, MessageCircle, Volume1, type LucideIcon } from 'lucide-react'
 import { useTrack } from '@/hooks/useTrack'
 import {
   CONCERN_LABELS, CONCERN_ORDER, DIAGNOSIS_LEVELS, SCENE_LABELS, SCENE_ORDER, TRACKS, getRung,
   type ConcernSlug, type RungLevel, type Scene,
 } from '@/lib/curriculum'
 import {
-  startRungFromBoundary, suggestConcernsFromDiagnosis, type DiagnosisSuggestion, type Measure,
+  JITTER_LIMIT, PACE_RANGE, startRungFromBoundary, suggestConcernsFromDiagnosis, type DiagnosisSuggestion, type Measure,
 } from '@/lib/trainingCycle'
+import { PRACTICE_TIME } from '@/lib/plan'
+import { Checklist, Display, Eyebrow, MetricRow, OptionCard, Pill, PrimaryButton, ProgressBar, SpecialButton, SurfaceCard } from '@/components/ds'
 import { measureBlob } from '@/lib/trainingMeasure'
 import RecordStep from '@/components/training/RecordStep'
 import { trackEvent } from '@/lib/analytics'
 import { iGa } from '@/lib/voiceScene'
 
-type Phase = 'intro' | 'climb' | 'choose' | 'saving'
+type Phase = 'intro' | 'climb' | 'choose' | 'planning'
+
+const CONCERN_ICON: Record<ConcernSlug, LucideIcon> = { trembling: AudioWaveform, small_voice: Volume1, fast: Gauge, diction: MessageCircle }
 
 export default function DiagnoseClient() {
   const router = useRouter()
@@ -33,6 +37,12 @@ export default function DiagnoseClient() {
   const [analyzing, setAnalyzing] = useState(false)
   const [failNote, setFailNote] = useState<string | null>(null)
   const [picked, setPicked] = useState<ConcernSlug | null>(targetConcern)
+  // 계획 만드는 중: 실제로 끝난 단계 수
+  const [planDone, setPlanDone] = useState(0)
+  const [planned, setPlanned] = useState<{ concern: ConcernSlug; rung: RungLevel } | null>(null)
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const timers = useRef<ReturnType<typeof setTimeout>[]>([])
+  useEffect(() => () => timers.current.forEach(clearTimeout), [])
 
   // 장면이 없으면 새 트랙 화면에서 고르게 한다.
   useEffect(() => {
@@ -40,7 +50,7 @@ export default function DiagnoseClient() {
   }, [loading, targetScene, router])
 
   const suggestions = useMemo<DiagnosisSuggestion[]>(
-    () => (phase === 'choose' || phase === 'saving' ? suggestConcernsFromDiagnosis(measures) : []),
+    () => (phase === 'choose' || phase === 'planning' ? suggestConcernsFromDiagnosis(measures) : []),
     [phase, measures],
   )
 
@@ -79,23 +89,139 @@ export default function DiagnoseClient() {
 
   async function handleConfirm() {
     if (!picked) return
-    setPhase('saving')
+    setSaveError(null)
     const s = suggestions.find((x) => x.concern === picked)
     const track = TRACKS[picked]
     const startRung: RungLevel = track.metric === 'self' ? 4 : startRungFromBoundary(s?.boundary ?? null)
     const baseline = measures.find((m) => m.level === 4) ?? null
+    setPlanned({ concern: picked, rung: startRung })
+    setPlanDone(0)
+    setPhase('planning')
     const ok = await startTrack({ concern: picked, rung: startRung, baseline, scene })
-    if (ok) {
-      await insertSession({
-        kind: 'diagnosis', concern: picked, scene, rung: startRung, session_index: 0,
-        voice_use: null, variation_id: null, retention: null, performance: null,
-        rung_measures: measures, effort: null, pain: false, met_criterion: null, next_rung: startRung,
-      })
-      trackEvent('diagnosis_completed', { concern: picked, start_rung: startRung, boundary: s?.boundary ?? 'none' })
-      router.replace('/training/track')
-    } else {
+    if (!ok) {
+      setSaveError('저장하지 못했어요. 연결을 확인하고 다시 눌러 주세요.')
       setPhase('choose')
+      return
     }
+    await insertSession({
+      kind: 'diagnosis', concern: picked, scene, rung: startRung, session_index: 0,
+      voice_use: null, variation_id: null, retention: null, performance: null,
+      rung_measures: measures, effort: null, pain: false, met_criterion: null, next_rung: startRung,
+    })
+    trackEvent('diagnosis_completed', { concern: picked, start_rung: startRung, boundary: s?.boundary ?? 'none' })
+    // 저장이 끝난 뒤에만 첫 체크를 켠다. 나머지는 이미 정해진 내용이라 차례로 보여 주기만 한다.
+    setPlanDone(1)
+    timers.current = [2, 3, 4].map((n, i) => setTimeout(() => setPlanDone(n), 650 * (i + 1)))
+  }
+
+  // ── 1일차 기준점 / 계획 만드는 중 ───────────────────────────────────────────
+  if (phase === 'choose' || phase === 'planning') {
+    const sustained = measures.find((m) => m.level === 1) ?? null
+    const speech = measures.find((m) => m.level === 4) ?? measures[measures.length - 1] ?? null
+    const jitterOk = sustained ? sustained.jitter_rel_pct <= JITTER_LIMIT[sustained.jitter_source] : null
+    const pace = speech?.onsets_per_second ?? null
+    const paceTone = pace == null ? null : pace > PACE_RANGE.max ? 'fast' : pace < PACE_RANGE.min ? 'slow' : 'ok'
+
+    if (phase === 'planning' && planned) {
+      const items = [
+        '1일차 기준점을 저장했어요',
+        `${TRACKS[planned.concern].label} 트랙, ${planned.rung}단계 ${getRung(planned.rung).title}부터 시작해요`,
+        `${SCENE_LABELS[scene].label} 문장으로 연습해요`,
+        plan
+          ? `${plan.weeklyGoal === 7 ? '매일' : `주 ${plan.weeklyGoal}회`}, ${PRACTICE_TIME[plan.time].label}에 연습해요`
+          : '주 3회 연습을 목표로 해요',
+      ]
+      const ready = planDone >= items.length
+      return (
+        <div className="fixed inset-0 z-[60] mx-auto w-full max-w-[480px] bg-background flex flex-col">
+          <div className="flex-1 overflow-y-auto px-5 pt-16 pb-6 space-y-7">
+            <div className="text-center space-y-2">
+              <Eyebrow>내 계획</Eyebrow>
+              <Display sub="1일차 기준점과 답하신 내용으로 만들어요.">{'연습 계획을\n만들고 있어요'}</Display>
+            </div>
+            <ProgressBar value={planDone / items.length} label="계획 만드는 중" />
+            <SurfaceCard><Checklist items={items} done={planDone} /></SurfaceCard>
+          </div>
+          <div className="shrink-0 px-5 pt-2 pb-[max(env(safe-area-inset-bottom),20px)]">
+            <SpecialButton disabled={!ready} onClick={() => router.replace('/training/track')}>
+              {ready ? '내 훈련 시작' : '만드는 중…'}
+            </SpecialButton>
+          </div>
+        </div>
+      )
+    }
+
+    return (
+      <div className="fixed inset-0 z-[60] mx-auto w-full max-w-[480px] bg-background flex flex-col">
+        <div className="flex-1 overflow-y-auto px-5 pt-14 pb-6 space-y-6">
+          <div className="text-center space-y-2">
+            <Eyebrow>1일차 기준점</Eyebrow>
+            <Display sub="4번의 녹음으로 잰 값이에요. 앞으로 시작 녹음을 이 값과 비교해요.">{'오늘이 당신의\n1일차예요'}</Display>
+          </div>
+
+          <SurfaceCard className="py-2">
+            {sustained && (
+              <MetricRow
+                label="목소리 떨림" value={sustained.jitter_rel_pct.toFixed(2)} unit="%"
+                pill={jitterOk ? <Pill tone="good">안정</Pill> : <Pill tone="caution">흔들림</Pill>}
+              />
+            )}
+            {pace != null && (
+              <MetricRow
+                label="말 빠르기" value={pace.toFixed(1)} unit="글자/초"
+                pill={paceTone === 'ok' ? <Pill tone="good">적당</Pill> : paceTone === 'fast' ? <Pill tone="caution">빠름</Pill> : <Pill>느긋</Pill>}
+              />
+            )}
+            {speech && <MetricRow label="목소리 크기" value={speech.db_mean.toFixed(0)} unit="dB" pill={<Pill>기준</Pill>} />}
+          </SurfaceCard>
+          <p className="-mt-3 px-1 text-[12px] leading-relaxed text-muted-foreground">
+            떨림은 1단계 &ldquo;음~&rdquo; 허밍으로 쟀어요. 크기는 마이크마다 달라서 다음부터 오늘 값과 비교해요.
+          </p>
+
+          {/* 스스로 고른 고민과 측정에서 먼저 드러난 고민 — 측정이 우리 차별점이 드러나는 순간 */}
+          {plan?.selfConcern && suggestions[0] && (() => {
+            const self = TRACKS[plan.selfConcern].label
+            const top = TRACKS[suggestions[0].concern].label
+            const same = suggestions[0].concern === plan.selfConcern
+            // 측정에서 실제로 걸린 고민이 있을 때만 "먼저 눈에 띈다"고 말한다. 모두 괜찮으면 목록 첫 항목은 의미가 없다.
+            const measuredIssue = suggestions[0].boundary !== null
+            const line = !measuredIssue
+              ? `${self}${iGa(self)} 고민이라고 하셨는데, 이번 녹음에서는 모두 괜찮은 범위였어요. 고르신 고민부터 연습해 볼까요?`
+              : same
+                ? `고르신 ${self}${iGa(self)} 측정에서도 가장 먼저 보여요.`
+                : `${self}${iGa(self)} 고민이라고 하셨는데, 재 보니 ${top}${iGa(top)} 먼저 눈에 띄어요.`
+            return (
+              <div className="rounded-[28px] border-2 border-accent/15 p-5 space-y-1" role="status">
+                <Eyebrow>고르신 고민과 측정 결과</Eyebrow>
+                <p className="text-[16px] font-bold text-foreground leading-relaxed">{line}</p>
+              </div>
+            )
+          })()}
+
+          <div className="space-y-3">
+            <h2 className="text-[20px] font-black tracking-[-0.02em] text-foreground">어떤 고민부터 연습할까요?</h2>
+            <p className="-mt-1 text-[13px] text-muted-foreground leading-relaxed">녹음에서 먼저 드러난 순서예요. 한 번에 하나만 집중하고, 나중에 바꿀 수 있어요.</p>
+            <div className="space-y-3" role="radiogroup" aria-label="연습할 고민">
+              {suggestions.map((s, i) => (
+                <OptionCard
+                  key={s.concern}
+                  icon={CONCERN_ICON[s.concern]}
+                  title={CONCERN_LABELS[s.concern]}
+                  sub={s.boundary !== null ? `${s.reason} ${s.boundary}단계부터 시작해요.` : s.reason}
+                  badge={i === 0 && s.boundary !== null ? '제안' : undefined}
+                  selected={picked === s.concern}
+                  onSelect={() => setPicked(s.concern)}
+                />
+              ))}
+            </div>
+          </div>
+          {saveError && <p className="text-[13px] text-destructive" role="alert">{saveError}</p>}
+        </div>
+        <div className="shrink-0 px-5 pt-2 pb-[max(env(safe-area-inset-bottom),20px)]">
+          <PrimaryButton disabled={!picked} onClick={handleConfirm}>이 고민으로 시작</PrimaryButton>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -138,7 +264,7 @@ export default function DiagnoseClient() {
             </p>
             <button
               onClick={() => { trackEvent('diagnosis_started', { scene }); setPhase('climb') }}
-              className="w-full h-12 rounded-2xl gradient-primary text-white text-sm font-bold active:scale-95 transition-transform"
+              className="w-full h-12 rounded-2xl gradient-primary text-primary-foreground text-sm font-bold active:scale-95 transition-transform"
             >
               시작
             </button>
@@ -165,68 +291,6 @@ export default function DiagnoseClient() {
           </>
         )}
 
-        {(phase === 'choose' || phase === 'saving') && (
-          <div className="space-y-4">
-            {/* 스스로 고른 고민과 측정에서 먼저 드러난 고민 — 측정이 우리 차별점이 드러나는 순간 */}
-            {plan?.selfConcern && suggestions[0] && (() => {
-              const self = TRACKS[plan.selfConcern].label
-              const top = TRACKS[suggestions[0].concern].label
-              const same = suggestions[0].concern === plan.selfConcern
-              return (
-                <div className="rounded-3xl bg-primary/15 p-5 space-y-1" role="status">
-                  <p className="text-[11px] font-bold text-[#8A6A00]">고르신 고민과 측정 결과</p>
-                  <p className="text-[15px] font-bold text-foreground leading-relaxed">
-                    {same
-                      ? `고르신 ${self}${iGa(self)} 측정에서도 가장 먼저 보여요.`
-                      : `${self}${iGa(self)} 고민이라고 하셨는데, 재 보니 ${top}${iGa(top)} 먼저 눈에 띄어요.`}
-                  </p>
-                  {!same && <p className="text-xs text-muted-foreground leading-relaxed">어느 쪽부터 연습할지 아래에서 골라 주세요.</p>}
-                </div>
-              )
-            })()}
-            <div className="glass rounded-3xl p-5 space-y-1">
-              <p className="text-sm font-bold text-foreground">이 트랙에서 집중할 고민을 하나 골라요</p>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                녹음에서 먼저 드러난 순서로 놓았어요. 한 번에 하나만 집중해서 연습해요. 나중에 다른 고민으로 바꿀 수 있어요.
-              </p>
-            </div>
-            <div className="space-y-2">
-              {suggestions.map((s, i) => {
-                const t = TRACKS[s.concern]
-                const sel = picked === s.concern
-                return (
-                  <button
-                    key={s.concern}
-                    disabled={phase === 'saving'}
-                    onClick={() => setPicked(s.concern)}
-                    className={`w-full text-left rounded-2xl p-4 transition-all active:scale-[0.98] ${
-                      sel ? 'bg-primary/15 border border-primary/50' : 'glass'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className="text-xl">{t.emoji}</span>
-                      <p className="text-sm font-bold text-foreground">{CONCERN_LABELS[s.concern]}</p>
-                      {i === 0 && s.boundary !== null && (
-                        <span className="ml-auto text-[10px] font-semibold text-primary bg-primary/10 rounded-full px-2 py-0.5">제안</span>
-                      )}
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">{s.reason}</p>
-                    {s.boundary !== null && (
-                      <p className="text-[11px] text-foreground mt-1">여기서 시작해요: {s.boundary}단계 {getRung(s.boundary).title}</p>
-                    )}
-                  </button>
-                )
-              })}
-            </div>
-            <button
-              disabled={!picked || phase === 'saving'}
-              onClick={handleConfirm}
-              className="w-full h-12 rounded-2xl gradient-primary text-white text-sm font-bold active:scale-95 transition-transform disabled:opacity-50"
-            >
-              {phase === 'saving' ? '저장 중…' : '이 고민으로 트랙 시작'}
-            </button>
-          </div>
-        )}
       </div>
     </div>
   )

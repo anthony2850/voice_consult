@@ -23,7 +23,7 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   viewportFit: 'cover',
-  themeColor: '#ffffff',
+  themeColor: '#FFFFFF',
 }
 
 export default function RootLayout({
@@ -34,11 +34,11 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <head>
-        {/* ── Pretendard Variable — Korean web font ── */}
+        {/* ── Wanted Sans Variable (OFL) — 한국어를 조각으로 나눈 웹 글꼴. 화면에 나온 글자의 조각만 받는다. ── */}
         <link rel="preconnect" href="https://cdn.jsdelivr.net" crossOrigin="anonymous" />
         <link
           rel="stylesheet"
-          href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css"
+          href="https://cdn.jsdelivr.net/npm/wanted-sans@1.0.3/fonts/webfonts/variable/split/WantedSansVariable.min.css"
         />
 
         {/* ── Google Analytics 4 ── */}

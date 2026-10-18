@@ -6,6 +6,11 @@
 
 @theme inline {
   --color-background: var(--background);
+  --color-brand-text: var(--brand-text);
+  --color-good: var(--good);
+  --color-good-tint: var(--good-tint);
+  --color-caution: var(--caution);
+  --color-caution-tint: var(--caution-tint);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-sans);
   --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -42,41 +47,48 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-/* ── Voice MBTI — teal-led, gold-accent theme ───────── */
-/* Two-color system — keep each screen to ONE dominant + ONE accent:
-   - brand / dominant : #00BECD teal → #0093BA deep-teal  (hero, gradients)
-   - accent / energy  : #FFD700 gold  (key numbers, primary CTA; #FF9E52 orange = its gradient partner)
-   Semantic colors (success / danger) use Tailwind emerald / rose — not brand colors. */
+/* ── MyTone design system (2026-10-18) ─────────────────
+   성격: 믿을 수 있는 측정, 차분한 코치, 가벼운 재미.
+   색: 해바라기 노랑은 버튼과 머리말에만(가벼운 재미). 남색은 수치와 그래프(믿을 수 있는 측정).
+       글자는 남색 검정(차분한 코치). 나머지는 흰색과 연회색.
+   그라데이션: 보상의 순간 한 화면 한 곳에만 .gradient-special. 글자, 큰 바탕, 머리 영역 금지.
+   주의 색은 빨강이 아니라 주황 — 목 통증 같은 건강 신호가 겁나게 보이지 않게.
+   글꼴: 원티드 산스 (OFL). 제목과 큰 숫자는 아주 굵게, 설명은 보통 굵기 회색. */
 :root {
-  --font-sans: "Pretendard Variable", "Pretendard", -apple-system, BlinkMacSystemFont,
-    "Segoe UI", system-ui, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
-  --background: oklch(0.99 0.003 90);
-  --foreground: oklch(0.13 0.01 90);
-  --card: oklch(1.0 0 0);
-  --card-foreground: oklch(0.13 0.01 90);
-  --popover: oklch(1.0 0 0);
-  --popover-foreground: oklch(0.13 0.01 90);
-  --primary: oklch(0.87 0.185 91);       /* #FFD700 gold */
-  --primary-foreground: oklch(0.16 0.03 91);
-  --secondary: oklch(0.95 0.015 90);
-  --secondary-foreground: oklch(0.25 0.03 90);
-  --muted: oklch(0.96 0.008 90);
-  --muted-foreground: oklch(0.48 0.03 90);
-  --accent: oklch(0.73 0.105 197);       /* #00BECD cyan */
-  --accent-foreground: oklch(0.15 0.03 197);
-  --destructive: oklch(0.52 0.22 27);
-  --border: oklch(0.88 0.015 90);
-  --input: oklch(0.92 0.015 90);
-  --ring: oklch(0.87 0.185 91);          /* gold */
-  --radius: 0.875rem;
-  --sidebar: oklch(0.98 0.004 90);
-  --sidebar-foreground: oklch(0.13 0.01 90);
-  --sidebar-primary: oklch(0.87 0.185 91);
-  --sidebar-primary-foreground: oklch(0.16 0.03 91);
-  --sidebar-accent: oklch(0.95 0.015 90);
-  --sidebar-accent-foreground: oklch(0.25 0.03 90);
-  --sidebar-border: oklch(0.88 0.015 90);
-  --sidebar-ring: oklch(0.87 0.185 91);
+  --font-sans: "Wanted Sans Variable", "Wanted Sans", -apple-system, BlinkMacSystemFont,
+    "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --background: #FFFFFF;
+  --foreground: #14183A;            /* 글자와 잉크 */
+  --card: #FFFFFF;
+  --card-foreground: #14183A;
+  --popover: #FFFFFF;
+  --popover-foreground: #14183A;
+  --primary: #FFD02F;               /* 해바라기 노랑 — 버튼, 머리말 */
+  --primary-foreground: #14183A;
+  --secondary: #F3F4F8;             /* 면 — 카드, 선택지 */
+  --secondary-foreground: #14183A;
+  --muted: #F3F4F8;
+  --muted-foreground: #5E6278;      /* 설명 글자 (흰 바탕 대비 6:1) */
+  --accent: #2D3A8C;                /* 남색 — 수치, 그래프, 선택 표시 */
+  --accent-foreground: #FFFFFF;
+  --destructive: #B42318;
+  --border: #E2E4EC;                /* 선 */
+  --input: #E2E4EC;
+  --ring: #2D3A8C;
+  --radius: 1rem;
+  --brand-text: #8A6A00;            /* 흰 바탕 위 노랑 글자 */
+  --good: #2F7D55;
+  --good-tint: #E4F2EA;
+  --caution: #B85A12;
+  --caution-tint: #FBEBDD;
+  --sidebar: #F3F4F8;
+  --sidebar-foreground: #14183A;
+  --sidebar-primary: #FFD02F;
+  --sidebar-primary-foreground: #14183A;
+  --sidebar-accent: #F3F4F8;
+  --sidebar-accent-foreground: #14183A;
+  --sidebar-border: #E2E4EC;
+  --sidebar-ring: #2D3A8C;
 }
 
 @layer base {
@@ -110,26 +122,31 @@
 }
 
 @layer utilities {
+  /* 예전 이름을 쓰는 곳이 많아 이름은 두고 단색으로 바꾼다. 새 코드는 bg-primary를 쓴다. */
   .gradient-primary {
-    background: linear-gradient(135deg, #FFD700 0%, #FF9E52 100%);
+    background: var(--primary);
   }
   .gradient-cyan {
-    background: linear-gradient(135deg, #00BECD 0%, #0093BA 100%);
+    background: var(--accent);
   }
+  /* 글자 그라데이션은 쓰지 않는다. 예전 이름은 남색 글자로. */
   .gradient-text {
-    background: linear-gradient(135deg, #FFD700 0%, #FF9E52 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    color: var(--accent);
   }
+  /* 보상의 순간 한 화면 한 곳에만 */
+  .gradient-special {
+    background: linear-gradient(120deg, #FFD02F 0%, #FFB020 100%);
+  }
+  /* 예전 반투명 카드는 흰 바탕 카드로. 그림자와 흐림 없음. */
   .glass {
-    background: oklch(1.0 0 0 / 0.72);
-    backdrop-filter: blur(16px) saturate(1.2);
-    -webkit-backdrop-filter: blur(16px) saturate(1.2);
-    border: 1px solid oklch(1.0 0 0 / 0.85);
-    /* layered soft shadow — tight contact + wide ambient for refined depth */
-    box-shadow:
-      0 1px 2px oklch(0.5 0.04 220 / 0.05),
-      0 10px 28px -14px oklch(0.5 0.05 220 / 0.16);
+    background: var(--card);
+    border: 1px solid var(--border);
+  }
+  /* 머리말: 제목 위 작은 글자 */
+  .eyebrow {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: var(--brand-text);
   }
 }
