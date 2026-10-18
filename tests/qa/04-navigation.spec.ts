@@ -75,7 +75,7 @@ test.describe('페이지 간 네비게이션', () => {
     // 결과 페이지에는 금액·사전등록·로그인 요청이 없어야 함
     await expect(page.getByText(/990원|4,900원|사전 ?예약|로그인하면/)).toHaveCount(0)
 
-    await page.getByRole('button', { name: '내 목소리 자세히 보기' }).click()
+    await page.getByRole('button', { name: '이 장면을 만든 수치 보기' }).click()
     await page.waitForURL('**/result/voice', { timeout: 5000 })
     await expect(page.getByRole('heading', { name: '목소리 품질 분석' })).toBeVisible()
 

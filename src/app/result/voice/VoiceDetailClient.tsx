@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Dumbbell, ChevronLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { trackEvent } from '@/lib/analytics'
-import { type Persona, normalizeEmotionScore, findBestPersona } from '@/lib/personas'
+import { pickScene, type SceneResult } from '@/lib/voiceScene'
 import { validateEmotionMap } from '@/lib/voiceAnalysis'
 import PersonaRadarChart from '@/components/PersonaRadarChart'
 import { type AudioFeatures } from '@/lib/extractAudioFeatures'
@@ -70,8 +70,7 @@ const AXES = [
 
 interface Loaded {
   features: AudioFeatures
-  persona: Persona | null
-  rawEmotions: Record<string, number>
+  scene: SceneResult | null
 }
 
 /** Read what the record page left in sessionStorage. null = nothing usable. */
@@ -84,8 +83,7 @@ function readSession(): Loaded | null {
     const rawEmotions = validateEmotionMap(storedEmotions ? JSON.parse(storedEmotions) : null)
     return {
       features,
-      rawEmotions: rawEmotions ?? {},
-      persona: rawEmotions ? findBestPersona(rawEmotions).persona : null,
+      scene: rawEmotions ? pickScene(rawEmotions, features) : null,
     }
   } catch {
     return null
@@ -134,25 +132,10 @@ export default function VoiceDetailClient() {
   }, [scores])
 
   const handleTrain = () => {
-    const persona = loaded?.persona ?? null
-    const rawEmotions = loaded?.rawEmotions ?? {}
-    const belowEmotions = persona
-      ? persona.emotions.filter((e) => {
-          const userScore = normalizeEmotionScore(e, rawEmotions)
-          return (persona.targetScores[e] ?? 0) - userScore > 10
-        })
-      : []
     trackEvent('result_train_clicked', {
-      persona_id: persona?.id ?? 'unknown',
-      gap_emotion_count: belowEmotions.length,
+      persona_id: loaded?.scene?.id ?? 'unknown',
       weakest_axis: weakest?.key ?? 'unknown',
     })
-    if (persona) {
-      sessionStorage.setItem(
-        'trainingTarget',
-        JSON.stringify({ emotions: belowEmotions.length > 0 ? belowEmotions : persona.emotions, personaId: persona.id }),
-      )
-    }
     router.push('/training')
   }
 
@@ -197,7 +180,7 @@ export default function VoiceDetailClient() {
             className="flex items-center gap-1 text-white/80 text-xs mb-4 active:opacity-70"
           >
             <ChevronLeft size={14} />
-            페르소나 결과
+            장면 결과
           </button>
           <p className="text-white/80 text-xs font-medium mb-1">내 목소리 진단</p>
           <h1 className="text-2xl font-black text-white">{summary}</h1>

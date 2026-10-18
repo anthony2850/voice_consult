@@ -1,152 +1,19 @@
 'use client'
 
-import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Play, Square, Dumbbell } from 'lucide-react'
-import { PERSONAS, type Persona } from '@/lib/personas'
-import { Badge } from '@/components/ui/badge'
-import { EMOTION_KO } from '@/lib/emotions'
+import { ArrowLeft, Mic } from 'lucide-react'
+import { PERSONAS, QUADRANT_LABEL, sceneInk, sceneTint, type Quadrant } from '@/lib/personas'
+import { trackEvent } from '@/lib/analytics'
 
-// 페르소나 시범 음성 샘플 준비되면 true로 토글
-const SHOW_LISTEN_BUTTON = false
+const ORDER: Quadrant[] = ['up-clear', 'down-clear', 'down-cloudy', 'up-cloudy']
 
-// ── Audio playback hook ───────────────────────────────────
-// sampleAudio 있으면 <audio> 재생, 없으면 TTS 폴백
-function usePersonaAudio() {
-  const [speakingId, setSpeakingId] = useState<number | null>(null)
-  const audioRef = useRef<HTMLAudioElement | null>(null)
-
-  const toggle = (persona: Persona) => {
-    // 이미 재생 중이면 정지
-    if (speakingId === persona.id) {
-      audioRef.current?.pause()
-      audioRef.current = null
-      window.speechSynthesis?.cancel()
-      setSpeakingId(null)
-      return
-    }
-
-    // 다른 페르소나 재생 중이면 먼저 정지
-    audioRef.current?.pause()
-    audioRef.current = null
-    window.speechSynthesis?.cancel()
-
-    setSpeakingId(persona.id)
-
-    if (persona.sampleAudio) {
-      // 실제 오디오 파일 재생
-      const audio = new Audio(persona.sampleAudio)
-      audioRef.current = audio
-      audio.onended = () => setSpeakingId(null)
-      audio.onerror = () => setSpeakingId(null)
-      audio.play().catch(() => setSpeakingId(null))
-    } else {
-      // TTS 폴백
-      if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
-        setSpeakingId(null)
-        return
-      }
-      const utterance = new SpeechSynthesisUtterance(persona.script)
-      utterance.lang = 'ko-KR'
-      utterance.rate = 0.88
-      utterance.onend = () => setSpeakingId(null)
-      utterance.onerror = () => setSpeakingId(null)
-      window.speechSynthesis.speak(utterance)
-    }
-  }
-
-  return { speakingId, toggle }
-}
-
-// ── Persona card ──────────────────────────────────────────
-function PersonaCard({
-  persona,
-  isSpeaking,
-  onToggleListen,
-  onStartTraining,
-}: {
-  persona: Persona
-  isSpeaking: boolean
-  onToggleListen: () => void
-  onStartTraining: () => void
-}) {
-  return (
-    <div className="glass rounded-3xl p-5">
-      {/* Header */}
-      <div className="flex items-start gap-3 mb-3">
-        <span className="text-2xl shrink-0">{persona.emoji}</span>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap mb-1">
-            <h2 className="text-sm font-bold text-foreground">{persona.name}</h2>
-            <Badge className="bg-primary/10 text-primary border-0 text-[10px] shrink-0">
-              {persona.category}
-            </Badge>
-          </div>
-          <p className="text-xs text-muted-foreground leading-relaxed">{persona.description}</p>
-        </div>
-      </div>
-
-      {/* Emotion tags */}
-      <div className="flex flex-wrap gap-1 mb-3">
-        {persona.emotions.map((e) => (
-          <span key={e} className="text-[10px] px-2 py-0.5 rounded-full bg-secondary text-muted-foreground">
-            {EMOTION_KO[e] ?? e}
-          </span>
-        ))}
-      </div>
-
-      {/* Script preview */}
-      <p className="text-[11px] text-muted-foreground/70 italic leading-relaxed mb-4 border-l-2 border-primary/30 pl-3">
-        &ldquo;{persona.script.length > 55 ? persona.script.slice(0, 55) + '…' : persona.script}&rdquo;
-      </p>
-
-      {/* Actions */}
-      <div className="flex gap-2">
-        {SHOW_LISTEN_BUTTON && (
-          <button
-            onClick={onToggleListen}
-            className={`flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-semibold border transition-colors shrink-0 ${
-              isSpeaking
-                ? 'bg-rose-500/15 text-rose-400 border-rose-500/30'
-                : 'bg-secondary text-muted-foreground border-border hover:text-foreground'
-            }`}
-          >
-            {isSpeaking ? <Square size={12} /> : <Play size={12} />}
-            {isSpeaking ? '정지' : '시범 듣기'}
-          </button>
-        )}
-
-        <button
-          onClick={onStartTraining}
-          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-[#FFD700] to-[#FF9E52] text-gray-900 shadow-sm active:scale-[0.98] transition-transform"
-        >
-          <Dumbbell size={12} className="shrink-0" />
-          이 페르소나로 훈련 시작
-        </button>
-      </div>
-    </div>
-  )
-}
-
-// ── Main ──────────────────────────────────────────────────
+/** 여덟 가지 목소리 장면을 지도의 네 칸 순서로 보여 준다. */
 export default function PersonasClient() {
   const router = useRouter()
-  const { speakingId, toggle } = usePersonaAudio()
-
-  const handleStartTraining = (persona: Persona) => {
-    window.speechSynthesis?.cancel()
-    // audio 정지는 usePersonaAudio 내부에서 처리되므로 여기선 생략
-    sessionStorage.setItem(
-      'trainingTarget',
-      JSON.stringify({ emotions: persona.emotions, personaId: persona.id }),
-    )
-    router.push('/training')
-  }
 
   return (
     <div className="flex flex-col min-h-[calc(100vh-84px)] pb-8">
-      {/* Header */}
-      <div className="px-4 pt-6 pb-4">
+      <div className="px-4 pt-6 pb-2">
         <button
           onClick={() => router.back()}
           className="flex items-center gap-1.5 text-sm text-muted-foreground mb-4 active:opacity-60"
@@ -154,23 +21,43 @@ export default function PersonasClient() {
           <ArrowLeft size={16} />
           돌아가기
         </button>
-        <h1 className="text-xl font-black text-foreground">페르소나 탐색</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          목표로 삼고 싶은 페르소나를 골라보세요
+        <h1 className="text-xl font-black text-foreground">여덟 가지 목소리 장면</h1>
+        <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
+          목소리의 에너지(들뜸·차분)와 기분(맑음·흐림)으로 나눈 지도예요. 같은 사람도 날마다 다른 장면이 나올 수 있어요.
         </p>
       </div>
 
-      {/* Cards */}
-      <div className="px-4 space-y-3">
-        {PERSONAS.map((persona) => (
-          <PersonaCard
-            key={persona.id}
-            persona={persona}
-            isSpeaking={speakingId === persona.id}
-            onToggleListen={() => toggle(persona)}
-            onStartTraining={() => handleStartTraining(persona)}
-          />
+      <div className="px-4 space-y-5 mt-3">
+        {ORDER.map((q) => (
+          <section key={q} className="space-y-2">
+            <h2 className="text-xs font-bold text-muted-foreground px-1">
+              {QUADRANT_LABEL[q].energy} · {QUADRANT_LABEL[q].mood}
+            </h2>
+            {PERSONAS.filter((p) => p.quadrant === q).map((p) => (
+              <article key={p.id} className="rounded-3xl p-5 space-y-2" style={{ background: sceneTint(p.color, 16) }}>
+                <div className="flex items-center gap-3">
+                  <span className="w-9 h-9 rounded-full shrink-0" style={{ background: p.color }} aria-hidden="true" />
+                  <div className="min-w-0">
+                    <p className="text-[15px] font-bold text-foreground leading-snug">{p.name}</p>
+                    <p className="text-xs font-medium" style={{ color: sceneInk(p.color) }}>{p.tagline}</p>
+                  </div>
+                </div>
+                <p className="text-[13px] text-foreground/80 leading-relaxed">&ldquo;{p.script}&rdquo;</p>
+              </article>
+            ))}
+          </section>
         ))}
+
+        <button
+          onClick={() => {
+            trackEvent('personas_record_clicked')
+            router.push('/record')
+          }}
+          className="w-full h-13 px-4 py-3.5 rounded-2xl gradient-primary text-gray-900 text-sm font-bold flex items-center justify-center gap-2 shadow-lg shadow-[#FFD700]/30 active:scale-[0.98] transition-transform"
+        >
+          <Mic size={16} />
+          내 목소리는 어떤 장면일까?
+        </button>
       </div>
     </div>
   )

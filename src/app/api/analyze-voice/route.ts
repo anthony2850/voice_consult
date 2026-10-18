@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { SCENE_EMOTIONS } from '@/lib/voiceScene'
 
 export const maxDuration = 60
 
@@ -20,16 +21,10 @@ const ALL_EMOTIONS = [
   'Surprise (positive)', 'Sympathy', 'Tiredness', 'Triumph',
 ]
 
-// Subset actually referenced by the current 10 personas — what we ask the model
-// to rate. Asking for all 49 triggers a refusal pattern in gpt-audio; a tighter
-// prompt with audio-first ordering is reliable. Expand as personas grow.
-const EMOTIONS_TO_RATE = [
-  'Adoration', 'Aesthetic Appreciation', 'Amusement', 'Anxiety', 'Awkwardness',
-  'Boredom', 'Calmness', 'Contemplation', 'Contentment', 'Disappointment',
-  'Doubt', 'Ecstasy', 'Embarrassment', 'Empathic Pain', 'Excitement',
-  'Joy', 'Love', 'Nostalgia', 'Realization', 'Relief',
-  'Romance', 'Sadness', 'Surprise (positive)', 'Tiredness', 'Triumph',
-]
+// The emotions the voice-scene judging uses (src/lib/voiceScene.ts) — what we ask
+// the model to rate. Asking for all 49 triggers a refusal pattern in gpt-audio; a
+// tighter prompt with audio-first ordering is reliable. Keep this list short.
+const EMOTIONS_TO_RATE = SCENE_EMOTIONS
 
 /** Extract the first balanced JSON object from a model response. */
 function parseEmotionJson(text: string): Record<string, unknown> | null {

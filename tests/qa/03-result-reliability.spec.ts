@@ -2,7 +2,7 @@
  * QA-03: 결과 페이지 신뢰성 테스트
  * - sessionStorage 유무에 따른 동작
  * - 감정 데이터가 정상적으로 표시되는지
- * - 페르소나 매칭 결과 일관성
+ * - 장면 판정 결과 일관성
  */
 import { test, expect } from '@playwright/test'
 
@@ -72,7 +72,7 @@ test.describe('결과 페이지 신뢰성', () => {
     console.log('✓ 동일한 감정 데이터로 항상 동일한 페르소나 반환')
   })
 
-  test('페르소나 매칭 카드에 감정 항목들이 표시됨', async ({ page }) => {
+  test('장면 이유 문장과 공감 문장 세 개가 표시됨', async ({ page }) => {
     await page.goto('/result')
     await page.evaluate((emotions) => {
       sessionStorage.setItem('voiceEmotions', JSON.stringify(emotions))
@@ -80,17 +80,13 @@ test.describe('결과 페이지 신뢰성', () => {
     await page.reload()
     await page.waitForTimeout(1200)
 
-    // 페르소나 매칭 결과 카드에 감정별 점수 행들이 표시되어야 함
-    await expect(
-      page.getByRole('heading', { name: '페르소나 매칭 결과' })
-    ).toBeVisible()
-    const emotionRows = page.getByText(/내 점수/)
-    const count = await emotionRows.count()
-    console.log('표시된 감정 항목 수:', count)
-    expect(count).toBeGreaterThanOrEqual(3)
+    // "…처럼 들려요." 문장 + 공감 문장 목록
+    await expect(page.getByText(/처럼 들려요\./).first()).toBeVisible()
+    const lines = page.locator('main ul li')
+    expect(await lines.count()).toBe(3)
   })
 
-  test('일치율 % 가 표시됨', async ({ page }) => {
+  test('일치율 대신 목소리 지도가 표시됨', async ({ page }) => {
     await page.goto('/result')
     await page.evaluate((emotions) => {
       sessionStorage.setItem('voiceEmotions', JSON.stringify(emotions))
@@ -98,8 +94,8 @@ test.describe('결과 페이지 신뢰성', () => {
     await page.reload()
     await page.waitForTimeout(1200)
 
-    await expect(page.locator('body')).toContainText('%')
-    console.log('✓ 일치율 표시 확인')
+    await expect(page.getByText('내 목소리 지도')).toBeVisible()
+    await expect(page.locator('main')).not.toContainText('일치율')
   })
 
   test('페르소나 카드가 로드됨 (애니메이션 후)', async ({ page }) => {
