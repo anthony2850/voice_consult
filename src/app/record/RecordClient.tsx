@@ -221,8 +221,9 @@ export default function RecordClient() {
         </p>
       </div>
 
-      {/* Waveform card */}
-      <div className="relative glass rounded-3xl overflow-hidden flex flex-col items-center justify-center p-6 mb-6"
+      {/* Waveform card — 녹음 전에는 감춘다(빈 파형과 00:00뿐이라 녹음 시작 버튼만 아래로 민다).
+          캔버스는 파형 훅이 잡고 있어야 해서 지우지 않고 감추기만 한다. */}
+      <div className={`relative glass rounded-3xl overflow-hidden flex-col items-center justify-center p-6 mb-6 ${state === 'idle' ? 'hidden' : 'flex'}`}
            style={{ minHeight: 180 }}>
         {/* Status indicator dot */}
         {state === 'recording' && (
@@ -278,24 +279,11 @@ export default function RecordClient() {
         </div>
       )}
 
-      {/* Tips */}
+      {/* Tips — 한 줄로. 녹음 시작 버튼이 첫 화면 안에 보이게 한다. */}
       {state === 'idle' && (
-        <div className="glass rounded-2xl p-4 mb-6">
-          <p className="text-xs font-semibold text-muted-foreground mb-2">녹음 팁</p>
-          <ul className="space-y-1.5">
-            {[
-              '조용한 환경에서 녹음해 주세요',
-              '마이크와 10~20cm 거리를 유지하세요',
-              '문단을 자연스럽게 소리 내어 읽어 주세요',
-              '마지막 "아~"는 떨림을 재는 데 써요',
-            ].map((tip) => (
-              <li key={tip} className="flex items-start gap-2 text-xs text-muted-foreground">
-                <span className="text-primary mt-0.5">•</span>
-                {tip}
-              </li>
-            ))}
-          </ul>
-        </div>
+        <p className="text-xs text-muted-foreground mb-4 px-1">
+          조용한 곳에서 마이크와 10~20cm 떨어져 읽어 주세요.
+        </p>
       )}
 
       {/* Script (prompt text) → "아~" */}
@@ -308,6 +296,12 @@ export default function RecordClient() {
       ) : (
         <div className="glass rounded-2xl p-4 mb-6">
           <p className="text-[11px] text-muted-foreground mb-2 font-semibold">읽어 주세요</p>
+          {/* 녹음 중에는 숨긴다. 문단 바로 위에 있으면 이 문구까지 소리 내어 읽어 녹음에 섞인다. */}
+          {state === 'idle' && (
+            <p className="text-[13px] text-foreground/80 leading-relaxed bg-primary/10 rounded-xl px-3 py-2.5 mb-3">
+              평소에 말 할 법하지 않은 문장이죠? 오글거리더라도 언제 이런 말 해보겠어요. 꾹 참고 한 번 읽어봅시다!
+            </p>
+          )}
           <p className="text-[15px] text-foreground leading-relaxed">{READING_SCRIPT.join(' ')}</p>
           <p className="text-[11px] text-muted-foreground mt-3">
             다 읽은 뒤 &ldquo;아~&rdquo;를 3초 길게 내면 끝나요
