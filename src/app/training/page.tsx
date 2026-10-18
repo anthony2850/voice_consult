@@ -3,7 +3,7 @@ import TrainingClient from './TrainingClient'
 
 export default function TrainingPage() {
   return (
-    <LoginRequired>
+    <LoginRequired guestRedirect="/training/onboarding">
       <TrainingClient />
     </LoginRequired>
   )

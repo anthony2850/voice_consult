@@ -14,13 +14,14 @@ import {
 import { measureBlob } from '@/lib/trainingMeasure'
 import RecordStep from '@/components/training/RecordStep'
 import { trackEvent } from '@/lib/analytics'
+import { iGa } from '@/lib/voiceScene'
 
 type Phase = 'intro' | 'climb' | 'choose' | 'saving'
 
 export default function DiagnoseClient() {
   const router = useRouter()
   const params = useSearchParams()
-  const { loading, profile, startTrack, insertSession } = useTrack()
+  const { loading, profile, plan, startTrack, insertSession } = useTrack()
   // 트랙 전환에서 왔으면 바꾸려는 상황, 고민이 쿼리로 온다. 진단을 마쳐야 트랙이 바뀐다.
   const qScene = params.get('scene')
   const qConcern = params.get('concern')
@@ -166,6 +167,23 @@ export default function DiagnoseClient() {
 
         {(phase === 'choose' || phase === 'saving') && (
           <div className="space-y-4">
+            {/* 스스로 고른 고민과 측정에서 먼저 드러난 고민 — 측정이 우리 차별점이 드러나는 순간 */}
+            {plan?.selfConcern && suggestions[0] && (() => {
+              const self = TRACKS[plan.selfConcern].label
+              const top = TRACKS[suggestions[0].concern].label
+              const same = suggestions[0].concern === plan.selfConcern
+              return (
+                <div className="rounded-3xl bg-primary/15 p-5 space-y-1" role="status">
+                  <p className="text-[11px] font-bold text-[#8A6A00]">고르신 고민과 측정 결과</p>
+                  <p className="text-[15px] font-bold text-foreground leading-relaxed">
+                    {same
+                      ? `고르신 ${self}${iGa(self)} 측정에서도 가장 먼저 보여요.`
+                      : `${self}${iGa(self)} 고민이라고 하셨는데, 재 보니 ${top}${iGa(top)} 먼저 눈에 띄어요.`}
+                  </p>
+                  {!same && <p className="text-xs text-muted-foreground leading-relaxed">어느 쪽부터 연습할지 아래에서 골라 주세요.</p>}
+                </div>
+              )
+            })()}
             <div className="glass rounded-3xl p-5 space-y-1">
               <p className="text-sm font-bold text-foreground">이 트랙에서 집중할 고민을 하나 골라요</p>
               <p className="text-xs text-muted-foreground leading-relaxed">

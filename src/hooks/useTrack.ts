@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { getSupabase } from '@/lib/supabase'
 import type { ConcernSlug, RungLevel, Scene } from '@/lib/curriculum'
 import { planTrackSwitch, type Measure, type SwitchPlan, type VoiceUse } from '@/lib/trainingCycle'
+import { isPlan, readLocalPlan, writeLocalPlan, type Plan } from '@/lib/plan'
 
 export interface TrackProfile {
   scene: Scene | null
@@ -45,6 +46,8 @@ export function useTrack() {
   const [userId, setUserId] = useState<string | null>(null)
   const [profile, setProfile] = useState<TrackProfile>(EMPTY_PROFILE)
   const [sessions, setSessions] = useState<TrainingSessionRow[]>([])
+  /** 온보딩에서 정한 계획. 계정(plan 칸)에 없으면 기기 저장본. */
+  const [plan, setPlan] = useState<Plan | null>(null)
 
   const refresh = useCallback(async () => {
     setLoading(true)
@@ -55,6 +58,7 @@ export function useTrack() {
         setUserId(null)
         setProfile(EMPTY_PROFILE)
         setSessions([])
+        setPlan(readLocalPlan())
         return
       }
       setUserId(user.id)
@@ -79,6 +83,9 @@ export function useTrack() {
         baseline: p?.baseline ?? null,
       })
       setSessions((s ?? []) as TrainingSessionRow[])
+      // plan 칸은 따로 읽는다. 마이그레이션 전이면 이 쿼리만 실패하고 나머지는 그대로 돈다.
+      const { data: pl } = await db.from('user_profiles').select('plan').eq('user_id', user.id).maybeSingle()
+      setPlan(isPlan(pl?.plan) ? pl.plan : readLocalPlan())
     } finally {
       setLoading(false)
     }
@@ -133,6 +140,25 @@ export function useTrack() {
     return ok
   }, [upsertProfile])
 
+  /** 계획 저장. 계정 저장이 실패해도(마이그레이션 전) 기기에는 남는다. 스스로 고른 고민은 concerns 칸에도 둔다. */
+  const savePlan = useCallback(async (next: Plan) => {
+    writeLocalPlan(next)
+    setPlan(next)
+    const supabase = getSupabase()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const db = supabase as any
+    if (next.selfConcern) {
+      await db.from('user_profiles').upsert(
+        { user_id: user.id, concerns: [next.selfConcern], concerns_set_at: new Date().toISOString() },
+        { onConflict: 'user_id' },
+      )
+    }
+    const { error } = await db.from('user_profiles').upsert({ user_id: user.id, plan: next }, { onConflict: 'user_id' })
+    if (error) console.warn('[useTrack] plan saved on this device only:', error.message)
+  }, [])
+
   /** 관찰일지 저장 */
   const insertSession = useCallback(async (row: NewSessionRow) => {
     const supabase = getSupabase()
@@ -170,7 +196,7 @@ export function useTrack() {
   ) => startTrack({ concern: next.concern, rung, baseline, scene: next.scene }), [startTrack])
 
   return {
-    loading, userId, profile, sessions, trackSessions,
-    refresh, startTrack, planSwitch, switchTrack, setTrackRung, clearTrack, insertSession,
+    loading, userId, profile, sessions, trackSessions, plan,
+    refresh, startTrack, savePlan, planSwitch, switchTrack, setTrackRung, clearTrack, insertSession,
   }
 }

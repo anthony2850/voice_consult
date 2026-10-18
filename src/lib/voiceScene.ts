@@ -205,7 +205,7 @@ const CUE_EMOTION_KO: Record<string, string> = {
 export const emotionWord = (k: string) => CUE_EMOTION_KO[k] ?? EMOTION_KO[k] ?? k
 
 /** 받침 있으면 '이', 없으면 '가' */
-function iGa(word: string): string {
+export function iGa(word: string): string {
   const c = word.charCodeAt(word.length - 1)
   if (c < 0xac00 || c > 0xd7a3) return '이'
   return (c - 0xac00) % 28 ? '이' : '가'

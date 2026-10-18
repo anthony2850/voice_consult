@@ -5,19 +5,31 @@ import Image from 'next/image'
 import { getSupabase } from '@/lib/supabase'
 import { savePendingGuestData } from '@/lib/guest-migration'
 import { trackEvent } from '@/lib/analytics'
+import { setPostLoginPath } from '@/lib/postLogin'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
-function signIn(provider: 'google' | 'kakao') {
-  trackEvent('login_clicked', { method: provider, source: 'login_required' })
+/** OAuth 로그인. 끝나면 nextPath(기본: 지금 화면)로 돌아온다. */
+export function signIn(provider: 'google' | 'kakao', nextPath?: string, source = 'login_required') {
+  trackEvent('login_clicked', { method: provider, source })
   savePendingGuestData()
+  setPostLoginPath(nextPath ?? `${window.location.pathname}${window.location.search}`)
   getSupabase().auth.signInWithOAuth({
     provider,
     options: { redirectTo: `${window.location.origin}/auth/callback` },
   })
 }
 
-export default function LoginRequired({ children }: { children: React.ReactNode }) {
+export default function LoginRequired({ children, guestRedirect }: {
+  children: React.ReactNode
+  /** 있으면 로그인 화면 대신 이 경로로 보낸다 (예: 훈련 탭 → 온보딩) */
+  guestRedirect?: string
+}) {
+  const router = useRouter()
   const [status, setStatus] = useState<'loading' | 'guest' | 'authed'>('loading')
+  useEffect(() => {
+    if (status === 'guest' && guestRedirect) router.replace(guestRedirect)
+  }, [status, guestRedirect, router])
 
   useEffect(() => {
     const supabase = getSupabase()
@@ -35,7 +47,7 @@ export default function LoginRequired({ children }: { children: React.ReactNode 
     return () => subscription.unsubscribe()
   }, [])
 
-  if (status === 'loading') {
+  if (status === 'loading' || (status === 'guest' && guestRedirect)) {
     return (
       <div className="flex items-center justify-center min-h-[calc(100vh-84px)]">
         <div className="w-8 h-8 rounded-full border-4 border-primary border-t-transparent animate-spin" />

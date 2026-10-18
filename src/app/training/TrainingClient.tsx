@@ -1,12 +1,13 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChevronRight, Flame, Plus } from 'lucide-react'
+import { CalendarCheck, ChevronRight, Plus } from 'lucide-react'
 import { useTrack } from '@/hooks/useTrack'
 import { SCENE_LABELS, TRACKS, getRung } from '@/lib/curriculum'
 import { listTracks, relativeDay, type TrackSummary } from '@/lib/trackList'
-import { streakFrom, toDateStr } from '@/lib/streak'
+import { toDateStr } from '@/lib/streak'
+import { daysTrainedThisWeek } from '@/lib/plan'
 import { trackEvent } from '@/lib/analytics'
 
 function trackName(t: Pick<TrackSummary, 'scene' | 'concern'>) {
@@ -16,7 +17,7 @@ function trackName(t: Pick<TrackSummary, 'scene' | 'concern'>) {
 /** 훈련 탭 첫 화면: 지금 트랙, 쉬고 있는 트랙, 새 트랙 시작. */
 export default function TrainingClient() {
   const router = useRouter()
-  const { loading, profile, sessions, planSwitch, switchTrack } = useTrack()
+  const { loading, profile, sessions, plan, planSwitch, switchTrack } = useTrack()
   const [switching, setSwitching] = useState(false)
   const todayStr = useMemo(() => toDateStr(new Date()), [])
 
@@ -25,7 +26,13 @@ export default function TrainingClient() {
     [sessions, profile.scene, profile.trackConcern, profile.trackRung],
   )
 
-  if (loading) {
+  // 처음 온 사람(트랙도 계획도 없음)은 온보딩부터
+  const firstVisit = !loading && tracks.length === 0 && !plan
+  useEffect(() => {
+    if (firstVisit) router.replace('/training/onboarding')
+  }, [firstVisit, router])
+
+  if (loading || firstVisit) {
     return (
       <div className="flex items-center justify-center min-h-[calc(100vh-84px)]">
         <div className="w-8 h-8 rounded-full border-4 border-primary border-t-transparent animate-spin" />
@@ -35,7 +42,8 @@ export default function TrainingClient() {
 
   const current = tracks.find((t) => t.current) ?? null
   const resting = tracks.filter((t) => !t.current)
-  const streak = streakFrom(sessions.map((s) => s.session_date), todayStr)
+  const weeklyGoal = plan?.weeklyGoal ?? 3
+  const weekDone = daysTrainedThisWeek(sessions.filter((s) => s.kind === 'session').map((s) => s.session_date))
   const doneToday = sessions.some((s) => s.session_date === todayStr && s.kind === 'session')
 
   /** 쉬고 있는 트랙으로 돌아가기. 규칙은 planTrackSwitch (진단 재사용, 재진단 권유, 진단 필요). */
@@ -81,8 +89,8 @@ export default function TrainingClient() {
           {tracks.length > 0 && (
             <div className="flex items-center gap-2 mt-3">
               <div className="flex items-center gap-1.5 bg-white/15 rounded-full px-3 py-1">
-                <Flame size={14} className="text-orange-300" />
-                <span className="text-white text-xs font-bold">{streak}일 연속</span>
+                <CalendarCheck size={14} className="text-white" />
+                <span className="text-white text-xs font-bold">이번 주 {weekDone}/{weeklyGoal}회</span>
               </div>
               <div className="bg-white/15 rounded-full px-3 py-1">
                 <span className="text-white text-xs font-bold">트랙 {tracks.length}개</span>

@@ -6,6 +6,7 @@ import { Suspense } from 'react'
 import { getSupabase } from '@/lib/supabase'
 import { migrateGuestData } from '@/lib/guest-migration'
 import { trackEvent } from '@/lib/analytics'
+import { takePostLoginPath } from '@/lib/postLogin'
 
 function CallbackHandler() {
   const router = useRouter()
@@ -31,7 +32,7 @@ function CallbackHandler() {
         setStatus('migrating')
         const hasMigrated = await migrateGuestData(data.session.user.id)
         setStatus('done')
-        router.replace(hasMigrated ? '/result' : '/record')
+        router.replace(takePostLoginPath() ?? (hasMigrated ? '/result' : '/record'))
         return
 
       } else {
@@ -56,7 +57,7 @@ function CallbackHandler() {
           setStatus('migrating')
           const hasMigrated = await migrateGuestData(data.session.user.id)
           setStatus('done')
-          router.replace(hasMigrated ? '/result' : '/record')
+          router.replace(takePostLoginPath() ?? (hasMigrated ? '/result' : '/record'))
           return
         } else {
           // 이미 세션이 있는 경우 fallback
@@ -65,7 +66,7 @@ function CallbackHandler() {
             setStatus('migrating')
             const hasMigrated = await migrateGuestData(data.session.user.id)
             setStatus('done')
-            router.replace(hasMigrated ? '/result' : '/record')
+            router.replace(takePostLoginPath() ?? (hasMigrated ? '/result' : '/record'))
             return
           }
         }

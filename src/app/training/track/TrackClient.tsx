@@ -2,12 +2,13 @@
 
 import { useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, ChevronRight, Flame, RotateCcw } from 'lucide-react'
+import { ArrowLeft, CalendarCheck, ChevronRight, RotateCcw } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { useTrack } from '@/hooks/useTrack'
 import { SCENE_LABELS, TRACKS, getRung } from '@/lib/curriculum'
 import { retentionCopy, retentionVerdict } from '@/lib/trainingCycle'
-import { streakFrom, toDateStr } from '@/lib/streak'
+import { toDateStr } from '@/lib/streak'
+import { daysTrainedThisWeek } from '@/lib/plan'
 import PrinciplesCard from '@/components/training/PrinciplesCard'
 import RungLadder from '@/components/training/RungLadder'
 import { trackEvent } from '@/lib/analytics'
@@ -15,7 +16,7 @@ import { trackEvent } from '@/lib/analytics'
 /** 지금 트랙의 대시보드. 트랙을 고르고 바꾸는 일은 훈련 탭 첫 화면(/training)에서 한다. */
 export default function TrackClient() {
   const router = useRouter()
-  const { loading, profile, sessions, trackSessions } = useTrack()
+  const { loading, profile, sessions, trackSessions, plan } = useTrack()
   const todayStr = useMemo(() => toDateStr(new Date()), [])
 
   useEffect(() => {
@@ -37,7 +38,8 @@ export default function TrackClient() {
   const last = trackSessions[0] ?? null
   const prev = trackSessions[1] ?? null
   const lastVerdict = last ? retentionVerdict(track.metric, prev?.performance ?? null, last.retention) : null
-  const streak = streakFrom(sessions.map((s) => s.session_date), todayStr)
+  const weeklyGoal = plan?.weeklyGoal ?? 3
+  const weekDone = daysTrainedThisWeek(sessions.filter((s) => s.kind === 'session').map((s) => s.session_date))
   const doneToday = sessions.some((s) => s.session_date === todayStr && s.kind === 'session')
 
   return (
@@ -58,8 +60,8 @@ export default function TrackClient() {
           <p className="text-white/85 text-sm">{rung}단계: {current.title}</p>
           <div className="flex items-center gap-2 mt-3">
             <div className="flex items-center gap-1.5 bg-white/15 rounded-full px-3 py-1">
-              <Flame size={14} className="text-orange-300" />
-              <span className="text-white text-xs font-bold">{streak}일 연속</span>
+              <CalendarCheck size={14} className="text-white" />
+              <span className="text-white text-xs font-bold">이번 주 {weekDone}/{weeklyGoal}회</span>
             </div>
             <div className="bg-white/15 rounded-full px-3 py-1">
               <span className="text-white text-xs font-bold">세션 {trackSessions.length}회</span>
