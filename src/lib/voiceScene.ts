@@ -40,6 +40,8 @@ export const SCENE_REF = {
   pitchCV: { mean: 0.18, sd: 0.06 },
   // 음절/초, 쉼 포함 (syllableRate.ts). 한국어 낭독은 대략 4~5.5.
   rate: { mean: 4.5, sd: 1.0 },
+  // 쉼 뺀 조음 속도 (음절/초). 예시 녹음 5.9. 자유 발화 녹음에서 쓴다.
+  articulation: { mean: 6.0, sd: 1.0 },
   rmsCV: { mean: 1.0, sd: 0.2 },
   arousalEm: { mean: 0, sd: 0.12 },
   mood: { mean: 0, sd: 0.06 },
@@ -69,11 +71,14 @@ export function acousticZ(f: AudioFeatures | null | undefined): AcousticZ | null
   const pm = f.pitch?.mean_hz, ps = f.pitch?.std_hz
   const rm = f.energy?.rms_mean, rs = f.energy?.rms_std
   const rate = f.rhythm?.onsets_per_second
+  const art = f.rhythm?.articulation_rate
   const vq = f.voice_quality
   const limit = vq?.source === 'praat' ? JITTER_LIMIT.praat : JITTER_LIMIT.frame
   const out: AcousticZ = {
     pitchCV: pm && pm > 0 && Number.isFinite(ps) ? z(ps / pm, SCENE_REF.pitchCV) : null,
-    rate: Number.isFinite(rate) && rate > 0 ? z(rate, SCENE_REF.rate) : null,
+    // 조음 속도가 있으면 그걸 쓴다 (자유 발화의 생각하는 쉼에 휘둘리지 않게)
+    rate: art != null && Number.isFinite(art) && art > 0 ? z(art, SCENE_REF.articulation)
+      : Number.isFinite(rate) && rate > 0 ? z(rate, SCENE_REF.rate) : null,
     rmsCV: rm && rm > 0 && Number.isFinite(rs) ? z(rs / rm, SCENE_REF.rmsCV) : null,
     jitter: vq && Number.isFinite(vq.jitter_rel_pct) && vq.jitter_rel_pct > 0 ? (vq.jitter_rel_pct / limit - 0.7) / 0.3 : null,
   }

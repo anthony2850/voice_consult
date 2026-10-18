@@ -20,7 +20,7 @@ export interface AudioFeatures {
   spectral: { centroid_mean_hz: number; centroid_std_hz: number; bandwidth_mean_hz: number; rolloff_mean_hz: number; flatness_mean: number; contrast_mean_db: number }
   mfccs: Record<string, number>
   zero_crossing: { mean: number; std: number }
-  rhythm: { tempo_bpm: number; onset_count: number; onsets_per_second: number }
+  rhythm: { tempo_bpm: number; onset_count: number; onsets_per_second: number; articulation_rate?: number }
   voice_quality: {
     jitter_abs_ms: number
     jitter_rel_pct: number
@@ -211,6 +211,8 @@ export async function extractAudioFeatures(audioBlob: Blob): Promise<AudioFeatur
       tempo_bpm: Math.max(60, Math.round(sylRate.speechRate * 60 * 0.5)),
       onset_count: sylRate.count,
       onsets_per_second: sylRate.speechRate,
+      // 쉼을 뺀 조음 속도. 자유 발화는 생각하느라 쉬는 시간이 있어 페르소나 판정에는 이 값을 쓴다.
+      articulation_rate: sylRate.articulationRate,
     }
 
     // ── Jitter (pitch period perturbation, voiced frames) ─

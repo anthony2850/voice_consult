@@ -8,7 +8,7 @@ export default function HomeHero() {
       </h1>
 
       <p className="text-[15px] text-muted-foreground leading-relaxed mb-8 max-w-[300px]">
-        짧은 글 한 단락을 읽으면 목소리를 수치로 진단하고
+        30초 동안 편하게 말하면 목소리를 수치로 진단하고
         <br />
         아쉬운 부분을 매일 훈련으로 다듬어요
       </p>

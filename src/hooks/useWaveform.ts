@@ -45,11 +45,8 @@ export function useWaveform({ analyser, canvasRef, active }: WaveformOptions) {
 
       const barWidth = (w - BAR_GAP * (BAR_COUNT - 1)) / BAR_COUNT
 
-      // gradient
-      const grad = ctx.createLinearGradient(0, 0, w, 0)
-      grad.addColorStop(0, active ? '#7c3aed' : '#3d2a6b')
-      grad.addColorStop(0.5, active ? '#a855f7' : '#4a3080')
-      grad.addColorStop(1, active ? '#ec4899' : '#3d2a6b')
+      // 디자인 시스템: 수치와 파형은 남색 단색 (그라데이션은 보상의 순간에만)
+      const grad = active ? '#2D3A8C' : '#C9CCD8'
 
       ctx.fillStyle = grad
 

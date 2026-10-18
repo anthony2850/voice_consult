@@ -12,6 +12,7 @@ import { TRACKS } from '@/lib/curriculum'
 import { validateEmotionMap } from '@/lib/voiceAnalysis'
 import type { AudioFeatures } from '@/lib/voiceDB'
 import VoiceMap from '@/components/scene/VoiceMap'
+import { getSpeakCategory, readStoredPrompt } from '@/lib/speakPrompts'
 
 // ── Share link encoding (fallback when /api/share fails) ──
 function encodeEmotions(emotions: Record<string, number>): string {
@@ -45,6 +46,8 @@ interface Loaded {
   features: AudioFeatures | null
   isShared: boolean
   meta: { source: string; model?: string } | null
+  /** 녹음 때 고른 말하기 방식 (공유 링크에는 없음) */
+  categoryLabel: string | null
 }
 
 function load(params: URLSearchParams): Loaded | null {
@@ -55,7 +58,7 @@ function load(params: URLSearchParams): Loaded | null {
     // 공유 링크에는 음향 값이 없다. 보낸 사람의 장면이 실려 오면 그대로 쓰고, 옛 링크면 감정만으로 다시 계산한다.
     const s = params.get('s')
     const scene = (s && decodeScene(s)) || pickScene(raw, null)
-    return { raw, scene, features: null, isShared: true, meta: { source: '공유된 AI 분석' } }
+    return { raw, scene, features: null, isShared: true, meta: { source: '공유된 AI 분석' }, categoryLabel: null }
   }
   try {
     const stored = sessionStorage.getItem('voiceEmotions')
@@ -69,7 +72,8 @@ function load(params: URLSearchParams): Loaded | null {
       const m = JSON.parse(storedMeta) as { source?: unknown; model?: unknown }
       if (m.source === 'openai') meta = { source: 'OpenAI', model: typeof m.model === 'string' ? m.model : undefined }
     }
-    return { raw, scene: pickScene(raw, features), features, isShared: false, meta }
+    const spoken = readStoredPrompt()
+    return { raw, scene: pickScene(raw, features), features, isShared: false, meta, categoryLabel: spoken ? getSpeakCategory(spoken.category).label : null }
   } catch {
     return null
   }
@@ -167,7 +171,7 @@ export default function ResultClient() {
       {/* ── Scene header ── */}
       <div className="px-5 pt-8 pb-7" style={{ background: sceneTint(persona.color, 22) }}>
         <p className="text-xs font-semibold" style={{ color: ink }}>
-          {isShared ? '친구의 목소리 페르소나' : '오늘의 목소리 페르소나'}
+          {isShared ? '친구의 목소리 페르소나' : loaded.categoryLabel ? `${loaded.categoryLabel}로 잰 오늘의 목소리 페르소나` : '오늘의 목소리 페르소나'}
         </p>
         {meta && (
           <p className="text-[11px] mt-0.5" style={{ color: ink, opacity: 0.8 }}>

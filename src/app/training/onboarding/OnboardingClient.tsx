@@ -15,6 +15,7 @@ import {
   type PendingOnboarding, type PracticeTime, type WeeklyGoal,
 } from '@/lib/plan'
 import { signIn } from '@/components/LoginRequired'
+import { getSpeakCategory, readStoredPrompt } from '@/lib/speakPrompts'
 import { trackEvent } from '@/lib/analytics'
 import { HoldButton, OnboardingShell, OnboardingTitle, OptionCard, PrimaryButton } from '@/components/onboarding/OnboardingParts'
 
@@ -73,6 +74,9 @@ export default function OnboardingClient() {
     supabase.auth.getSession().then(({ data }) => {
       const isAuthed = !!data.session
       setAuthed(isAuthed)
+      // 방금 녹음에서 고른 말하기 방식에 맞는 상황을 미리 골라 둔다 (자기소개 → 면접)
+      const spoken = readStoredPrompt()
+      if (spoken) setScene((cur) => cur ?? getSpeakCategory(spoken.category).scene)
       // 로그인하고 돌아온 경우: 저장해 둔 답으로 이어서 진단으로 간다.
       // 로그인을 취소하고 돌아온 경우: 답을 채운 채 마지막 장으로.
       const pending = resume && !resumed.current ? readPendingOnboarding() : null

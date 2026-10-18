@@ -46,7 +46,7 @@ export interface AudioFeatures {
   }
   mfccs: Record<string, number>
   zero_crossing: { mean: number; std: number }
-  rhythm: { tempo_bpm: number; onset_count: number; onsets_per_second: number }
+  rhythm: { tempo_bpm: number; onset_count: number; onsets_per_second: number; articulation_rate?: number }
   voice_quality: {
     jitter_abs_ms: number
     jitter_rel_pct: number
