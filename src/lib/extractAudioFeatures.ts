@@ -1,6 +1,7 @@
 'use client'
 
 import { audioBlobToWav } from './audioToWav'
+import { syllableRate } from './syllableRate'
 
 /**
  * 'praat'  — jitter/shimmer are cycle-to-cycle values from Modal/parselmouth,
@@ -26,6 +27,8 @@ export interface AudioFeatures {
     shimmer_abs: number
     shimmer_rel_pct: number
     source: VoiceQualitySource
+    /** 떨림을 잰 구간. 'vowel' = 지속 모음 "아~", 'speech' = 문단 읽기 (예전 기록은 없음) */
+    task?: 'vowel' | 'speech'
   }
   hnr_db: number
 }
@@ -123,7 +126,6 @@ export async function extractAudioFeatures(audioBlob: Blob): Promise<AudioFeatur
 
     const f0s: number[] = []
     const voicedRms: number[] = []
-    const rmsByFrame: number[] = []
     let totalFrames = 0
 
     for (let start = 0; start + FRAME <= dsData.length; start += HOP) {
@@ -132,7 +134,6 @@ export async function extractAudioFeatures(audioBlob: Blob): Promise<AudioFeatur
       let sq = 0
       for (let i = 0; i < FRAME; i++) sq += frame[i] * frame[i]
       const rms = Math.sqrt(sq / FRAME)
-      rmsByFrame.push(rms)
       totalFrames++
 
       const f0 = detectPitchFrame(frame, dsSr)
@@ -202,27 +203,14 @@ export async function extractAudioFeatures(audioBlob: Blob): Promise<AudioFeatur
     const zcrMean = arrMean(zcrVals)
     const zero_crossing = { mean: zcrMean, std: arrStd(zcrVals, zcrMean) }
 
-    // ── Onset detection (energy rise, min gap = 2 frames) ─
-    let onsetCount = 0
-    let lastOnset = -3
-    const noiseFl = arrMean(rmsByFrame) * 0.3
-
-    for (let i = 2; i < rmsByFrame.length - 1; i++) {
-      if (
-        i - lastOnset >= 2 &&
-        rmsByFrame[i] > noiseFl &&
-        rmsByFrame[i] > rmsByFrame[i - 1] * 1.3 &&
-        rmsByFrame[i] >= rmsByFrame[i + 1]
-      ) {
-        onsetCount++
-        lastOnset = i
-      }
-    }
-
+    // ── Speech rate: syllable nuclei (de Jong & Wempe, 2009) ─
+    // onsets_per_second는 이름만 남기고 음절/초(쉼 포함)를 담는다. 소비처: calcPaceScore,
+    // 훈련 PACE_RANGE, 장면 판정. 예전 '1.3배 상승' 방식은 실측 초당 1회 안팎으로 낮게 셌다.
+    const sylRate = syllableRate(rawData, origSr)
     const rhythm = {
-      tempo_bpm: Math.max(60, Math.round((onsetCount / duration) * 60 * 0.5)),
-      onset_count: onsetCount,
-      onsets_per_second: duration > 0 ? onsetCount / duration : 0,
+      tempo_bpm: Math.max(60, Math.round(sylRate.speechRate * 60 * 0.5)),
+      onset_count: sylRate.count,
+      onsets_per_second: sylRate.speechRate,
     }
 
     // ── Jitter (pitch period perturbation, voiced frames) ─
@@ -317,12 +305,22 @@ async function fetchPraatVoiceQuality(blob: Blob): Promise<
  */
 export async function extractAudioFeaturesWithPraat(
   blob: Blob,
+  /**
+   * 지속 모음 "아~" 구간. 있으면 떨림(jitter, shimmer, HNR)은 이 구간에서만 잰다.
+   * 떨림은 원래 지속 모음으로 재는 지표다. 이어 말하기에서는 억양과 자음 전환이 섞여 부풀려진다.
+   */
+  vowelBlob?: Blob | null,
 ): Promise<AudioFeatures | null> {
-  const [features, praat] = await Promise.all([
+  const qualityBlob = vowelBlob ?? blob
+  const [features, praat, vowelFeatures] = await Promise.all([
     extractAudioFeatures(blob),
-    fetchPraatVoiceQuality(blob),
+    fetchPraatVoiceQuality(qualityBlob),
+    vowelBlob ? extractAudioFeatures(vowelBlob) : Promise.resolve(null),
   ])
   if (!features) return null
+  // Modal이 꺼져 있으면 브라우저 근사치를 쓰되, 모음이 있으면 모음 구간의 근사치를 쓴다.
+  if (vowelFeatures) features.voice_quality = { ...vowelFeatures.voice_quality }
+  features.voice_quality.task = vowelBlob ? 'vowel' : 'speech'
   if (praat) {
     features.voice_quality.jitter_rel_pct = praat.jitter_rel_pct
     features.voice_quality.shimmer_rel_pct = praat.shimmer_rel_pct

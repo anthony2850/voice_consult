@@ -2,19 +2,34 @@
 
 import { useRef, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Mic, Square, RotateCcw, Play, Pause, ChevronRight, AlertCircle, Sparkles } from 'lucide-react'
+import { Mic, RotateCcw, Play, Pause, ChevronRight, AlertCircle, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { useAudioRecorder } from '@/hooks/useAudioRecorder'
 import { useWaveform } from '@/hooks/useWaveform'
 import { saveVoiceRecord } from '@/lib/voiceDB'
 import { extractAudioFeaturesWithPraat } from '@/lib/extractAudioFeatures'
-import { audioBlobToWav } from '@/lib/audioToWav'
+import { splitRecordingToWav } from '@/lib/audioToWav'
 import { trackEvent } from '@/lib/analytics'
 import { readVoiceAnalysisResponse, VoiceAnalysisError } from '@/lib/voiceAnalysis'
 
-const MAX_SECONDS = 30
-const MIN_SECONDS = 3   // minimum recording before allowing proceed
+const MAX_SECONDS = 40
+/** 문단 읽기 부분이 이보다 짧으면 억양과 말 속도를 믿을 수 없다 */
+const MIN_SPEECH_SECONDS = 8
+/** "다 읽었어요" 뒤 "아~" 녹음 길이 */
+const VOWEL_MS = 3500
+
+/**
+ * 질문, 감탄, 평서문을 섞은 약 20초 문단 (약 94음절).
+ * 평평한 인사 한 줄로는 억양 변화폭과 말 속도가 사람마다 거의 다르지 않다.
+ */
+const READING_SCRIPT = [
+  '안녕하세요, 오늘은 제 목소리를 들려 드리려고 해요.',
+  '요즘 날씨가 정말 좋지 않나요?',
+  '아침에 창문을 열었더니 바람이 기분 좋게 불어오더라고요.',
+  '와, 이런 날엔 어디든 떠나고 싶어져요!',
+  '그래도 오늘은 차분하게 제 목소리부터 확인해 볼게요.',
+]
 
 const VOCAL_TIPS = [
   { emoji: '🎯', tip: '복식호흡을 하면 목소리에 깊이가 생겨요. 배에서 소리를 밀어올리듯 발성해보세요.' },
@@ -51,8 +66,18 @@ export default function RecordClient() {
     setCurrentTip(VOCAL_TIPS[Math.floor(Math.random() * VOCAL_TIPS.length)])
   }, [])
 
-  const { state, duration, audioBlob, audioUrl, analyserNode, start, stop, reset, error } =
+  const { state, duration, audioBlob, audioUrl, analyserNode, start, stop, markAndStopAfter, markSec, reset, error } =
     useAudioRecorder(MAX_SECONDS)
+  // 녹음 중 단계: 문단 읽기 → "아~"
+  const phase: 'read' | 'vowel' | null = state === 'recording' ? (markSec == null ? 'read' : 'vowel') : null
+  const speechSec = markSec ?? duration
+  const [vowelLeft, setVowelLeft] = useState(3)
+  useEffect(() => {
+    if (phase !== 'vowel') return
+    setVowelLeft(3)
+    const t = setInterval(() => setVowelLeft((n) => Math.max(0, n - 1)), 1000)
+    return () => clearInterval(t)
+  }, [phase])
 
   useWaveform({
     analyser: analyserNode,
@@ -104,14 +129,14 @@ export default function RecordClient() {
     }, 300)
 
     try {
-      // OpenAI 오디오 모델은 wav/mp3만 받으므로 업로드 전 WAV로 변환
-      const wavBlob = await audioBlobToWav(audioBlob)
+      // 문단(감정, 억양, 말 속도)과 "아~"(떨림)로 나눈다. OpenAI 오디오 모델은 wav/mp3만 받는다.
+      const { speech, vowel } = await splitRecordingToWav(audioBlob, markSec)
       const formData1 = new FormData()
-      formData1.append('audio', wavBlob, 'voice.wav')
+      formData1.append('audio', speech, 'voice.wav')
 
       const [emotionRes, audioFeatures] = await Promise.all([
         fetch('/api/analyze-voice', { method: 'POST', body: formData1 }),
-        extractAudioFeaturesWithPraat(audioBlob),
+        extractAudioFeaturesWithPraat(speech, vowel),
       ])
 
       const emotionData = await readVoiceAnalysisResponse(emotionRes)
@@ -189,8 +214,9 @@ export default function RecordClient() {
         <p className="text-xs font-semibold text-primary mb-1">STEP 1</p>
         <h1 className="text-xl font-bold text-foreground">목소리 녹음</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          {state === 'idle'    && '평소 자신의 원래 목소리대로 편하게 읽어 주세요'}
-          {state === 'recording' && '자연스럽게 말씀해 주세요 — 30초까지 녹음됩니다'}
+          {state === 'idle'    && '아래 문단을 평소 목소리로 읽고, 마지막에 "아~"를 3초 내요'}
+          {phase === 'read'    && '다 읽으면 아래 버튼을 눌러 주세요'}
+          {phase === 'vowel'   && '"아~"를 편한 높이로 길게 내 주세요'}
           {state === 'recorded'  && '녹음이 완료됐어요! 확인 후 분석을 시작하세요'}
         </p>
       </div>
@@ -260,7 +286,8 @@ export default function RecordClient() {
             {[
               '조용한 환경에서 녹음해 주세요',
               '마이크와 10~20cm 거리를 유지하세요',
-              '스크립트를 자연스럽게 소리 내어 읽어 주세요',
+              '문단을 자연스럽게 소리 내어 읽어 주세요',
+              '마지막 "아~"는 떨림을 재는 데 써요',
             ].map((tip) => (
               <li key={tip} className="flex items-start gap-2 text-xs text-muted-foreground">
                 <span className="text-primary mt-0.5">•</span>
@@ -271,16 +298,22 @@ export default function RecordClient() {
         </div>
       )}
 
-      {/* Script (prompt text) */}
-      <div className="glass rounded-2xl p-4 mb-6">
-        <p className="text-[11px] text-muted-foreground mb-2 font-semibold">읽어 주세요</p>
-        <p className="text-sm text-foreground leading-relaxed">
-          &ldquo;안녕하세요, 저는 오늘 제 목소리를 분석하러 왔습니다. 잘 부탁드립니다.&rdquo;
-        </p>
-        <p className="text-[10px] text-muted-foreground mt-2">
-          ✦ 평소 자신의 목소리 그대로 자연스럽게 읽어 주세요
-        </p>
-      </div>
+      {/* Script (prompt text) → "아~" */}
+      {phase === 'vowel' ? (
+        <div className="glass rounded-2xl p-6 mb-6 text-center" aria-live="polite">
+          <p className="text-[11px] text-muted-foreground mb-2 font-semibold">마지막으로</p>
+          <p className="text-4xl font-black text-foreground">아~</p>
+          <p className="text-sm text-muted-foreground mt-2">편한 높이로 길게, {vowelLeft > 0 ? `${vowelLeft}초` : '끝!'}</p>
+        </div>
+      ) : (
+        <div className="glass rounded-2xl p-4 mb-6">
+          <p className="text-[11px] text-muted-foreground mb-2 font-semibold">읽어 주세요</p>
+          <p className="text-[15px] text-foreground leading-relaxed">{READING_SCRIPT.join(' ')}</p>
+          <p className="text-[11px] text-muted-foreground mt-3">
+            다 읽은 뒤 &ldquo;아~&rdquo;를 3초 길게 내면 끝나요
+          </p>
+        </div>
+      )}
 
       {/* Spacer */}
       <div className="flex-1" />
@@ -298,14 +331,28 @@ export default function RecordClient() {
           </Button>
         )}
 
-        {state === 'recording' && (
+        {phase === 'read' && (
           <Button
             size="lg"
-            onClick={stop}
-            className="w-full h-14 text-base font-bold rounded-2xl bg-red-600 hover:bg-red-700 border-0 shadow-xl shadow-red-900/40 active:scale-95 transition-transform"
+            onClick={() => markAndStopAfter(VOWEL_MS)}
+            className="w-full h-14 text-base font-bold rounded-2xl gradient-primary border-0 shadow-xl shadow-primary/30 active:scale-95 transition-transform"
           >
-            <Square size={18} className="mr-2 fill-white" />
-            녹음 중지
+            다 읽었어요, 이제 &ldquo;아~&rdquo;
+            <ChevronRight size={18} className="ml-1" />
+          </Button>
+        )}
+        {phase === 'read' && (
+          <button onClick={stop} className="w-full py-1 text-xs text-muted-foreground underline-offset-4 hover:underline">
+            &ldquo;아~&rdquo; 없이 녹음 끝내기
+          </button>
+        )}
+        {phase === 'vowel' && (
+          <Button
+            size="lg"
+            disabled
+            className="w-full h-14 text-base font-bold rounded-2xl bg-secondary text-foreground border-0 disabled:opacity-100"
+          >
+            &ldquo;아~&rdquo; 녹음 중, 자동으로 끝나요
           </Button>
         )}
 
@@ -343,16 +390,16 @@ export default function RecordClient() {
             <Button
               size="lg"
               onClick={handleProceed}
-              disabled={duration < MIN_SECONDS}
+              disabled={speechSec < MIN_SPEECH_SECONDS}
               className="w-full h-14 text-base font-bold rounded-2xl gradient-primary border-0 shadow-xl shadow-primary/30 active:scale-95 transition-transform disabled:opacity-40"
             >
               이 목소리로 분석하기
               <ChevronRight size={18} className="ml-1" />
             </Button>
 
-            {duration < MIN_SECONDS && (
+            {speechSec < MIN_SPEECH_SECONDS && (
               <p className="text-center text-xs text-muted-foreground">
-                {MIN_SECONDS}초 이상 녹음해야 분석이 가능해요
+                문단을 끝까지 읽어 주세요. 읽는 부분이 {MIN_SPEECH_SECONDS}초 이상이어야 분석할 수 있어요
               </p>
             )}
           </>

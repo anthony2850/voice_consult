@@ -13,21 +13,21 @@ function emo(over: Record<string, number>): Record<string, number> {
 
 /** pitchCV, 말 속도, 세기 변동만 정한 음향 특징 */
 function feat(o: { cv?: number; rate?: number; rms?: number; jitter?: number }): AudioFeatures {
-  // rate = onsets_per_second (실측 초당 1회 안팎)
+  // rate = onsets_per_second (음절/초)
   return {
     duration_sec: 10, sample_rate: 16000,
     pitch: { mean_hz: 200, min_hz: 100, max_hz: 300, std_hz: 200 * (o.cv ?? 0.18), voiced_ratio: 0.6 },
     energy: { rms_mean: 0.1, rms_std: 0.1 * (o.rms ?? 1.0), db_mean: -25, db_max: -10, db_min: -50, db_range: 40 },
     spectral: { centroid_mean_hz: 0, centroid_std_hz: 0, bandwidth_mean_hz: 0, rolloff_mean_hz: 0, flatness_mean: 0, contrast_mean_db: 0 },
     mfccs: {}, zero_crossing: { mean: 0, std: 0 },
-    rhythm: { tempo_bpm: 0, onset_count: 0, onsets_per_second: o.rate ?? 1.0 },
+    rhythm: { tempo_bpm: 0, onset_count: 0, onsets_per_second: o.rate ?? 4.5 },
     voice_quality: { jitter_abs_ms: 0, jitter_rel_pct: o.jitter ?? 2.1, shimmer_abs: 0, shimmer_rel_pct: 3, source: 'praat' },
     hnr_db: 15,
   }
 }
 
-const ENERGETIC = feat({ cv: 0.28, rate: 1.6, rms: 1.3 })
-const CALM = feat({ cv: 0.12, rate: 0.7, rms: 0.85 })
+const ENERGETIC = feat({ cv: 0.28, rate: 6.0, rms: 1.3 })
+const CALM = feat({ cv: 0.12, rate: 3.3, rms: 0.85 })
 
 describe('SCENE_EMOTIONS', () => {
   it('asks the model for 22 emotions, covering every scene signature', () => {

@@ -202,7 +202,7 @@ export default function VoiceDetailClient() {
           title="목소리 안정감"
           score={scores.stability}
           description={getStabilityDesc(scores.stability)}
-          detail={`Jitter ${features.voice_quality.jitter_rel_pct.toFixed(2)}%, Shimmer ${features.voice_quality.shimmer_rel_pct.toFixed(2)}%`}
+          detail={`Jitter ${features.voice_quality.jitter_rel_pct.toFixed(2)}%, Shimmer ${features.voice_quality.shimmer_rel_pct.toFixed(2)}%, ${features.voice_quality.task === 'vowel' ? '"아~" 3초로 측정' : '문단 읽기로 측정한 참고값'}`}
           animate={animate}
         />
         <ScoreCard
@@ -210,7 +210,7 @@ export default function VoiceDetailClient() {
           title="말하기 여유 및 전달력"
           score={scores.pace}
           description={getPaceDesc(scores.pace, features.rhythm.onsets_per_second)}
-          detail={`초당 ${features.rhythm.onsets_per_second.toFixed(1)}음절, 총 ${features.rhythm.onset_count}회, ${features.duration_sec.toFixed(1)}초`}
+          detail={`초당 ${features.rhythm.onsets_per_second.toFixed(1)}음절, 총 ${features.rhythm.onset_count}음절, ${features.duration_sec.toFixed(1)}초`}
           animate={animate}
         />
         <ScoreCard

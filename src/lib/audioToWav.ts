@@ -32,6 +32,44 @@ export async function audioBlobToWav(blob: Blob): Promise<Blob> {
   return encodeWav(rendered.getChannelData(0), TARGET_SR)
 }
 
+/** "아~" 구간이 이보다 짧으면 떨림 측정에 쓰지 않는다 (Praat 주기 검출에 충분한 길이) */
+export const MIN_VOWEL_SEC = 1.5
+
+/**
+ * 녹음 하나를 "다 읽었어요"를 누른 시점(markSec)에서 둘로 나눈다.
+ * - speech: 처음 ~ markSec (문단 읽기) — 감정, 억양, 말 속도
+ * - vowel: markSec + 0.4초 ~ 끝 - 0.15초 ("아~") — 떨림. 짧으면 null.
+ * 버튼을 누르고 "아~"를 시작하기까지의 0.4초, 녹음이 멈추는 끝 0.15초는 뺀다.
+ */
+export async function splitRecordingToWav(blob: Blob, markSec: number | null): Promise<{ speech: Blob; vowel: Blob | null }> {
+  const TARGET_SR = 16000
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const AudioCtx = window.AudioContext || (window as any).webkitAudioContext
+  const ctx = new AudioCtx()
+  let decoded: AudioBuffer
+  try {
+    decoded = await ctx.decodeAudioData(await blob.arrayBuffer())
+  } finally {
+    await ctx.close()
+  }
+  const frameCount = Math.max(1, Math.ceil(decoded.duration * TARGET_SR))
+  const offline = new OfflineAudioContext(1, frameCount, TARGET_SR)
+  const source = offline.createBufferSource()
+  source.buffer = decoded
+  source.connect(offline.destination)
+  source.start()
+  const all = (await offline.startRendering()).getChannelData(0)
+
+  if (markSec == null || markSec <= 0 || markSec >= decoded.duration) {
+    return { speech: encodeWav(all, TARGET_SR), vowel: null }
+  }
+  const cut = Math.round(markSec * TARGET_SR)
+  const vStart = Math.min(all.length, cut + Math.round(0.4 * TARGET_SR))
+  const vEnd = Math.max(vStart, all.length - Math.round(0.15 * TARGET_SR))
+  const vowel = vEnd - vStart >= MIN_VOWEL_SEC * TARGET_SR ? encodeWav(all.subarray(vStart, vEnd), TARGET_SR) : null
+  return { speech: encodeWav(all.subarray(0, cut), TARGET_SR), vowel }
+}
+
 /** Encode mono Float32 PCM samples as a 16-bit PCM WAV blob. */
 function encodeWav(samples: Float32Array, sampleRate: number): Blob {
   const buffer = new ArrayBuffer(44 + samples.length * 2)

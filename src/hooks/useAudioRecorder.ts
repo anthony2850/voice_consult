@@ -13,6 +13,10 @@ export interface AudioRecorderResult {
   analyserNode: AnalyserNode | null
   start: () => Promise<void>
   stop: () => void
+  /** 녹음 중 지금 시점(초)을 표시하고, afterMs 뒤에 자동으로 멈춘다 */
+  markAndStopAfter: (afterMs: number) => void
+  /** markAndStopAfter를 누른 시점 (녹음 시작부터 초). 없으면 null */
+  markSec: number | null
   reset: () => void
   error: string | null
 }
@@ -24,6 +28,8 @@ export function useAudioRecorder(maxSeconds = 30): AudioRecorderResult {
   const [audioUrl, setAudioUrl] = useState<string | null>(null)
   const [analyserNode, setAnalyserNode] = useState<AnalyserNode | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [markSec, setMarkSec] = useState<number | null>(null)
+  const startedAtRef = useRef<number>(0)
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<BlobPart[]>([])
@@ -58,6 +64,7 @@ export function useAudioRecorder(maxSeconds = 30): AudioRecorderResult {
     setAudioUrl(null)
     chunksRef.current = []
     setDuration(0)
+    setMarkSec(null)
 
     let stream: MediaStream
     try {
@@ -98,6 +105,7 @@ export function useAudioRecorder(maxSeconds = 30): AudioRecorderResult {
     }
 
     recorder.start(100) // collect chunks every 100ms
+    startedAtRef.current = performance.now()
     setState('recording')
     trackEvent('record_started', { max_seconds: maxSeconds })
 
@@ -116,8 +124,16 @@ export function useAudioRecorder(maxSeconds = 30): AudioRecorderResult {
     autoStopRef.current = setTimeout(() => stop(), maxSeconds * 1000 + 500)
   }, [audioUrl, maxSeconds, stop])
 
+  const markAndStopAfter = useCallback((afterMs: number) => {
+    if (mediaRecorderRef.current?.state !== 'recording') return
+    setMarkSec((performance.now() - startedAtRef.current) / 1000)
+    if (autoStopRef.current) clearTimeout(autoStopRef.current)
+    autoStopRef.current = setTimeout(() => stop(), afterMs)
+  }, [stop])
+
   const reset = useCallback(() => {
     cleanup()
+    setMarkSec(null)
     if (audioUrl) URL.revokeObjectURL(audioUrl)
     setAudioUrl(null)
     setAudioBlob(null)
@@ -127,7 +143,7 @@ export function useAudioRecorder(maxSeconds = 30): AudioRecorderResult {
     setState('idle')
   }, [cleanup, audioUrl])
 
-  return { state, duration, audioBlob, audioUrl, analyserNode, start, stop, reset, error }
+  return { state, duration, audioBlob, audioUrl, analyserNode, start, stop, markAndStopAfter, markSec, reset, error }
 }
 
 function getSupportedMimeType(): string {

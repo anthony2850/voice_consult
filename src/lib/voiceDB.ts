@@ -53,6 +53,7 @@ export interface AudioFeatures {
     shimmer_abs: number
     shimmer_rel_pct: number
     source: 'praat' | 'frame'
+    task?: 'vowel' | 'speech'
   }
   hnr_db: number
 }

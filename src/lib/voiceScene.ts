@@ -38,9 +38,8 @@ export const SCENE_EMOTIONS: string[] = [
 // 감정 축: gpt-audio는 대부분 0, 나머지는 0.1 단위로 답한다(2026-10-18 실측). 그래서 평균 차가 ±0.1 안팎이다.
 export const SCENE_REF = {
   pitchCV: { mean: 0.18, sd: 0.06 },
-  // onsets_per_second는 음절이 아니라 '소리가 1.3배 이상 커지는 순간' 수라 실측이 초당 1회 안팎이다
-  // (2026-10 기록 13건 평균 0.8, 예시 녹음 1.26). 음절 기준(4~5회)으로 두면 모두 '느림'이 된다.
-  rate: { mean: 1.0, sd: 0.35 },
+  // 음절/초, 쉼 포함 (syllableRate.ts). 한국어 낭독은 대략 4~5.5.
+  rate: { mean: 4.5, sd: 1.0 },
   rmsCV: { mean: 1.0, sd: 0.2 },
   arousalEm: { mean: 0, sd: 0.12 },
   mood: { mean: 0, sd: 0.06 },
