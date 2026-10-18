@@ -10,7 +10,7 @@ import { streakFrom, toDateStr } from '@/lib/streak'
 import { trackEvent } from '@/lib/analytics'
 
 function trackName(t: Pick<TrackSummary, 'scene' | 'concern'>) {
-  return `${SCENE_LABELS[t.scene].emoji} ${SCENE_LABELS[t.scene].label} · ${TRACKS[t.concern].label}`
+  return `${SCENE_LABELS[t.scene].emoji} ${SCENE_LABELS[t.scene].label} ${TRACKS[t.concern].label} 트랙`
 }
 
 /** 훈련 탭 첫 화면: 지금 트랙, 쉬고 있는 트랙, 새 트랙 시작. */
@@ -38,7 +38,7 @@ export default function TrainingClient() {
   const streak = streakFrom(sessions.map((s) => s.session_date), todayStr)
   const doneToday = sessions.some((s) => s.session_date === todayStr && s.kind === 'session')
 
-  /** 쉬고 있는 트랙으로 돌아가기. 규칙은 planTrackSwitch (진단 재사용·재진단 권유·진단 필요). */
+  /** 쉬고 있는 트랙으로 돌아가기. 규칙은 planTrackSwitch (진단 재사용, 재진단 권유, 진단 필요). */
   async function openResting(t: TrackSummary) {
     if (switching) return
     const next = { scene: t.scene, concern: t.concern }
@@ -101,8 +101,8 @@ export default function TrainingClient() {
                 <span className="flex items-center text-[11px] text-muted-foreground">자세히 <ChevronRight size={12} /></span>
               </div>
               <p className="text-lg font-black text-foreground mt-1">{trackName(current)}</p>
-              <p className="text-sm text-foreground/80 mt-0.5">{current.rung}단계 · {getRung(current.rung).title}</p>
-              <p className="text-[11px] text-muted-foreground mt-1">세션 {current.sessions}회 · 마지막 {relativeDay(current.lastAt)}</p>
+              <p className="text-sm text-foreground/80 mt-0.5">{current.rung}단계: {getRung(current.rung).title}</p>
+              <p className="text-[11px] text-muted-foreground mt-1">세션 {current.sessions}회, 마지막 {relativeDay(current.lastAt)}</p>
             </button>
             <button
               onClick={() => {
@@ -139,7 +139,7 @@ export default function TrainingClient() {
                 >
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-foreground truncate">{trackName(t)}</p>
-                    <p className="text-[11px] text-muted-foreground">{t.rung}단계 · 세션 {t.sessions}회 · {relativeDay(t.lastAt)}</p>
+                    <p className="text-[11px] text-muted-foreground">{t.rung}단계, 세션 {t.sessions}회, {relativeDay(t.lastAt)}</p>
                   </div>
                   <span className="text-[11px] font-semibold text-primary shrink-0">이어 하기</span>
                 </button>

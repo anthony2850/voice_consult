@@ -12,8 +12,10 @@ export default function VoiceMap({ energy, mood, id, second }: {
 }) {
   const p = getPersona(id)
   const s = getPersona(second)
-  const left = `${((mood + 1) / 2) * 100}%`
-  const top = `${((1 - energy) / 2) * 100}%`
+  // 끝에 붙으면 점과 '나' 표시가 잘리므로 안쪽 여백 안에 둔다
+  const inside = (x: number) => Math.min(88, Math.max(12, x))
+  const left = `${inside(((mood + 1) / 2) * 100)}%`
+  const top = `${inside(((1 - energy) / 2) * 100) - 4}%`
   return (
     <figure className="m-0">
       <div className="relative aspect-[4/3] w-full rounded-2xl bg-secondary/50 overflow-hidden" role="img"
@@ -33,7 +35,7 @@ export default function VoiceMap({ energy, mood, id, second }: {
         </div>
       </div>
       <figcaption className="mt-2 text-[12px] text-muted-foreground leading-relaxed">
-        두 번째로 가까운 장면은 <span className="font-semibold text-foreground">{s.name}</span>이에요.
+        두 번째로 가까운 페르소나는 <span className="font-semibold text-foreground">{s.name}</span>이에요.
       </figcaption>
     </figure>
   )

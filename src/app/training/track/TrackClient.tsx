@@ -55,7 +55,7 @@ export default function TrackClient() {
             {SCENE_LABELS[scene].emoji} {SCENE_LABELS[scene].label}
           </Badge>
           <h1 className="text-2xl font-black text-white mb-1">{track.emoji} {track.label}</h1>
-          <p className="text-white/85 text-sm">{rung}단계 · {current.title}</p>
+          <p className="text-white/85 text-sm">{rung}단계: {current.title}</p>
           <div className="flex items-center gap-2 mt-3">
             <div className="flex items-center gap-1.5 bg-white/15 rounded-full px-3 py-1">
               <Flame size={14} className="text-orange-300" />

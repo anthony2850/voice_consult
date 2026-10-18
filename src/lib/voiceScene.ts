@@ -3,7 +3,7 @@
  * 설계: docs/superpowers/specs/2026-10-18-voice-scene-persona-design.md (5절)
  *
  * - 에너지(들뜸↔차분): 음향 각성 60% + 모델 각성 40%. 음향이 없으면 모델만.
- *   음향은 성별·마이크 차이를 피하려고 상대값(변동계수)만 쓴다.
+ *   음향은 성별과 마이크 차이를 피하려고 상대값(변동계수)만 쓴다.
  * - 기분(맑음↔흐림): 모델 감정 원점수. 음향만으로는 기분이 덜 정확하다(Juslin & Laukka, 2003).
  */
 import type { AudioFeatures } from './voiceDB'
@@ -33,7 +33,7 @@ export const SCENE_EMOTIONS: string[] = [
 ].sort()
 
 // ─── 기준값 ─────────────────────────────────────────────────────────────────
-// 출발점 추정치. 2026-10 기준 지금 분석 방식의 기록이 없어 연구·훈련 기준으로 정했다.
+// 출발점 추정치. 2026-10 기준 지금 분석 방식의 기록이 없어 연구와 훈련 기준으로 정했다.
 // 실제 분포가 쌓이면 다시 맞춘다 (설계 6절).
 // 감정 축: gpt-audio는 대부분 0, 나머지는 0.1 단위로 답한다(2026-10-18 실측). 그래서 평균 차가 ±0.1 안팎이다.
 export const SCENE_REF = {
@@ -111,7 +111,7 @@ const signatureScore = (p: Persona, e: Record<string, number>) => mean(p.signatu
 function acousticTieBreak(q: Quadrant, az: AcousticZ): boolean | null {
   const v = (x: number | null) => x ?? 0
   switch (q) {
-    case 'up-clear': // concert: 세기·속도가 더 큼 / puppy: 억양 출렁임이 더 큼
+    case 'up-clear': // concert: 세기와 속도가 더 큼 / puppy: 억양 출렁임이 더 큼
       return (v(az.rmsCV) + v(az.rate)) / 2 >= v(az.pitchCV)
     case 'down-clear': // cafe-book: 속도 보통 / sunday: 더 느림
       return az.rate == null ? null : az.rate >= -0.5
@@ -244,7 +244,7 @@ export function whySentence(r: Pick<SceneResult, 'id' | 'cues'>): string {
 const CUE_KEYS: CueKey[] = ['fast', 'slow', 'wide', 'flat', 'strong', 'soft', 'shaky', 'steady', 'emotion']
 const isNum = (x: unknown): x is number => typeof x === 'number' && Number.isFinite(x)
 
-/** 바깥에서 온 값(공유 링크·DB)을 SceneResult로 검증한다. 아니면 null. */
+/** 바깥에서 온 값(공유 링크, DB)을 SceneResult로 검증한다. 아니면 null. */
 export function parseSceneResult(v: unknown): SceneResult | null {
   if (!v || typeof v !== 'object') return null
   const o = v as Record<string, unknown>

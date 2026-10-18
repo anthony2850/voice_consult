@@ -87,7 +87,7 @@ export default function RecordStep({
 
       {variation && (
         <div className="rounded-2xl bg-secondary/60 px-4 py-3 space-y-1">
-          <p className="text-[11px] font-semibold text-muted-foreground">오늘은 이렇게 해 봐요 · {variation.label}</p>
+          <p className="text-[11px] font-semibold text-muted-foreground">오늘은 이렇게 해 봐요: {variation.label}</p>
           <p className="text-xs text-foreground"><span className="text-muted-foreground">방법</span> {variation.change}</p>
           <p className="text-xs text-foreground"><span className="text-muted-foreground">유지</span> {variation.hold}</p>
           <p className="text-xs text-foreground"><span className="text-muted-foreground">확인</span> {variation.observe}</p>

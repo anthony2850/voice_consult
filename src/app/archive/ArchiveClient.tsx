@@ -158,10 +158,10 @@ function TrainingCalendar({ trainingDates, selectedDate, onSelectDate, currentMo
 function sessionLine(s: TrainingSessionRow): { title: string; sub: string } {
   const track = s.concern ? TRACKS[s.concern] : null
   const scene = s.scene ? SCENE_LABELS[s.scene].label : ''
-  if (s.kind === 'diagnosis') return { title: `진단 · ${scene}`, sub: track ? `${track.label} 트랙 시작` : '진단 완료' }
-  const rung = s.rung ? `${s.rung}단계 · ${getRung(s.rung).title}` : ''
+  if (s.kind === 'diagnosis') return { title: `${scene} 진단`, sub: track ? `${track.label} 트랙 시작` : '진단 완료' }
+  const rung = s.rung ? `${s.rung}단계: ${getRung(s.rung).title}` : ''
   const result = s.met_criterion === true ? '목표 안' : s.met_criterion === false ? '목표에 조금 못 미침' : '직접 판단'
-  return { title: `${track?.emoji ?? ''} ${track?.label ?? '훈련'} · ${scene}`, sub: `${rung} · ${result}` }
+  return { title: `${track?.emoji ?? ''} ${scene} ${track?.label ?? '훈련'}`, sub: [rung, result].filter(Boolean).join(', ') }
 }
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
@@ -213,10 +213,10 @@ export default function ArchiveClient() {
         <div className="absolute -top-10 -right-10 w-56 h-56 rounded-full bg-white/10 blur-3xl" />
         <div className="relative z-10">
           <Badge className="mb-3 bg-white/20 text-white border-0 text-xs backdrop-blur">
-            {today.getFullYear()}년 {today.getMonth() + 1}월 · 아카이브
+            {today.getFullYear()}년 {today.getMonth() + 1}월 아카이브
           </Badge>
           <h1 className="text-2xl font-black text-white leading-tight mb-1">
-            {track && scene ? `${scene.emoji} ${scene.label} · ${track.label}` : '훈련 기록'}
+            {track && scene ? `${scene.emoji} ${scene.label} ${track.label} 트랙` : '훈련 기록'}
           </h1>
           <p className="text-white/70 text-xs mb-5">이번 달 {monthCount}일 훈련</p>
 
@@ -251,7 +251,7 @@ export default function ArchiveClient() {
             <p className="text-sm font-bold text-foreground">개선 추이</p>
             {metric ? (
               <p className="text-[11px] text-muted-foreground mt-0.5">
-                {METRIC_LABEL[metric].title} · 매 세션 <span className="font-semibold text-foreground">시작 녹음</span>을 주 단위로 묶었어요
+                {METRIC_LABEL[metric].title}: 매 세션 <span className="font-semibold text-foreground">시작 녹음</span>을 주 단위로 묶었어요
               </p>
             ) : (
               <p className="text-[11px] text-muted-foreground mt-0.5">훈련을 시작하면 트랙의 지표 하나만 여기서 추이로 보여 드려요.</p>

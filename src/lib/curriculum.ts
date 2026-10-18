@@ -1,10 +1,10 @@
 /**
  * 훈련 커리큘럼 — 한 고민, 한 트랙, 전이 사다리.
  *
- * - 사용자는 목표 장면(면접·발표·전화·일상)을 고르고 고민 하나(트랙)를 확정한다.
+ * - 사용자는 목표 장면(면접, 발표, 전화, 일상)을 고르고 고민 하나(트랙)를 확정한다.
  * - 모든 트랙은 같은 6단 사다리를 오른다 (5교시 캐리어-변조 계층 순서).
  *   트랙마다 다른 것은 "무엇을 들을 것인가"(핵심 정보)와 성공 기준, 변형 목록이다.
- * - 지시문은 결과·비유 언어로 쓴다. 금지문 없음. 마지막 줄은 결과를 향한다.
+ * - 지시문은 결과, 비유 언어로 쓴다. 금지문 없음. 마지막 줄은 결과를 향한다.
  *
  * 사양: docs/superpowers/specs/2026-10-17-training-track-design.md
  */
@@ -29,12 +29,12 @@ export const SCENE_ORDER: Scene[] = ['interview', 'presentation', 'call', 'daily
 export const SCENE_LABELS: Record<Scene, { label: string; emoji: string; hint: string }> = {
   interview: { label: '면접', emoji: '🤝', hint: '첫인사부터 답변까지' },
   presentation: { label: '발표', emoji: '🎤', hint: '여러 사람 앞에서 말하기' },
-  call: { label: '전화·회의', emoji: '📞', hint: '얼굴 없이 목소리만으로' },
-  daily: { label: '일상 대화', emoji: '☕', hint: '친구·가족과의 대화' },
+  call: { label: '전화와 회의', emoji: '📞', hint: '얼굴 없이 목소리만으로' },
+  daily: { label: '일상 대화', emoji: '☕', hint: '친구, 가족과의 대화' },
 }
 
 export interface SceneScript {
-  /** 기준 문장. 사다리 2·4단과 파지·수행 체크에서 트랙 내내 같은 문장으로 쓴다. */
+  /** 기준 문장. 사다리 2, 4단과 파지, 수행 체크에서 트랙 내내 같은 문장으로 쓴다. */
   short: string
   /** 두 문장짜리 전체 답변 (5단) */
   full: string
@@ -66,7 +66,7 @@ export const SCENE_SCRIPTS: Record<Scene, SceneScript> = {
 }
 
 /**
- * 유성자음(ㄴ·ㄹ·ㅁ·ㅇ)과 모음으로만 된 "소리 잇기" 문장 (3단).
+ * 유성자음(ㄴ, ㄹ, ㅁ, ㅇ)과 모음으로만 된 "소리 잇기" 문장 (3단).
  * 무성자음이 없어 소리가 끊기지 않는다. 뜻보다 소리의 연결이 목적이다.
  */
 export const SONORANT_SCRIPTS: string[] = [
@@ -90,7 +90,7 @@ export interface Rung {
   keeps: string
   /** 이 계단에서 더해지는 변조 */
   adds: string
-  /** 결과·비유 언어. 마지막 줄은 결과를 향한다. */
+  /** 결과, 비유 언어. 마지막 줄은 결과를 향한다. */
   instructions: string[]
   /** 녹음 상한(초). 한계까지 가지 않는다. */
   maxSec: number
@@ -140,9 +140,9 @@ export const LADDER: Rung[] = [
     id: 'rung-3-sonorant',
     title: '부드러운 자음 문장',
     keeps: '소리 + 높낮이 + 부드러운 자음',
-    adds: '부드러운 자음(ㄴ·ㄹ·ㅁ·ㅇ)',
+    adds: '부드러운 자음(ㄴ, ㄹ, ㅁ, ㅇ)',
     instructions: [
-      '아래 문장은 ㄴ·ㄹ·ㅁ·ㅇ처럼 소리가 끊기지 않는 자음으로만 되어 있어요.',
+      '아래 문장은 ㄴ, ㄹ, ㅁ, ㅇ처럼 소리가 끊기지 않는 자음으로만 되어 있어요.',
       '글자와 글자를 붙여서, 노래 가사처럼 이어 읽습니다.',
       '녹음을 들었을 때 문장 중간에 소리가 뚝 끊기는 곳이 없으면 성공입니다.',
     ],
@@ -155,10 +155,10 @@ export const LADDER: Rung[] = [
     id: 'rung-4-base-sentence',
     title: '실제 첫 문장',
     keeps: '실제 문장',
-    adds: '끊기는 자음(ㄱ·ㄷ·ㅂ·ㅅ 등)',
+    adds: '끊기는 자음(ㄱ, ㄷ, ㅂ, ㅅ 등)',
     instructions: [
       '실제 상황에서 처음 꺼낼 문장이에요. 2m 앞 사람에게 말하듯 읽습니다.',
-      'ㄱ·ㄷ·ㅂ 같은 자음에서는 소리가 잠깐 끊겨요. 그 뒤 글자도 앞 글자와 같은 크기로 냅니다.',
+      'ㄱ, ㄷ, ㅂ 같은 자음에서는 소리가 잠깐 끊겨요. 그 뒤 글자도 앞 글자와 같은 크기로 냅니다.',
       '마지막 글자까지 첫 글자와 같은 크기로 들리면 성공입니다.',
     ],
     maxSec: 12,
@@ -211,7 +211,7 @@ export type VariationAxis = 'sound' | 'time' | 'body' | 'approach'
 export const VARIATION_AXIS_LABELS: Record<VariationAxis, string> = {
   sound: '소리',
   time: '시간',
-  body: '몸·환경',
+  body: '몸과 환경',
   approach: '접근 경로',
 }
 
@@ -298,7 +298,7 @@ export const TRACKS: Record<ConcernSlug, Track> = {
     variations: [
       { id: 'di-coda', axis: 'sound', label: '받침 살리기', change: '받침 있는 글자는 받침 소리까지 분명하게 낸 뒤 다음 글자로', hold: '빠르기와 문장은 그대로', observe: '받침이 들리는가', strength: 1 },
       { id: 'di-slow', axis: 'time', label: '느리게', change: '평소보다 느리게', hold: '목소리 크기와 문장은 그대로', observe: '글자 첫소리가 분명한가', strength: 1 },
-      { id: 'di-open', axis: 'body', label: '입을 크게', change: '"아·오·우" 같은 소리마다 입을 평소보다 크게 벌리기', hold: '빠르기와 문장은 그대로', observe: '글자가 하나하나 구분되는가', strength: 2 },
+      { id: 'di-open', axis: 'body', label: '입을 크게', change: '"아, 오, 우" 같은 소리마다 입을 평소보다 크게 벌리기', hold: '빠르기와 문장은 그대로', observe: '글자가 하나하나 구분되는가', strength: 2 },
       { id: 'di-first-word', axis: 'approach', label: '첫 단어만 또렷하게', change: '첫 단어만 한 글자씩 또박또박, 나머지는 평소대로', hold: '문장은 그대로', observe: '뒤 단어들도 첫 단어만큼 또렷한가', strength: 2 },
     ],
   },
@@ -309,7 +309,7 @@ export const TRACKS: Record<ConcernSlug, Track> = {
 export const LEARNING_PRINCIPLES: { title: string; body: string }[] = [
   { title: '연습이 조금 어려워야 실전이 쉬워져요', body: '매 세션 지금보다 한 단계 어려운 것도 같이 해요. 잘 안 되는 게 정상이에요.' },
   { title: '어려워지는 지점을 집중해서 연습해요', body: '진단에서 처음 어려워진 단계 주변만 연습해요. 거기가 가장 빨리 바뀌는 곳이에요.' },
-  { title: '측정은 앱이 해요. 당신은 상대에게 말하는 데만 집중하세요', body: '떨림·빠르기·크기는 녹음으로 재요. 목이나 입 모양을 신경 쓰기보다, 앞에 있는 사람에게 말을 건네는 데 마음을 두세요.' },
+  { title: '측정은 앱이 해요. 당신은 상대에게 말하는 데만 집중하세요', body: '떨림, 빠르기, 크기는 녹음으로 재요. 목이나 입 모양을 신경 쓰기보다, 앞에 있는 사람에게 말을 건네는 데 마음을 두세요.' },
   { title: '점수는 오르내리며 자라요', body: '연습 직후에 좋아진 건 몸이 풀려서일 수 있어요. 진짜 변화는 다음 세션을 시작할 때 보여요. 길게 봐요.' },
   { title: '안 되는 날은 방법을 바꿔요', body: '말하는 방식을 조금 바꾸거나 한 단계 낮춰요. 당신 탓이 아니라 방법을 바꿀 때라는 신호예요.' },
 ]

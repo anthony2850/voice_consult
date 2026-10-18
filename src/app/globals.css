@@ -44,8 +44,8 @@
 
 /* ── Voice MBTI — teal-led, gold-accent theme ───────── */
 /* Two-color system — keep each screen to ONE dominant + ONE accent:
-   · brand / dominant : #00BECD teal → #0093BA deep-teal  (hero, gradients)
-   · accent / energy  : #FFD700 gold  (key numbers, primary CTA; #FF9E52 orange = its gradient partner)
+   - brand / dominant : #00BECD teal → #0093BA deep-teal  (hero, gradients)
+   - accent / energy  : #FFD700 gold  (key numbers, primary CTA; #FF9E52 orange = its gradient partner)
    Semantic colors (success / danger) use Tailwind emerald / rose — not brand colors. */
 :root {
   --font-sans: "Pretendard Variable", "Pretendard", -apple-system, BlinkMacSystemFont,

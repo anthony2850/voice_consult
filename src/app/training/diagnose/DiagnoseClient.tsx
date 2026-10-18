@@ -21,7 +21,7 @@ export default function DiagnoseClient() {
   const router = useRouter()
   const params = useSearchParams()
   const { loading, profile, startTrack, insertSession } = useTrack()
-  // 트랙 전환에서 왔으면 바꾸려는 상황·고민이 쿼리로 온다. 진단을 마쳐야 트랙이 바뀐다.
+  // 트랙 전환에서 왔으면 바꾸려는 상황, 고민이 쿼리로 온다. 진단을 마쳐야 트랙이 바뀐다.
   const qScene = params.get('scene')
   const qConcern = params.get('concern')
   const targetScene: Scene | null = SCENE_ORDER.includes(qScene as Scene) ? (qScene as Scene) : profile.scene

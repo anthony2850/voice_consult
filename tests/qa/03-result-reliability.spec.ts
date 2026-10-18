@@ -31,7 +31,7 @@ test.describe('결과 페이지 신뢰성', () => {
     }, SAMPLE_EMOTIONS)
     await page.reload()
 
-    await expect(page.getByText('OpenAI 음성 분석 · gpt-audio-1.5')).toBeVisible()
+    await expect(page.getByText('OpenAI gpt-audio-1.5 음성 분석')).toBeVisible()
   })
 
   test('감정 데이터 주입 후 페르소나가 올바르게 표시됨', async ({ page }) => {

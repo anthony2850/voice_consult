@@ -6,7 +6,7 @@ import { LegalLinks } from '@/components/legal/LegalPage'
 
 // What the analysis actually measures — keep in sync with lib/voiceScores.ts.
 const METRICS = [
-  { emoji: '〰️', name: '목소리 떨림', how: 'Jitter·Shimmer' },
+  { emoji: '〰️', name: '목소리 떨림', how: 'Jitter, Shimmer' },
   { emoji: '⏱️', name: '말 속도', how: '초당 음절 수' },
   { emoji: '🎵', name: '억양 변화', how: '피치 변화폭' },
   { emoji: '🔊', name: '목소리 크기', how: '평균 음량' },

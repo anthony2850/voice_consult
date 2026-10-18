@@ -20,7 +20,7 @@ const STEP_ORDER: Step[] = ['status', 'retention', 'exerciseA', 'exerciseB', 'pe
 const VOICE_USE_OPTIONS: { value: VoiceUse; label: string; hint: string }[] = [
   { value: 'low', label: '거의 안 썼어요', hint: '조용한 하루' },
   { value: 'normal', label: '보통이에요', hint: '평소만큼' },
-  { value: 'high', label: '많이 썼어요', hint: '회의·강의·노래' },
+  { value: 'high', label: '많이 썼어요', hint: '회의, 강의, 노래' },
 ]
 
 function fmt(metric: keyof typeof METRIC_INFO, m: Measure | null): string {
@@ -111,7 +111,7 @@ export default function SessionClient() {
         effort, pain, met_criterion: met, next_rung: next,
       })
       if (ok && next !== current) await setTrackRung(next)
-      // 힘든 정도·통증은 건강 관련 자가 응답이라 분석 도구(GA·Meta)로 보내지 않는다. DB에만 저장.
+      // 힘든 정도와 통증은 건강 관련 자가 응답이라 분석 도구(GA, Meta)로 보내지 않는다. DB에만 저장.
       trackEvent('training_session_completed', {
         concern: track!.concern, rung: current, next_rung: next, met: met ?? 'na', verdict,
       })
@@ -129,8 +129,8 @@ export default function SessionClient() {
       <div className="relative bg-gradient-to-br from-[#0093BA] to-[#00BECD] px-5 pt-10 pb-6 overflow-hidden">
         <div className="absolute -top-10 -right-10 w-48 h-48 rounded-full bg-white/10 blur-3xl" />
         <div className="relative z-10">
-          <p className="text-white/80 text-xs mb-1">{track.emoji} {track.label} 트랙 · {sessionIndex + 1}번째 세션</p>
-          <h1 className="text-xl font-black text-white">{current}단계 · {getRung(current).title}</h1>
+          <p className="text-white/80 text-xs mb-1">{track.emoji} {track.label} 트랙, {sessionIndex + 1}번째 세션</p>
+          <h1 className="text-xl font-black text-white">{current}단계: {getRung(current).title}</h1>
           <p className="text-white/80 text-xs mt-2">{track.keyInfo}</p>
         </div>
       </div>
@@ -186,7 +186,7 @@ export default function SessionClient() {
           return (
             <RecordStep
               key={`a-${r.id}`}
-              eyebrow={`연습 1 · ${rungs.a}단계 (몸 풀기)`}
+              eyebrow={`연습 1: ${rungs.a}단계 (몸 풀기)`}
               title={r.title}
               keyInfo={track.keyInfo}
               instructions={r.instructions}
@@ -209,7 +209,7 @@ export default function SessionClient() {
           return (
             <RecordStep
               key={`b-${r.id}`}
-              eyebrow={`연습 2 · ${rungs.b}단계 (도전)`}
+              eyebrow={`연습 2: ${rungs.b}단계 (도전)`}
               title={r.title}
               keyInfo={track.keyInfo}
               instructions={r.instructions}

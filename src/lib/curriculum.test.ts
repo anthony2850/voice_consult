@@ -30,7 +30,7 @@ describe('ladder', () => {
 })
 
 describe('sonorant scripts (rung 3)', () => {
-  it('contain only ㄴ·ㄹ·ㅁ·ㅇ onsets and codas — nothing that breaks the carrier', () => {
+  it('contain only ㄴ, ㄹ, ㅁ, ㅇ onsets and codas — nothing that breaks the carrier', () => {
     for (const s of SONORANT_SCRIPTS) {
       for (const ch of s) {
         const j = jamo(ch)
@@ -42,7 +42,7 @@ describe('sonorant scripts (rung 3)', () => {
   })
 })
 
-describe('wording (8교시 4부 · 5교시 48쪽)', () => {
+describe('wording (8교시 4부, 5교시 48쪽)', () => {
   const texts = [
     ...LADDER.flatMap((r) => r.instructions),
     ...Object.values(TRACKS).flatMap((t) => [t.keyInfo, t.goal, t.lastWord, ...t.variations.flatMap((v) => [v.change, v.hold, v.observe])]),

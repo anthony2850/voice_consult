@@ -11,7 +11,7 @@ function emo(over: Record<string, number>): Record<string, number> {
   return { ...Object.fromEntries(SCENE_EMOTIONS.map((k) => [k, 0])), ...over }
 }
 
-/** pitchCV·말 속도·세기 변동만 정한 음향 특징 */
+/** pitchCV, 말 속도, 세기 변동만 정한 음향 특징 */
 function feat(o: { cv?: number; rate?: number; rms?: number; jitter?: number }): AudioFeatures {
   // rate = onsets_per_second (실측 초당 1회 안팎)
   return {
@@ -107,7 +107,7 @@ describe('whySentence', () => {
 })
 
 describe('real model output', () => {
-  it('a calm, content sample (gpt-audio, 2026-10-18) lands in calm · clear, not on the border', () => {
+  it('a calm, content sample (gpt-audio, 2026-10-18) lands in calm, clear, not on the border', () => {
     const r = pickScene(emo({ Calmness: 0.5, Contemplation: 0.3, Excitement: 0.2, Contentment: 0.2, Joy: 0.1, 'Aesthetic Appreciation': 0.1 }), null)
     expect(r.energy).toBeLessThan(-0.1)
     expect(r.mood).toBeGreaterThan(0.1)

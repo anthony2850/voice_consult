@@ -52,12 +52,12 @@ export function Table({ head, rows }: { head: string[]; rows: React.ReactNode[][
   )
 }
 
-/** 홈·로그인·마이페이지 하단에 붙이는 링크 한 줄 */
+/** 홈, 로그인, 마이페이지 하단에 붙이는 링크 한 줄 */
 export function LegalLinks({ className = '' }: { className?: string }) {
   return (
     <p className={`text-[11px] text-muted-foreground text-center ${className}`}>
       <Link href="/terms" className="underline underline-offset-2">이용약관</Link>
-      <span className="mx-2">·</span>
+      <span className="inline-block w-5" aria-hidden="true" />
       <Link href="/privacy" className="underline underline-offset-2 font-semibold">개인정보처리방침</Link>
     </p>
   )

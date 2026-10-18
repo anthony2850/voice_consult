@@ -32,13 +32,6 @@ export interface Persona {
   signature: string[]
 }
 
-export const QUADRANT_LABEL: Record<Quadrant, { energy: '들뜸' | '차분'; mood: '맑음' | '흐림' }> = {
-  'up-clear': { energy: '들뜸', mood: '맑음' },
-  'down-clear': { energy: '차분', mood: '맑음' },
-  'down-cloudy': { energy: '차분', mood: '흐림' },
-  'up-cloudy': { energy: '들뜸', mood: '흐림' },
-}
-
 export const PERSONAS: Persona[] = [
   {
     id: 'concert',

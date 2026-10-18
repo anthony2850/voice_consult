@@ -76,7 +76,7 @@ async function analyzeWithOpenAI(audioBlob: Blob): Promise<Record<string, number
             {
               type: 'text',
               text:
-                '위 오디오에 담긴 화자의 목소리 톤·발성·운율을 듣고 다음 감정 각각의 ' +
+                '위 오디오에 담긴 화자의 목소리 톤, 발성, 운율을 듣고 다음 감정 각각의 ' +
                 '강도(0.0~1.0)를 추정하고 제공된 함수로 기록하세요. ' +
                 '키는 정확히 아래 영문 표기를 사용하세요.\n\n' +
                 `감정 목록: ${EMOTIONS_TO_RATE.join(', ')}`,

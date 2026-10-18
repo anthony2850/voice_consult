@@ -151,7 +151,7 @@ export default function ResultClient() {
     try {
       await navigator.share({
         title: `내 목소리는 '${persona.name}' 같대요`,
-        text: `${persona.tagline} — 너는 어떤 장면처럼 들릴까?`,
+        text: `${persona.tagline}. 너는 어떤 페르소나일까?`,
         url: shareUrl,
       })
       trackEvent('share', { method: 'web_share', content_type: 'result', persona_id: persona.id, url_source: urlSource })
@@ -167,11 +167,11 @@ export default function ResultClient() {
       {/* ── Scene header ── */}
       <div className="px-5 pt-8 pb-7" style={{ background: sceneTint(persona.color, 22) }}>
         <p className="text-xs font-semibold" style={{ color: ink }}>
-          {isShared ? '친구의 목소리 장면' : '오늘의 목소리 장면'}
+          {isShared ? '친구의 목소리 페르소나' : '오늘의 목소리 페르소나'}
         </p>
         {meta && (
           <p className="text-[11px] mt-0.5" style={{ color: ink, opacity: 0.8 }}>
-            {meta.source} 음성 분석{meta.model ? ` · ${meta.model}` : ''}
+            {meta.source}{meta.model ? ` ${meta.model}` : ''} 음성 분석
           </p>
         )}
         <div className="h-4" aria-hidden="true" />
@@ -236,7 +236,7 @@ export default function ResultClient() {
               }}
               className="w-full h-13 px-4 py-3.5 rounded-2xl gradient-primary text-gray-900 text-sm font-bold flex items-center justify-center gap-2 shadow-lg shadow-[#FFD700]/30 active:scale-[0.98] transition-transform"
             >
-              <span>이 장면을 만든 수치 보기</span>
+              <span>이 페르소나를 만든 수치 보기</span>
               <ChevronRight size={16} className="shrink-0 opacity-70" />
             </button>
           )}
@@ -249,7 +249,7 @@ export default function ResultClient() {
               className="w-full h-13 px-4 py-3.5 rounded-2xl gradient-primary text-gray-900 text-sm font-bold flex items-center justify-center gap-2 shadow-lg shadow-[#FFD700]/30 active:scale-[0.98] transition-transform"
             >
               <Mic size={16} className="shrink-0" />
-              <span>내 목소리는 어떤 장면일까?</span>
+              <span>내 목소리는 어떤 페르소나일까?</span>
             </button>
           )}
           <Button
@@ -261,7 +261,7 @@ export default function ResultClient() {
             <Share2 size={16} />
             공유하기
           </Button>
-          <div className="flex items-center justify-center gap-4 pt-1 text-xs text-muted-foreground">
+          <div className="flex items-center justify-center gap-8 pt-1 text-xs text-muted-foreground">
             <button
               onClick={() => {
                 trackEvent('result_retry_clicked', { persona_id: persona.id })
@@ -271,7 +271,6 @@ export default function ResultClient() {
             >
               다시 분석하기
             </button>
-            <span aria-hidden="true">·</span>
             <button
               onClick={() => {
                 trackEvent('result_explore_personas_clicked', { persona_id: persona.id })
@@ -279,7 +278,7 @@ export default function ResultClient() {
               }}
               className="underline-offset-4 hover:underline"
             >
-              다른 장면 보기
+              다른 페르소나 보기
             </button>
           </div>
         </div>

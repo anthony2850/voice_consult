@@ -13,7 +13,7 @@ export interface TrackProfile {
   baseline: Measure | null
 }
 
-/** training_sessions 한 행 — 관찰일지 (4교시 54·55쪽) */
+/** training_sessions 한 행 — 관찰일지 (4교시 54, 55쪽) */
 export interface TrainingSessionRow {
   id: string
   created_at: string
@@ -164,7 +164,7 @@ export function useTrack() {
     [sessions],
   )
 
-  /** 진단 없이 트랙을 바꾼다 (resume·reuse, 또는 재진단을 건너뛴 경우) */
+  /** 진단 없이 트랙을 바꾼다 (resume, reuse, 또는 재진단을 건너뛴 경우) */
   const switchTrack = useCallback(async (
     next: { scene: Scene; concern: ConcernSlug }, rung: RungLevel, baseline: Measure | null,
   ) => startTrack({ concern: next.concern, rung, baseline, scene: next.scene }), [startTrack])

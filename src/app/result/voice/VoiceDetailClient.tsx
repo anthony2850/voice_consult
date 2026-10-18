@@ -147,7 +147,7 @@ export default function VoiceDetailClient() {
         <div className="mb-5 text-5xl" aria-hidden="true">🎙️</div>
         <h1 className="mb-2 text-xl font-bold text-foreground">표시할 목소리 진단이 없어요</h1>
         <p className="mb-6 max-w-sm text-sm leading-relaxed text-muted-foreground">
-          목소리를 녹음하면 안정감·전달력·표현력을 측정해 드려요.
+          목소리를 녹음하면 안정감, 전달력, 표현력을 측정해 드려요.
         </p>
         <Button
           size="lg"
@@ -180,7 +180,7 @@ export default function VoiceDetailClient() {
             className="flex items-center gap-1 text-white/80 text-xs mb-4 active:opacity-70"
           >
             <ChevronLeft size={14} />
-            장면 결과
+            페르소나 결과
           </button>
           <p className="text-white/80 text-xs font-medium mb-1">내 목소리 진단</p>
           <h1 className="text-2xl font-black text-white">{summary}</h1>
@@ -202,7 +202,7 @@ export default function VoiceDetailClient() {
           title="목소리 안정감"
           score={scores.stability}
           description={getStabilityDesc(scores.stability)}
-          detail={`Jitter ${features.voice_quality.jitter_rel_pct.toFixed(2)}% · Shimmer ${features.voice_quality.shimmer_rel_pct.toFixed(2)}%`}
+          detail={`Jitter ${features.voice_quality.jitter_rel_pct.toFixed(2)}%, Shimmer ${features.voice_quality.shimmer_rel_pct.toFixed(2)}%`}
           animate={animate}
         />
         <ScoreCard
@@ -210,7 +210,7 @@ export default function VoiceDetailClient() {
           title="말하기 여유 및 전달력"
           score={scores.pace}
           description={getPaceDesc(scores.pace, features.rhythm.onsets_per_second)}
-          detail={`초당 ${features.rhythm.onsets_per_second.toFixed(1)}음절 · 총 ${features.rhythm.onset_count}회 · ${features.duration_sec.toFixed(1)}초`}
+          detail={`초당 ${features.rhythm.onsets_per_second.toFixed(1)}음절, 총 ${features.rhythm.onset_count}회, ${features.duration_sec.toFixed(1)}초`}
           animate={animate}
         />
         <ScoreCard
@@ -218,7 +218,7 @@ export default function VoiceDetailClient() {
           title="생동감 및 표현력"
           score={scores.expressiveness}
           description={getExpressivenessDesc(scores.expressiveness)}
-          detail={`피치 변화폭 ${features.pitch.std_hz.toFixed(1)}Hz · 평균 음량 ${features.energy.db_mean.toFixed(1)}dB`}
+          detail={`피치 변화폭 ${features.pitch.std_hz.toFixed(1)}Hz, 평균 음량 ${features.energy.db_mean.toFixed(1)}dB`}
           animate={animate}
         />
 
