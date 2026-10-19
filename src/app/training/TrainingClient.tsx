@@ -110,7 +110,7 @@ export default function TrainingClient() {
             </button>
             <PrimaryButton
               onClick={() => {
-                trackEvent('training_session_cta', { concern: current.concern, rung: current.rung, source: 'hub' })
+                trackEvent('training_session_cta', { concern: current.concern, rung: current.rung, from: 'hub' })
                 router.push('/training/session')
               }}
             >

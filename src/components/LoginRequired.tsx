@@ -12,7 +12,7 @@ import Link from 'next/link'
 
 /** OAuth 로그인. 끝나면 nextPath(기본: 지금 화면)로 돌아온다. */
 export function signIn(provider: 'google' | 'kakao', nextPath?: string, source = 'login_required') {
-  trackEvent('login_clicked', { method: provider, source })
+  trackEvent('login_clicked', { method: provider, from: source })
   savePendingGuestData()
   setPostLoginPath(nextPath ?? `${window.location.pathname}${window.location.search}`)
   getSupabase().auth.signInWithOAuth({

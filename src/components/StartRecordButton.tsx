@@ -10,7 +10,7 @@ export default function StartRecordButton() {
     <Link
       href="/record"
       className="w-full max-w-[360px]"
-      onClick={() => trackEvent('click_start_record', { source: 'button' })}
+      onClick={() => trackEvent('click_start_record', { from: 'button' })}
     >
       <Button
         size="lg"
@@ -32,7 +32,7 @@ export function StartRecordMic() {
       href="/record"
       aria-label="내 목소리 분석 시작하기"
       className="relative flex items-center justify-center mb-8 active:scale-95 transition-transform"
-      onClick={() => trackEvent('click_start_record', { source: 'mic' })}
+      onClick={() => trackEvent('click_start_record', { from: 'mic' })}
     >
       {/* pulse rings */}
       <span className="absolute w-28 h-28 rounded-full bg-primary/25 animate-ping [animation-duration:2.4s]" />

@@ -61,7 +61,7 @@ export default function TrackClient() {
           </div>
           <PrimaryButton
             onClick={() => {
-              trackEvent('training_session_cta', { concern: track.concern, rung, source: 'track' })
+              trackEvent('training_session_cta', { concern: track.concern, rung, from: 'track' })
               router.push('/training/session')
             }}
           >
