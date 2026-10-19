@@ -223,7 +223,7 @@ export default function OnboardingClient() {
             ))}
           </dl>
           <button type="button" onClick={downloadIcs} className="mt-4 w-full h-11 rounded-full border border-border flex items-center justify-center gap-2 text-[14px] font-semibold active:bg-secondary">
-            <CalendarPlus size={17} /> 캘린더에 알림 추가
+            <CalendarPlus size={17} /> 캘린더에 연습 전화 추가
           </button>
         </section>
       </OnboardingShell>

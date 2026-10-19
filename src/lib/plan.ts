@@ -54,6 +54,9 @@ export function daysTrainedThisWeek(dates: string[], now: Date = new Date()): nu
 
 // ─── 캘린더 알림 (.ics) ──────────────────────────────────────────────────────
 
+/** 알림을 누르면 열리는 연습 전화 화면 */
+export const PRACTICE_CALL_URL = 'https://mytoneai.vercel.app/call?from=calendar'
+
 /** 주간 반복 일정 하나. 시각은 기기 시간대 그대로(floating time) 둔다. */
 export function buildPracticeIcs(plan: Plan, now: Date = new Date()): string {
   const t = PRACTICE_TIME[plan.time]
@@ -71,12 +74,12 @@ export function buildPracticeIcs(plan: Plan, now: Date = new Date()): string {
     `DTSTART:${stamp(start)}`,
     `DTEND:${stamp(end)}`,
     `RRULE:FREQ=WEEKLY;BYDAY=${WEEKLY_DAYS[plan.weeklyGoal]}`,
-    'SUMMARY:MyTone 목소리 훈련 5분',
-    'DESCRIPTION:오늘 세션을 시작해요. https://mytoneai.vercel.app/training',
-    'URL:https://mytoneai.vercel.app/training',
+    'SUMMARY:MyTone 코치의 연습 전화',
+    `DESCRIPTION:코치에게서 전화가 와요. 눌러서 받아 보세요. ${PRACTICE_CALL_URL}`,
+    `URL:${PRACTICE_CALL_URL}`,
     'BEGIN:VALARM',
     'ACTION:DISPLAY',
-    'DESCRIPTION:MyTone 목소리 훈련 5분',
+    'DESCRIPTION:MyTone 코치에게서 전화가 와요',
     'TRIGGER:PT0M',
     'END:VALARM',
     'END:VEVENT',

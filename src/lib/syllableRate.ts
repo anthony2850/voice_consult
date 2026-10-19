@@ -123,3 +123,27 @@ export function syllableRate(
     articulationRate: phonationSec > 0 ? count / phonationSec : 0,
   }
 }
+
+/**
+ * 첫마디가 시작된 시점(초). 녹음 시작부터, 무음 기준선(가장 큰 세기 − 25dB) 위가
+ * 0.15초 이상 이어진 첫 지점. 소리가 없으면 null.
+ * 전화 연습에서 "질문이 끝나고 대답을 시작하기까지" 걸린 시간을 잰다.
+ */
+export function speechOnsetSec(samples: Float32Array, sampleRate: number, opts: Partial<typeof SYLLABLE_DEFAULTS> = {}): number | null {
+  const { winSec, silenceDb } = { ...SYLLABLE_DEFAULTS, ...opts }
+  const { y, sr } = downsample(samples, sampleRate)
+  const db = intensityDb(y, sr, winSec)
+  if (db.length < 3) return null
+  const sorted = [...db].sort((p, q) => p - q)
+  const q99 = sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * 0.99))]
+  // 아주 조용한 녹음(최대 세기가 낮음)은 말이 없는 것으로 본다
+  if (q99 < -60) return null
+  const threshold = q99 - silenceDb
+  const need = Math.round(0.15 / HOP_SEC)
+  let run = 0
+  for (let i = 0; i < db.length; i++) {
+    run = db[i] > threshold ? run + 1 : 0
+    if (run >= need) return Math.max(0, (i - need + 1) * HOP_SEC)
+  }
+  return null
+}

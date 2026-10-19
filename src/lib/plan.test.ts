@@ -20,6 +20,7 @@ describe('buildPracticeIcs', () => {
     expect(ics).toContain('DTSTART:20261022T210000')
     expect(ics).toContain('DTEND:20261022T211000')
     expect(ics).toContain('BEGIN:VALARM')
+    expect(ics).toContain('URL:https://mytoneai.vercel.app/call?from=calendar')
     expect(ics.split('\r\n')[0]).toBe('BEGIN:VCALENDAR')
   })
   it('daily goal uses all seven days', () => {

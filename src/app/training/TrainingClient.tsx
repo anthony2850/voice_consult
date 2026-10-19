@@ -2,12 +2,12 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChevronRight, Plus } from 'lucide-react'
+import { CalendarPlus, ChevronRight, Phone, Plus } from 'lucide-react'
 import { useTrack } from '@/hooks/useTrack'
 import { SCENE_LABELS, TRACKS, getRung } from '@/lib/curriculum'
 import { listTracks, relativeDay, type TrackSummary } from '@/lib/trackList'
 import { toDateStr } from '@/lib/streak'
-import { daysTrainedThisWeek } from '@/lib/plan'
+import { PRACTICE_TIME, buildPracticeIcs, daysTrainedThisWeek } from '@/lib/plan'
 import { trackEvent } from '@/lib/analytics'
 import { PageHeader, Pill, PrimaryButton, SCENE_ICON } from '@/components/ds'
 
@@ -44,6 +44,17 @@ export default function TrainingClient() {
   const current = tracks.find((t) => t.current) ?? null
   const resting = tracks.filter((t) => !t.current)
   const weeklyGoal = plan?.weeklyGoal ?? 3
+  const callPlan = plan ?? { weeklyGoal: 3 as const, time: 'evening' as const, selfConcern: null }
+  const callTime = PRACTICE_TIME[callPlan.time]
+
+  const addCallToCalendar = () => {
+    const url = URL.createObjectURL(new Blob([buildPracticeIcs(callPlan)], { type: 'text/calendar' }))
+    const a = document.createElement('a')
+    a.href = url; a.download = 'mytone-call.ics'
+    document.body.appendChild(a); a.click(); a.remove()
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
+    trackEvent('call_calendar_added', { weekly: callPlan.weeklyGoal, time: callPlan.time })
+  }
   const weekDone = daysTrainedThisWeek(sessions.filter((s) => s.kind === 'session').map((s) => s.session_date))
   const doneToday = sessions.some((s) => s.session_date === todayStr && s.kind === 'session')
 
@@ -153,6 +164,30 @@ export default function TrainingClient() {
             </div>
           </section>
         )}
+
+        <section className="rounded-[28px] bg-secondary p-6">
+          <p className="eyebrow">연습 전화</p>
+          <p className="mt-1 text-[14px] text-muted-foreground leading-relaxed">
+            정한 시간에 코치가 전화를 걸어 질문해요. 받아서 20초 대답하면 첫마디와 말 빠르기를 알려 드려요.
+          </p>
+          <div className="mt-4 flex gap-2">
+            <button
+              type="button"
+              onClick={() => router.push('/call?from=hub')}
+              className="flex-1 h-11 rounded-full bg-card flex items-center justify-center gap-1.5 text-[14px] font-bold text-foreground active:opacity-70"
+            >
+              <Phone size={16} aria-hidden="true" /> 지금 받아 보기
+            </button>
+            <button
+              type="button"
+              onClick={addCallToCalendar}
+              className="flex-1 h-11 rounded-full bg-card flex items-center justify-center gap-1.5 text-[14px] font-bold text-foreground active:opacity-70"
+            >
+              <CalendarPlus size={16} aria-hidden="true" /> 캘린더에 추가
+            </button>
+          </div>
+          <p className="mt-2 text-[12px] text-muted-foreground">{callPlan.weeklyGoal === 7 ? '매일' : `주 ${callPlan.weeklyGoal}회`} {callTime.label} {callTime.hh}:{String(callTime.mm).padStart(2, '0')}에 울려요.</p>
+        </section>
 
         {current ? (
           <>

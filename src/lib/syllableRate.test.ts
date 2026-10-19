@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { syllableRate } from './syllableRate'
+import { speechOnsetSec, syllableRate } from './syllableRate'
 
 /** 16비트 PCM WAV를 첫 채널 Float32Array로 읽는다 */
 function readWav(path: string): { x: Float32Array; sr: number } {
@@ -66,5 +66,21 @@ describe('syllableRate', () => {
     expect(r.count).toBeLessThanOrEqual(26)
     expect(r.speechRate).toBeGreaterThan(3)
     expect(r.speechRate).toBeLessThan(7)
+  })
+})
+
+describe('speechOnsetSec', () => {
+  it('finds when speech starts after silence', () => {
+    const sr = 16000
+    const voice = syntheticSyllables(5, 2, sr)
+    const x = new Float32Array(Math.round(sr * 3.5))
+    x.set(voice, Math.round(sr * 1.2))
+    const t = speechOnsetSec(x, sr)
+    expect(t).not.toBeNull()
+    expect(t!).toBeGreaterThan(1.0)
+    expect(t!).toBeLessThan(1.5)
+  })
+  it('returns null for silence', () => {
+    expect(speechOnsetSec(new Float32Array(16000), 16000)).toBeNull()
   })
 })
