@@ -100,6 +100,12 @@ describe('suggestConcernsFromDiagnosis', () => {
     expect(s[0].concern).toBe('small_voice')
   })
 
+  it('does not flag slow speech as the fast concern', () => {
+    const ms = [m({ level: 1 }), m({ level: 2 }), m({ level: 3, onsets_per_second: 1.8 }), m({ level: 4, onsets_per_second: 2.0 })]
+    expect(suggestConcernsFromDiagnosis(ms).find((x) => x.concern === 'fast')?.boundary).toBeNull()
+    expect(diagnosisSteps('fast', ms)!.map((x) => x.note)).toEqual(['소리만이라 빠르기는 재지 않아요', '소리만이라 빠르기는 재지 않아요', '느긋했어요', '느긋했어요'])
+  })
+
   it('ignores pace on rungs 1–2 (no syllables there)', () => {
     const ms = [m({ level: 1, onsets_per_second: 0.5 }), m({ level: 2, onsets_per_second: 0.8 }), m({ level: 3 }), m({ level: 4 })]
     const s = suggestConcernsFromDiagnosis(ms)

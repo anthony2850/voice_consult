@@ -128,9 +128,15 @@ export function suggestConcernsFromDiagnosis(measures: Measure[]): DiagnosisSugg
     out.push({ concern: 'trembling', boundary: jitterBoundary, reason: `${jitterBoundary}단계부터 목소리가 떨리기 시작했어요.` })
   }
 
-  const paceBoundary = findBoundary('pace', measures.filter((m) => (m.level ?? 0) >= 3))
+  // 빨라지는 목소리는 빠를 때만 본다. 느린 건 이 트랙(늦추는 연습)의 문제가 아니고,
+  // 3단계는 이어 읽는 과제라 원래 느려진다. 세션 성공 기준은 지나치게 느려지지 않게 범위로 둔다.
+  const fastStep = measures
+    .filter((m) => (m.level ?? 0) >= 3)
+    .sort((a, b) => a.level! - b.level!)
+    .find((m) => m.onsets_per_second > PACE_RANGE.max)
+  const paceBoundary = fastStep?.level ?? null
   if (paceBoundary !== null) {
-    out.push({ concern: 'fast', boundary: paceBoundary, reason: `${paceBoundary}단계부터 말이 적당한 빠르기를 벗어났어요.` })
+    out.push({ concern: 'fast', boundary: paceBoundary, reason: `${paceBoundary}단계부터 말이 빨라졌어요.` })
   }
 
   const first = byLevel.get(1)
@@ -180,8 +186,7 @@ export function diagnosisSteps(concern: ConcernSlug, measures: Measure[]): Diagn
     if (concern === 'fast') {
       if (level < 3) return { level, state: 'skip', note: '소리만이라 빠르기는 재지 않아요' }
       if (m.onsets_per_second > PACE_RANGE.max) return { level, state: 'off', note: '빨랐어요' }
-      if (m.onsets_per_second < PACE_RANGE.min) return { level, state: 'off', note: '느렸어요' }
-      return { level, state: 'ok', note: '괜찮았어요' }
+      return { level, state: 'ok', note: m.onsets_per_second < PACE_RANGE.min ? '느긋했어요' : '괜찮았어요' }
     }
     // small_voice: 마이크 거리 때문에 절대값 대신 허밍과 실제 문장의 차이만 본다
     if (level === 1) return { level, state: 'base', note: '이 크기를 기준으로 비교해요' }
