@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { ArrowUpRight, Copy, Check, X } from 'lucide-react'
-import { IN_APP_NAME, buildEscapePlan } from '@/lib/inAppBrowser'
+import { buildEscapePlan } from '@/lib/inAppBrowser'
 import { trackEvent } from '@/lib/analytics'
 
 /**
@@ -18,7 +18,6 @@ export function InAppEscapeSheet({ url, open, onClose, sub }: { url: string; ope
   }, [open, plan])
 
   if (!open || !plan) return null
-  const name = IN_APP_NAME[plan.app]
   const browser = plan.os === 'ios' ? '사파리' : '크롬'
 
   const copy = async () => {
@@ -42,11 +41,11 @@ export function InAppEscapeSheet({ url, open, onClose, sub }: { url: string; ope
       <div className="absolute inset-x-0 bottom-0 rounded-t-[32px] bg-background px-5 pt-5 pb-[max(env(safe-area-inset-bottom),20px)]">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="eyebrow">마이크를 켜려면</p>
+            <p className="eyebrow">다음 단계</p>
             <h2 id="inapp-title" className="mt-1 text-[22px] leading-tight font-black tracking-[-0.02em] text-foreground">
-              {name} 안에서는
+              {browser}에서
               <br />
-              마이크를 켤 수 없어요
+              이어서 할게요
             </h2>
           </div>
           <button type="button" onClick={onClose} aria-label="닫기" className="shrink-0 w-10 h-10 rounded-full bg-secondary flex items-center justify-center text-foreground">
@@ -54,7 +53,7 @@ export function InAppEscapeSheet({ url, open, onClose, sub }: { url: string; ope
           </button>
         </div>
         <p className="mt-2 text-[14px] leading-relaxed text-muted-foreground">
-          {browser}에서 열면 {sub ?? '고른 질문 그대로 바로 이어서 해요'}. 녹음은 저장하지 않아요.
+          {sub ?? '고른 질문 그대로 열려요'}. 녹음은 저장하지 않아요.
         </p>
 
         {plan.button && (
