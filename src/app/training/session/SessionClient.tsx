@@ -6,7 +6,7 @@ import { useTrack } from '@/hooks/useTrack'
 import { SCENE_SCRIPTS, TRACKS, getRung, type RungLevel } from '@/lib/curriculum'
 import {
   METRIC_INFO, allowStrongVariations, meetsCriterion, metricValue, nextRung, performanceCopy,
-  pickVariation, retentionCopy, retentionVerdict, sessionRungs, type Measure, type VoiceUse,
+  pickVariation, retentionCopy, retentionVerdict, rungReason, sessionRungs, type Measure, type VoiceUse,
 } from '@/lib/trainingCycle'
 import { measureBlob } from '@/lib/trainingMeasure'
 import RecordStep from '@/components/training/RecordStep'
@@ -136,6 +136,12 @@ export default function SessionClient() {
 
       <div className="px-5 pt-4 pb-8 space-y-4">
         {failNote && <p className="text-[13px] text-caution px-1">{failNote}</p>}
+
+        {step === 'status' && (
+          <p className="rounded-2xl border-2 border-accent/15 px-4 py-3 text-[14px] font-semibold text-foreground leading-relaxed" role="status">
+            {rungReason(track.concern, current, lastSession)}
+          </p>
+        )}
 
         {step === 'status' && (
           <div className="glass rounded-3xl p-6 space-y-4">

@@ -11,6 +11,8 @@ import {
   retentionVerdict,
   planTrackSwitch,
   pickFromPool,
+  diagnosisSteps,
+  rungReason,
   type Measure,
 } from './trainingCycle'
 import { TRACKS, type RungLevel } from './curriculum'
@@ -222,5 +224,52 @@ describe('pickFromPool', () => {
   it('returns an element from the pool', () => {
     const pool = ['a', 'b', 'c']
     expect(pool).toContain(pickFromPool(pool))
+  })
+})
+
+describe('diagnosisSteps', () => {
+  const ms = [
+    m({ level: 1, db_mean: -18 }),
+    m({ level: 2 }),
+    m({ level: 3, jitter_rel_pct: 4 }),
+    m({ level: 4, jitter_rel_pct: 4, onsets_per_second: 6.5, db_mean: -24 }),
+  ]
+  it('trembling marks each step with the same rule as the boundary', () => {
+    const st = diagnosisSteps('trembling', ms)!
+    expect(st.map((x) => x.state)).toEqual(['ok', 'ok', 'off', 'off'])
+    expect(st.findIndex((x) => x.state === 'off') + 1).toBe(suggestConcernsFromDiagnosis(ms).find((s) => s.concern === 'trembling')!.boundary)
+  })
+  it('fast skips the sound-only steps', () => {
+    expect(diagnosisSteps('fast', ms)!.map((x) => x.state)).toEqual(['skip', 'skip', 'ok', 'off'])
+  })
+  it('small voice compares the real sentence with the hum only', () => {
+    expect(diagnosisSteps('small_voice', ms)!.map((x) => x.state)).toEqual(['base', 'skip', 'skip', 'off'])
+  })
+  it('diction has no measured steps', () => {
+    expect(diagnosisSteps('diction', ms)).toBeNull()
+  })
+})
+
+describe('rungReason', () => {
+  const last = (o: Partial<{ rung: RungLevel; next_rung: RungLevel; met_criterion: boolean | null; effort: number; pain: boolean }>) =>
+    ({ rung: 3 as RungLevel, next_rung: 3 as RungLevel, met_criterion: null, effort: 2, pain: false, ...o })
+  it('first session explains the diagnosis', () => {
+    expect(rungReason('trembling', 3, null)).toBe('진단에서 3단계부터 목소리가 떨렸어요. 처음 어려워진 단계부터 연습해요.')
+    expect(rungReason('fast', 5, null)).toContain('4단계까지는 괜찮았어요')
+    expect(rungReason('diction', 4, null)).toContain('4단계부터')
+  })
+  it('later sessions explain the move from last time', () => {
+    expect(rungReason('trembling', 4, last({ rung: 3, next_rung: 4, met_criterion: true }))).toContain('올라왔어요')
+    expect(rungReason('trembling', 2, last({ rung: 3, next_rung: 2, pain: true }))).toContain('아팠어요')
+    expect(rungReason('trembling', 2, last({ rung: 3, next_rung: 2, effort: 5 }))).toContain('힘들었어요')
+    expect(rungReason('trembling', 3, last({ met_criterion: true, effort: 4 }))).toContain('한 번 더')
+    expect(rungReason('trembling', 3, last({ met_criterion: false }))).toContain('같은 단계')
+  })
+  it('falls back to the diagnosis when the last session did not set this step', () => {
+    expect(rungReason('trembling', 2, last({ rung: 4, next_rung: 4 }))).toContain('진단에서 2단계부터')
+  })
+  it('copy avoids middle dots', () => {
+    const all = [rungReason('small_voice', 4, null), ...['trembling', 'fast', 'small_voice'].flatMap((c) => diagnosisSteps(c as 'trembling', [m({ level: 1 }), m({ level: 4 })])!.map((x) => x.note))]
+    expect(all.join(' ')).not.toMatch(/\u00B7/)
   })
 })

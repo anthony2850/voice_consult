@@ -9,12 +9,13 @@ import {
   type ConcernSlug, type RungLevel, type Scene,
 } from '@/lib/curriculum'
 import {
-  JITTER_LIMIT, PACE_RANGE, startRungFromBoundary, suggestConcernsFromDiagnosis, type DiagnosisSuggestion, type Measure,
+  JITTER_LIMIT, PACE_RANGE, diagnosisSteps, startRungFromBoundary, suggestConcernsFromDiagnosis, type DiagnosisSuggestion, type Measure,
 } from '@/lib/trainingCycle'
 import { PRACTICE_TIME } from '@/lib/plan'
 import { Checklist, Display, Eyebrow, MetricRow, OptionCard, PageHeader, Pill, PrimaryButton, ProgressBar, SpecialButton, SurfaceCard } from '@/components/ds'
 import { measureBlob } from '@/lib/trainingMeasure'
 import RecordStep from '@/components/training/RecordStep'
+import DiagnosisLadder from '@/components/training/DiagnosisLadder'
 import { trackEvent } from '@/lib/analytics'
 import { iGa } from '@/lib/voiceScene'
 
@@ -87,12 +88,16 @@ export default function DiagnoseClient() {
     }
   }
 
+  function startRungFor(concern: ConcernSlug): RungLevel {
+    if (TRACKS[concern].metric === 'self') return 4
+    return startRungFromBoundary(suggestions.find((x) => x.concern === concern)?.boundary ?? null)
+  }
+
   async function handleConfirm() {
     if (!picked) return
     setSaveError(null)
     const s = suggestions.find((x) => x.concern === picked)
-    const track = TRACKS[picked]
-    const startRung: RungLevel = track.metric === 'self' ? 4 : startRungFromBoundary(s?.boundary ?? null)
+    const startRung = startRungFor(picked)
     const baseline = measures.find((m) => m.level === 4) ?? null
     setPlanned({ concern: picked, rung: startRung })
     setPlanDone(0)
@@ -215,6 +220,10 @@ export default function DiagnoseClient() {
               ))}
             </div>
           </div>
+          {picked && (() => {
+            const steps = diagnosisSteps(picked, measures)
+            return steps && <DiagnosisLadder label={CONCERN_LABELS[picked]} steps={steps} start={startRungFor(picked)} />
+          })()}
           {saveError && <p className="text-[13px] text-destructive" role="alert">{saveError}</p>}
         </div>
         <div className="shrink-0 px-5 pt-2 pb-[max(env(safe-area-inset-bottom),20px)]">

@@ -135,7 +135,7 @@ export function suggestConcernsFromDiagnosis(measures: Measure[]): DiagnosisSugg
 
   const first = byLevel.get(1)
   const base = byLevel.get(4)
-  if (first && base && base.db_mean < first.db_mean - 4) {
+  if (first && base && base.db_mean < first.db_mean - SMALL_VOICE_DROP_DB) {
     out.push({ concern: 'small_voice', boundary: 4, reason: '허밍보다 실제 문장을 말할 때 목소리가 많이 작아졌어요.' })
   }
 
@@ -149,6 +149,47 @@ export function suggestConcernsFromDiagnosis(measures: Measure[]): DiagnosisSugg
     }
   }
   return out
+}
+
+/** 진단에서 실제 문장이 허밍보다 이만큼 작아지면 작은 목소리로 본다 (dB) */
+const SMALL_VOICE_DROP_DB = 4
+
+export interface DiagnosisStep {
+  level: RungLevel
+  /** ok 괜찮음, off 흔들림, base 비교 기준, skip 이 고민은 이 단계에서 재지 않음 */
+  state: 'ok' | 'off' | 'base' | 'skip'
+  note: string
+}
+
+/**
+ * 고른 고민으로 진단 단계마다 어땠는지. suggestConcernsFromDiagnosis와 같은 기준을 쓴다.
+ * 발음은 측정하지 않으므로 null.
+ */
+export function diagnosisSteps(concern: ConcernSlug, measures: Measure[]): DiagnosisStep[] | null {
+  if (concern === 'diction') return null
+  const byLevel = new Map(measures.filter((m) => m.level != null).map((m) => [m.level!, m]))
+  const levels = [...byLevel.keys()].sort((a, b) => a - b)
+  const hum = byLevel.get(1)
+  return levels.map((level): DiagnosisStep => {
+    const m = byLevel.get(level)!
+    if (concern === 'trembling') {
+      return meetsCriterion('jitter', m)
+        ? { level, state: 'ok', note: '괜찮았어요' }
+        : { level, state: 'off', note: '떨렸어요' }
+    }
+    if (concern === 'fast') {
+      if (level < 3) return { level, state: 'skip', note: '소리만이라 빠르기는 재지 않아요' }
+      if (m.onsets_per_second > PACE_RANGE.max) return { level, state: 'off', note: '빨랐어요' }
+      if (m.onsets_per_second < PACE_RANGE.min) return { level, state: 'off', note: '느렸어요' }
+      return { level, state: 'ok', note: '괜찮았어요' }
+    }
+    // small_voice: 마이크 거리 때문에 절대값 대신 허밍과 실제 문장의 차이만 본다
+    if (level === 1) return { level, state: 'base', note: '이 크기를 기준으로 비교해요' }
+    if (level !== 4 || !hum) return { level, state: 'skip', note: '중간 단계는 비교하지 않아요' }
+    return m.db_mean < hum.db_mean - SMALL_VOICE_DROP_DB
+      ? { level, state: 'off', note: '허밍보다 많이 작아졌어요' }
+      : { level, state: 'ok', note: '허밍만큼 나왔어요' }
+  })
 }
 
 export interface PastSession {
@@ -223,6 +264,36 @@ export function nextRung(current: RungLevel, o: SessionOutcome): RungLevel {
   if (o.pain || o.effort >= 5) return Math.max(1, current - 1) as RungLevel
   if (o.met === true && o.effort <= 3) return Math.min(MAX_RUNG, current + 1) as RungLevel
   return current
+}
+
+const OFF_VERB: Record<Exclude<ConcernSlug, 'diction'>, string> = {
+  trembling: '목소리가 떨렸어요',
+  fast: '빠르기가 적당한 범위를 벗어났어요',
+  small_voice: '목소리가 작아졌어요',
+}
+
+/**
+ * 세션이 왜 이 단계에서 하는지 한 줄. 지난 세션이 지금 단계를 정했으면 그 이유를,
+ * 아니면(트랙 첫 세션) 진단 결과를 말한다.
+ */
+export function rungReason(
+  concern: ConcernSlug,
+  current: RungLevel,
+  last: { rung: RungLevel | null; next_rung: RungLevel | null; met_criterion: boolean | null; effort: number | null; pain: boolean } | null,
+): string {
+  if (last && last.rung != null && last.next_rung === current) {
+    if (current > last.rung) return '지난번에 기준을 지켰고 목도 편했어요. 한 단계 올라왔어요.'
+    if (current < last.rung) {
+      return last.pain
+        ? '지난번에 목이 아팠어요. 한 단계 내려와서 편하게 해요.'
+        : '지난번에 목이 많이 힘들었어요. 한 단계 내려와서 편하게 해요.'
+    }
+    if (last.met_criterion === true) return '지난번에 기준은 지켰지만 목이 조금 힘들었어요. 같은 단계를 한 번 더 해요.'
+    return '지난번과 같은 단계예요. 기준을 지키고 목이 편하면 다음 단계로 올라가요.'
+  }
+  if (concern === 'diction') return '발음은 실제 문장인 4단계부터 연습해요.'
+  if (current >= 5) return '진단한 4단계까지는 괜찮았어요. 그다음 단계부터 연습해요.'
+  return `진단에서 ${current}단계부터 ${OFF_VERB[concern]}. 처음 어려워진 단계부터 연습해요.`
 }
 
 /** 세션에서 연습할 두 계단: A = 성공 경험(한 계단 아래), B = 도전(현재 계단). */
