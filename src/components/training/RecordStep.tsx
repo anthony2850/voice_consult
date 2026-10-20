@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Mic, Square, RotateCcw } from 'lucide-react'
 import { useAudioRecorder } from '@/hooks/useAudioRecorder'
 import { useWaveform } from '@/hooks/useWaveform'
+import { useVoiceLine } from '@/hooks/useVoiceLine'
 import type { Variation } from '@/lib/curriculum'
 
 interface Props {
@@ -27,15 +28,19 @@ interface Props {
   doneLabel?: string
   /** 점수를 보여주지 않는 단계라는 안내 */
   silentNote?: string
+  /** 파형 대신 목소리 크기 선을 그린다. 연습 녹음에만 쓰고, 비교용 측정 녹음에는 쓰지 않는다 */
+  voiceLine?: boolean
 }
 
 export default function RecordStep({
   eyebrow, title, keyInfo, instructions, variation, script, scriptLabel = '읽어 주세요',
-  lastWord, maxSec, targetSec, prepSec, analyzing, onRecorded, doneLabel = '다음', silentNote,
+  lastWord, maxSec, targetSec, prepSec, analyzing, onRecorded, doneLabel = '다음', silentNote, voiceLine = false,
 }: Props) {
   const recorder = useAudioRecorder(maxSec)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   useWaveform({ analyser: recorder.analyserNode, canvasRef, active: recorder.state === 'recording' })
+  const lineRef = useRef<HTMLCanvasElement>(null)
+  useVoiceLine({ analyser: voiceLine ? recorder.analyserNode : null, canvasRef: lineRef, spanSec: targetSec ?? maxSec })
   const [prepLeft, setPrepLeft] = useState<number | null>(null)
   const prepTimer = useRef<number | null>(null)
 
@@ -127,7 +132,9 @@ export default function RecordStep({
 
       {recorder.state === 'recording' && (
         <div className="flex flex-col items-center gap-3">
-          <canvas ref={canvasRef} className="w-full h-12 rounded-xl" />
+          {voiceLine
+            ? <canvas ref={lineRef} className="w-full h-20" aria-label="목소리 크기 선" />
+            : <canvas ref={canvasRef} className="w-full h-12 rounded-xl" />}
           <p className="text-xs tabular-nums text-muted-foreground">{recorder.duration}초 / {maxSec}초</p>
           <button
             onClick={() => recorder.stop()}
@@ -148,6 +155,12 @@ export default function RecordStep({
 
       {reviewing && !analyzing && recorder.audioUrl && (
         <div className="flex flex-col gap-3">
+          {voiceLine && (
+            <div>
+              <canvas ref={lineRef} className="w-full h-20" aria-label="방금 녹음한 목소리 크기 선" />
+              <p className="mt-1 text-[12px] text-muted-foreground text-center">선이 곧고 끊기지 않을수록 고른 소리예요</p>
+            </div>
+          )}
           <audio controls src={recorder.audioUrl} className="w-full h-10" />
           <div className="flex gap-2">
             <button
