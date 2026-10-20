@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef, useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import {
   AlertCircle, Lightbulb, MessagesSquare, Mic, Pause, Play, Presentation, RefreshCw, RotateCcw, Sparkles, UserRound,
   type LucideIcon,
@@ -13,7 +13,8 @@ import { extractAudioFeaturesWithPraat } from '@/lib/extractAudioFeatures'
 import { splitRecordingToWav } from '@/lib/audioToWav'
 import { trackEvent } from '@/lib/analytics'
 import { readVoiceAnalysisResponse, VoiceAnalysisError } from '@/lib/voiceAnalysis'
-import { SPEAK_CATEGORIES, SPEAK_PROMPT_KEY, getSpeakCategory, pickPromptIndex, type SpeakCategory } from '@/lib/speakPrompts'
+import { SPEAK_CATEGORIES, SPEAK_PROMPT_KEY, getSpeakCategory, isSpeakCategory, pickPromptIndex, type SpeakCategory } from '@/lib/speakPrompts'
+import { InAppEscapeSheet } from '@/components/InAppEscapeSheet'
 import { OnboardingShell, OnboardingTitle } from '@/components/onboarding/OnboardingParts'
 import { OptionCard, Pill, PrimaryButton } from '@/components/ds'
 
@@ -52,17 +53,22 @@ export default function RecordClient() {
   const [analyzeError, setAnalyzeError] = useState<string | null>(null)
   const [currentTip, setCurrentTip] = useState(VOCAL_TIPS[0])
 
-  // 주제 고르기 → 말하기
-  const [stage, setStage] = useState<'topic' | 'talk'>('topic')
-  const [category, setCategory] = useState<SpeakCategory | null>(null)
-  const [promptIdx, setPromptIdx] = useState(0)
+  // 주제 고르기 → 말하기. 앱 안 브라우저에서 밖으로 나와 다시 열면 주소에 실린 질문으로 바로 이어진다.
+  const params = useSearchParams()
+  const urlCategory = params.get('category')
+  const urlQ = Number(params.get('q'))
+  const [stage, setStage] = useState<'topic' | 'talk'>(isSpeakCategory(urlCategory) ? 'talk' : 'topic')
+  const [category, setCategory] = useState<SpeakCategory | null>(isSpeakCategory(urlCategory) ? urlCategory : null)
+  const [promptIdx, setPromptIdx] = useState(Number.isInteger(urlQ) && urlQ >= 0 ? urlQ : 0)
+  const [escapeOpen, setEscapeOpen] = useState(false)
 
   useEffect(() => {
     setCurrentTip(VOCAL_TIPS[Math.floor(Math.random() * VOCAL_TIPS.length)])
   }, [])
 
-  const { state, duration, audioBlob, audioUrl, analyserNode, start, stop, markAndStopAfter, markSec, reset, error } =
+  const { state, duration, audioBlob, audioUrl, analyserNode, start, stop, markAndStopAfter, markSec, reset, error, micDenied } =
     useAudioRecorder(MAX_SECONDS)
+  useEffect(() => { if (micDenied) setEscapeOpen(true) }, [micDenied])
   // 녹음 중 단계: 말하기 → "아~"
   const phase: 'talk' | 'vowel' | null = state === 'recording' ? (markSec == null ? 'talk' : 'vowel') : null
   const speechSec = markSec ?? duration
@@ -319,6 +325,11 @@ export default function RecordClient() {
           <p>{error ?? analyzeError}</p>
         </div>
       )}
+      <InAppEscapeSheet
+        open={escapeOpen && micDenied}
+        onClose={() => setEscapeOpen(false)}
+        url={`${typeof window === 'undefined' ? '' : window.location.origin}/record?category=${category}&q=${promptIdx}`}
+      />
     </OnboardingShell>
   )
 }

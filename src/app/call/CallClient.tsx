@@ -10,6 +10,7 @@ import { trackEvent } from '@/lib/analytics'
 import { speechOnsetSec, syllableRate } from '@/lib/syllableRate'
 import { ANSWER_MAX_SEC, ANSWER_MIN_SEC, onsetFeedback, paceFeedback, pickCallQuestion, type Tone } from '@/lib/callPractice'
 import { Display, Eyebrow, MetricRow, Pill, PrimaryButton, SurfaceCard } from '@/components/ds'
+import { InAppEscapeSheet } from '@/components/InAppEscapeSheet'
 
 type Phase = 'ringing' | 'speaking' | 'listening' | 'analyzing' | 'done' | 'declined'
 
@@ -222,6 +223,12 @@ export default function CallClient() {
         )}
         {recorder.error && <p className="mt-6 text-[14px] text-primary" role="alert">{recorder.error}</p>}
       </div>
+      <InAppEscapeSheet
+        open={recorder.micDenied}
+        onClose={() => window.location.reload()}
+        sub="전화를 다시 받을 수 있어요"
+        url={`${typeof window === 'undefined' ? '' : window.location.origin}/call?from=${from}`}
+      />
 
       <div className="shrink-0 px-10 pb-[max(env(safe-area-inset-bottom),40px)]">
         {phase === 'ringing' ? (

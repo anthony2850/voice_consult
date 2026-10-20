@@ -19,6 +19,8 @@ export interface AudioRecorderResult {
   markSec: number | null
   reset: () => void
   error: string | null
+  /** 마이크 허락을 못 받았다 */
+  micDenied: boolean
 }
 
 export function useAudioRecorder(maxSeconds = 30): AudioRecorderResult {
@@ -28,6 +30,8 @@ export function useAudioRecorder(maxSeconds = 30): AudioRecorderResult {
   const [audioUrl, setAudioUrl] = useState<string | null>(null)
   const [analyserNode, setAnalyserNode] = useState<AnalyserNode | null>(null)
   const [error, setError] = useState<string | null>(null)
+  /** 마이크 허락을 못 받았다. 앱 안 브라우저 안내를 띄울지 정할 때 쓴다 */
+  const [micDenied, setMicDenied] = useState(false)
   const [markSec, setMarkSec] = useState<number | null>(null)
   const startedAtRef = useRef<number>(0)
 
@@ -59,6 +63,7 @@ export function useAudioRecorder(maxSeconds = 30): AudioRecorderResult {
 
   const start = useCallback(async () => {
     setError(null)
+    setMicDenied(false)
     setAudioBlob(null)
     if (audioUrl) URL.revokeObjectURL(audioUrl)
     setAudioUrl(null)
@@ -73,6 +78,7 @@ export function useAudioRecorder(maxSeconds = 30): AudioRecorderResult {
     } catch {
       trackEvent('mic_permission_denied')
       setError('마이크 접근 권한이 필요합니다. 브라우저 설정에서 허용해 주세요.')
+      setMicDenied(true)
       return
     }
     streamRef.current = stream
@@ -143,7 +149,7 @@ export function useAudioRecorder(maxSeconds = 30): AudioRecorderResult {
     setState('idle')
   }, [cleanup, audioUrl])
 
-  return { state, duration, audioBlob, audioUrl, analyserNode, start, stop, markAndStopAfter, markSec, reset, error }
+  return { state, duration, audioBlob, audioUrl, analyserNode, start, stop, markAndStopAfter, markSec, reset, error, micDenied }
 }
 
 function getSupportedMimeType(): string {
