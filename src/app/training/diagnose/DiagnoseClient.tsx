@@ -237,7 +237,12 @@ export default function DiagnoseClient() {
       <div className="px-5 pt-4 pb-8 space-y-4">
         {phase === 'intro' && (
           <section className="rounded-[28px] bg-secondary p-6 space-y-5">
-            <p className="text-[17px] font-black text-foreground">점점 실제 말하기에 가까워져요</p>
+            <div className="space-y-1.5">
+              <p className="text-[17px] font-black text-foreground">말을 나눠서, 하나씩 얹어 봐요</p>
+              <p className="text-[14px] text-foreground leading-relaxed">
+                말은 소리, 높낮이, 자음이 겹쳐서 완성돼요. 가장 단순한 소리에서 시작해 하나씩 더하면서, 어느 요소를 얹을 때 목소리가 흔들리기 시작하는지 찾아요.
+              </p>
+            </div>
             <ol className="space-y-3">
               {DIAGNOSIS_LEVELS.map((l) => {
                 const r = getRung(l)
@@ -246,7 +251,7 @@ export default function DiagnoseClient() {
                     <span className="w-7 h-7 shrink-0 rounded-full bg-primary text-primary-foreground text-[13px] font-black flex items-center justify-center tabular-nums">{l}</span>
                     <span className="min-w-0">
                       <span className="block text-[15px] font-bold text-foreground">{r.title}</span>
-                      <span className="block text-[13px] text-muted-foreground">{r.adds}</span>
+                      <span className="block text-[13px] text-muted-foreground">{l === 1 ? '소리만' : `+ ${r.adds}`}</span>
                     </span>
                   </li>
                 )
