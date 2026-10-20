@@ -53,8 +53,8 @@ export function buildEscapePlan(url: string, ua: string): EscapePlan | null {
   const app = detectInApp(ua)
   if (!app) return null
   const os = detectOS(ua)
-  const browser = os === 'ios' ? '사파리' : '크롬'
-  const openLabel = os === 'ios' ? '사파리로 열기' : '크롬으로 열기'
+  // 아래 링크는 모두 기기의 기본 브라우저를 연다. 사파리가 아닐 수 있으니 이름을 못 박지 않는다.
+  const openLabel = '브라우저로 열기'
 
   let button: EscapePlan['button'] = null
   if (app === 'line') {
@@ -67,12 +67,12 @@ export function buildEscapePlan(url: string, ua: string): EscapePlan | null {
   } else if (os === 'android') {
     const bare = url.replace(/^https?:\/\//, '')
     button = {
-      label: '크롬으로 열기',
+      label: openLabel,
       href: `intent://${bare}#Intent;scheme=https;action=android.intent.action.VIEW;category=android.intent.category.BROWSABLE;S.browser_fallback_url=${enc(url)};end`,
     }
   } else if (os === 'ios') {
-    if (app === 'instagram') button = { label: '사파리로 열기', href: `instagram://extbrowser/?url=${enc(url)}` }
-    else if (app === 'threads') button = { label: '사파리로 열기', href: `barcelona://extbrowser/?url=${enc(url)}` }
+    if (app === 'instagram') button = { label: openLabel, href: `instagram://extbrowser/?url=${enc(url)}` }
+    else if (app === 'threads') button = { label: openLabel, href: `barcelona://extbrowser/?url=${enc(url)}` }
     else button = { label: '사파리로 열기', href: url.replace(/^https?:\/\//, 'x-safari-https://') }
   }
 
@@ -80,12 +80,12 @@ export function buildEscapePlan(url: string, ua: string): EscapePlan | null {
     app === 'kakaotalk'
       ? ['오른쪽 아래 ⋯ 누르기', "'다른 브라우저로 열기' 누르기"]
       : app === 'line'
-        ? ['오른쪽 아래 공유 버튼 누르기', `'${browser}에서 열기' 누르기`]
+        ? ['오른쪽 아래 공유 버튼 누르기', "'브라우저에서 열기' 누르기"]
         : app === 'naver'
           ? ['오른쪽 아래 ⋯ 누르기', `'${openLabel}' 누르기`]
           : app === 'instagram' || app === 'threads' || app === 'facebook'
             ? ['오른쪽 위 ⋯ 누르기', "'외부 브라우저에서 열기' 누르기"]
-            : ['화면의 메뉴(⋯ 또는 공유) 누르기', `'${browser}에서 열기' 누르기`]
+            : ['화면의 메뉴(⋯ 또는 공유) 누르기', "'브라우저에서 열기' 누르기"]
 
   return { app, os, button, manual }
 }

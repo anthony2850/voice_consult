@@ -18,7 +18,6 @@ export function InAppEscapeSheet({ url, open, onClose, sub }: { url: string; ope
   }, [open, plan])
 
   if (!open || !plan) return null
-  const browser = plan.os === 'ios' ? '사파리' : '크롬'
 
   const copy = async () => {
     trackEvent('inapp_escape_clicked', { app: plan.app, method: 'copy' })
@@ -43,7 +42,7 @@ export function InAppEscapeSheet({ url, open, onClose, sub }: { url: string; ope
           <div>
             <p className="eyebrow">다음 단계</p>
             <h2 id="inapp-title" className="mt-1 text-[22px] leading-tight font-black tracking-[-0.02em] text-foreground">
-              {browser}에서
+              브라우저에서
               <br />
               이어서 할게요
             </h2>
