@@ -15,7 +15,19 @@ export const CALL_QUESTIONS: string[] = [
 ]
 
 export function pickCallQuestion(rand: () => number = Math.random): string {
-  return CALL_QUESTIONS[Math.floor(rand() * CALL_QUESTIONS.length) % CALL_QUESTIONS.length]
+  return CALL_QUESTIONS[pickCallIndex(rand)]
+}
+
+export function pickCallIndex(rand: () => number = Math.random): number {
+  return Math.floor(rand() * CALL_QUESTIONS.length) % CALL_QUESTIONS.length
+}
+
+/**
+ * 코치 목소리 파일. 질문마다 미리 만들어 둔 녹음(Qwen3-TTS, Sohee, 명랑한 말투)이라
+ * 어느 기기에서나 같은 목소리가 나온다. 못 열리면 기기 기본 음성으로 넘어간다.
+ */
+export function callQuestionAudio(index: number): string {
+  return `/call/q${index + 1}.mp3`
 }
 
 /** 대답 녹음 길이 */

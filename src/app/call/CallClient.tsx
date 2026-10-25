@@ -8,7 +8,7 @@ import { useAudioRecorder } from '@/hooks/useAudioRecorder'
 import { getSupabase } from '@/lib/supabase'
 import { trackEvent } from '@/lib/analytics'
 import { speechOnsetSec, syllableRate } from '@/lib/syllableRate'
-import { ANSWER_MAX_SEC, ANSWER_MIN_SEC, onsetFeedback, paceFeedback, pickCallQuestion, type Tone } from '@/lib/callPractice'
+import { ANSWER_MAX_SEC, ANSWER_MIN_SEC, CALL_QUESTIONS, callQuestionAudio, onsetFeedback, paceFeedback, pickCallIndex, type Tone } from '@/lib/callPractice'
 import { Display, Eyebrow, MetricRow, Pill, PrimaryButton, SurfaceCard } from '@/components/ds'
 import { InAppEscapeSheet } from '@/components/InAppEscapeSheet'
 
@@ -49,7 +49,9 @@ export default function CallClient() {
   const params = useSearchParams()
   const from = params.get('from') ?? 'direct'
   const [phase, setPhase] = useState<Phase>('ringing')
-  const [question] = useState(() => pickCallQuestion())
+  const [qIndex] = useState(() => pickCallIndex())
+  const question = CALL_QUESTIONS[qIndex]
+  const voice = useRef<HTMLAudioElement | null>(null)
   const [authed, setAuthed] = useState(false)
   const [result, setResult] = useState<{ onset: number | null; rate: number | null; sec: number } | null>(null)
   const audioCtx = useRef<AudioContext | null>(null)
@@ -61,6 +63,14 @@ export default function CallClient() {
   useEffect(() => {
     getSupabase().auth.getSession().then(({ data }) => setAuthed(!!data.session))
   }, [])
+
+  // 벨이 울리는 동안 코치 목소리를 미리 받아 둔다
+  useEffect(() => {
+    const a = new Audio(callQuestionAudio(qIndex))
+    a.preload = 'auto'
+    voice.current = a
+    return () => { a.pause(); voice.current = null }
+  }, [qIndex])
 
   // 벨소리. 아이폰은 화면을 한 번 누르기 전에는 소리를 낼 수 없어, 누르면 그때 울린다.
   const ensureRing = useCallback(() => {
@@ -98,21 +108,43 @@ export default function CallClient() {
     startedAt.current = performance.now()
     setPhase('speaking')
     const startListening = () => { setPhase('listening'); void recorder.start() }
-    const synth = typeof window !== 'undefined' ? window.speechSynthesis : undefined
-    if (!synth) { window.setTimeout(startListening, 3500); return }
+    let done = false
+    const finish = () => { if (!done) { done = true; startListening() } }
+
+    // 미리 만들어 둔 코치 목소리. 받기 버튼을 누른 직후라 재생이 허용된다.
+    const a = voice.current
+    if (a) {
+      a.onended = finish
+      a.onerror = () => speakFallback()
+      a.currentTime = 0
+      a.play().then(() => {
+        // 재생은 됐지만 끝 신호가 안 오는 기기를 위한 안전장치
+        window.setTimeout(finish, Math.max(6000, (a.duration || 7) * 1000 + 1500))
+      }).catch(() => speakFallback())
+      return
+    }
+    speakFallback()
+
+    function speakFallback() {
+      if (done) return
+      const synth = typeof window !== 'undefined' ? window.speechSynthesis : undefined
+      if (!synth) { window.setTimeout(finish, 3500); return }
+      speakWithDevice(synth)
+    }
+
+    function speakWithDevice(synth: SpeechSynthesis) {
     const u = new SpeechSynthesisUtterance(question)
     u.lang = 'ko-KR'
     u.rate = 0.95
     const ko = synth.getVoices().find((v) => v.lang?.startsWith('ko'))
     if (ko) u.voice = ko
-    let done = false
-    const finish = () => { if (!done) { done = true; startListening() } }
     u.onend = finish
     u.onerror = finish
     // 음성이 안 나오는 기기를 위해 일정 시간이 지나면 그냥 듣기로 넘어간다
     window.setTimeout(finish, Math.max(4000, question.length * 220))
     synth.cancel()
     synth.speak(u)
+    }
   }
 
   const decline = () => {

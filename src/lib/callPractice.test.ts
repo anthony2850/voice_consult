@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { CALL_QUESTIONS, onsetFeedback, paceFeedback, pickCallQuestion } from './callPractice'
+import { existsSync } from 'node:fs'
+import { CALL_QUESTIONS, callQuestionAudio, onsetFeedback, paceFeedback, pickCallIndex, pickCallQuestion } from './callPractice'
 
 describe('call practice', () => {
   it('every question opens like a phone call and avoids middle dots', () => {
@@ -8,6 +9,12 @@ describe('call practice', () => {
       expect(q).not.toMatch(/·/)
     }
     expect(CALL_QUESTIONS).toContain(pickCallQuestion(() => 0.99))
+  })
+  it('every question has a recorded coach voice file', () => {
+    for (let i = 0; i < CALL_QUESTIONS.length; i++) {
+      expect(existsSync(`public${callQuestionAudio(i)}`), callQuestionAudio(i)).toBe(true)
+    }
+    expect(pickCallIndex(() => 0.99)).toBe(CALL_QUESTIONS.length - 1)
   })
   it('onset feedback bands', () => {
     expect(onsetFeedback(0.8).tone).toBe('good')
