@@ -111,7 +111,7 @@ export function trendVerdict(metric: Metric, points: WeekPoint[], totalSessions:
 
 export function trendCopy(v: TrendVerdict, totalSessions: number): string {
   switch (v) {
-    case 'too-few': return `세션을 ${TREND_MIN_SESSIONS}번 하면 추이가 보여요. 지금 ${totalSessions}번 했어요.`
+    case 'too-few': return `연습을 ${TREND_MIN_SESSIONS}번 하면 추이가 보여요. 지금 ${totalSessions}번 했어요.`
     case 'one-week': return '한 주가 더 쌓이면 첫 주와 비교할 수 있어요.'
     case 'closer': return '첫 주보다 시작 녹음이 목표에 가까워졌어요. 연습이 쉬고 난 뒤에도 남아 있다는 뜻이에요.'
     case 'both-in': return '첫 주부터 지금까지 시작 녹음이 목표 안에 있어요. 다음 단계로 올라가며 조건을 늘려 볼 때예요.'

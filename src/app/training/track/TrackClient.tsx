@@ -50,7 +50,7 @@ export default function TrackClient() {
         eyebrow={`${SCENE_LABELS[scene].label} 상황`}
         title={<span className="flex items-center gap-3"><Icon size={28} className="text-accent shrink-0" aria-hidden="true" />{track.label} 트랙</span>}
         sub={`${rung}단계: ${current.title}`}
-        chips={<><Pill tone="data">이번 주 {weekDone}/{weeklyGoal}회</Pill><Pill>세션 {trackSessions.length}회</Pill></>}
+        chips={<><Pill tone="data">이번 주 {weekDone}/{weeklyGoal}회</Pill><Pill>연습 {trackSessions.length}회</Pill></>}
       />
 
       <div className="px-5 pt-4 space-y-4">
@@ -65,7 +65,7 @@ export default function TrackClient() {
               router.push('/training/session')
             }}
           >
-            오늘 세션 시작, 약 5분
+            오늘 연습 시작, 약 5분
           </PrimaryButton>
           {doneToday && <p className="-mt-2 text-[13px] font-semibold text-good text-center">오늘 이미 한 번 했어요. 한 번 더 해도 돼요.</p>}
         </section>
@@ -81,7 +81,7 @@ export default function TrackClient() {
           <p className="text-[18px] font-black text-foreground">훈련 단계</p>
           <RungLadder current={rung} />
           <p className="text-[13px] text-muted-foreground leading-relaxed">
-            매 세션 이미 할 수 있는 단계 하나와 지금 도전하는 단계 하나를 연습해요. 목표에 들어오고 목이 힘들지 않았으면 다음 단계로 올라가요.
+            연습마다 몸 풀기로 한 단계 아래를, 도전으로 지금 단계를 해요. 기준에 들어오고 목이 편했으면 다음 단계로 올라가요.
           </p>
         </section>
 

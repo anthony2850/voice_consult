@@ -237,7 +237,7 @@ export default function ArchiveClient() {
             <p className="text-[18px] font-black text-foreground">개선 추이</p>
             {metric ? (
               <p className="text-[13px] text-muted-foreground mt-1 leading-relaxed">
-                {METRIC_LABEL[metric].title}: 매 세션 <span className="font-semibold text-foreground">시작 녹음</span>을 주 단위로 묶었어요
+                {METRIC_LABEL[metric].title}: 매 연습의 <span className="font-semibold text-foreground">시작 녹음</span>을 주 단위로 묶었어요
               </p>
             ) : (
               <p className="text-[13px] text-muted-foreground mt-1 leading-relaxed">훈련을 시작하면 트랙의 지표 하나만 여기서 추이로 보여 드려요.</p>
@@ -311,7 +311,7 @@ export default function ArchiveClient() {
         <section className="rounded-[28px] bg-secondary p-5 space-y-2">
           <p className="text-[16px] font-black text-foreground mb-1 px-1">바로가기</p>
           {[
-            { href: '/training', icon: Dumbbell, iconBox: 'bg-primary text-primary-foreground', title: '오늘 세션', sub: '약 5분, 시작 녹음부터' },
+            { href: '/training', icon: Dumbbell, iconBox: 'bg-primary text-primary-foreground', title: '오늘 연습', sub: '약 5분, 시작 녹음부터' },
             { href: '/record', icon: Mic, iconBox: 'bg-accent text-accent-foreground', title: '목소리 다시 분석', sub: '페르소나와 목소리 진단을 새로 받아요' },
           ].map(({ href, icon: Icon, iconBox, title, sub }) => (
             <button

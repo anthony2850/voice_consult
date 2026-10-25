@@ -169,7 +169,7 @@ export default function CallClient() {
         </div>
         <div className="shrink-0 px-5 pt-2 pb-[max(env(safe-area-inset-bottom),20px)] space-y-3">
           {authed ? (
-            <PrimaryButton onClick={() => router.push('/training')}>오늘 세션 이어서 하기</PrimaryButton>
+            <PrimaryButton onClick={() => router.push('/training')}>오늘 연습 이어서 하기</PrimaryButton>
           ) : (
             <PrimaryButton onClick={() => router.push('/record')}>내 목소리 페르소나 알아보기</PrimaryButton>
           )}

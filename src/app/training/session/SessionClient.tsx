@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTrack } from '@/hooks/useTrack'
-import { SCENE_SCRIPTS, TRACKS, getRung, type RungLevel } from '@/lib/curriculum'
+import { SCENE_LABELS, SCENE_SCRIPTS, TRACKS, getRung, type RungLevel } from '@/lib/curriculum'
 import {
   METRIC_INFO, allowStrongVariations, meetsCriterion, metricValue, nextRung, performanceCopy,
   JITTER_LIMIT, LOUDNESS_TOLERANCE_DB, PACE_RANGE, pickVariation, retentionCopy, retentionVerdict, rungReason, sessionRungs, type Measure, type VoiceUse,
@@ -135,8 +135,8 @@ export default function SessionClient() {
     <div className="min-h-[calc(100vh-84px)]">
       <PageHeader
         back={{ label: '나가기', onClick: () => router.push('/training/track') }}
-        eyebrow={`${track.label} 트랙, ${sessionIndex + 1}번째 세션`}
-        title={`${current}단계: ${getRung(current).title}`}
+        eyebrow={`${SCENE_LABELS[scene].label} ${track.label} 트랙, ${sessionIndex + 1}번째 연습`}
+        title={`오늘은 ${current}단계에 도전해요`}
         chips={step !== 'saved' && <Pill tone="data">{stepNo} / {stepTotal}</Pill>}
       />
 
@@ -175,7 +175,7 @@ export default function SessionClient() {
         {step === 'retention' && (
           <RecordStep
             eyebrow="시작 녹음"
-            title={sessionIndex === 0 ? '기준 문장을 평소대로 한 번' : '지난 세션의 문장을 그대로 한 번'}
+            title={sessionIndex === 0 ? '기준 문장을 평소대로 한 번' : '지난 연습의 문장을 그대로 한 번'}
             instructions={['연습 전에 평소처럼 한 번 읽어요.']}
             script={baseScript}
             maxSec={12}
@@ -189,7 +189,7 @@ export default function SessionClient() {
           return (
             <RecordStep
               key={`a-${r.id}`}
-              eyebrow={`연습 1: ${rungs.a}단계 (몸 풀기)`}
+              eyebrow={`몸 풀기, ${rungs.a}단계`}
               title={r.title}
               keyInfo={track.keyInfo}
               instructions={r.instructions.slice(0, -1)}
@@ -214,7 +214,7 @@ export default function SessionClient() {
           return (
             <RecordStep
               key={`b-${r.id}`}
-              eyebrow={`연습 2: ${rungs.b}단계 (도전)`}
+              eyebrow={`도전, ${rungs.b}단계`}
               title={r.title}
               keyInfo={track.keyInfo}
               instructions={r.instructions.slice(0, -1)}

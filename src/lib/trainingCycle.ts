@@ -366,7 +366,7 @@ export type VoiceUse = 'low' | 'normal' | 'high'
 export function retentionCopy(verdict: RetentionVerdict, voiceUse: VoiceUse): string {
   switch (verdict) {
     case 'first':
-      return '첫 기록이에요. 다음 세션 시작 녹음과 비교해요.'
+      return '첫 기록이에요. 다음 연습 시작 녹음과 비교해요.'
     case 'kept':
       return '지난번 마무리만큼 나왔어요. 연습한 게 남아 있어요.'
     case 'partly':
@@ -382,9 +382,9 @@ export function retentionCopy(verdict: RetentionVerdict, voiceUse: VoiceUse): st
 
 /** 세션 끝 문구: 오늘 끝의 상승을 "학습"이라 부르지 않는다 (9교시 6쪽). */
 export function performanceCopy(met: boolean | null, next: RungLevel, current: RungLevel): string {
-  const move = next > current ? '다음 세션은 한 단계 올라가요.'
-    : next < current ? '다음 세션은 한 단계 낮춰서 해요.'
-    : '다음 세션도 같은 단계를 해요.'
+  const move = next > current ? '다음 연습은 한 단계 올라가요.'
+    : next < current ? '다음 연습은 한 단계 낮춰서 해요.'
+    : '다음 연습도 같은 단계를 해요.'
   if (met === true) return `오늘 마무리 녹음이 기준 안이에요. ${move}`
   if (met === false) return `오늘 마무리 녹음이 기준 밖이에요. ${move}`
   return move

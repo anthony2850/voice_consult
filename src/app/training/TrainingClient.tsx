@@ -116,7 +116,7 @@ export default function TrainingClient() {
                 <p className="text-[22px] leading-tight font-black tracking-[-0.02em]">{trackName(current)}</p>
               </div>
               <p className="mt-3 text-[15px] font-semibold">{current.rung}단계: {getRung(current.rung).title}</p>
-              <p className="mt-0.5 text-[13px] text-white/60 tabular-nums">세션 {current.sessions}회, 마지막 {relativeDay(current.lastAt)}</p>
+              <p className="mt-0.5 text-[13px] text-white/60 tabular-nums">연습 {current.sessions}회, 마지막 {relativeDay(current.lastAt)}</p>
             </button>
             <PrimaryButton
               onClick={() => {
@@ -124,7 +124,7 @@ export default function TrainingClient() {
                 router.push('/training/session')
               }}
             >
-              오늘 세션 시작, 약 5분
+              오늘 연습 시작, 약 5분
             </PrimaryButton>
             {doneToday && <p className="-mt-2 text-[13px] font-semibold text-white/80 text-center">오늘 이미 한 번 했어요. 한 번 더 해도 돼요.</p>}
           </section>
@@ -153,7 +153,7 @@ export default function TrainingClient() {
                     <Icon size={20} className="shrink-0 text-foreground/55" aria-hidden="true" />
                     <div className="flex-1 min-w-0">
                       <p className="text-[15px] font-bold text-foreground truncate">{trackName(t)}</p>
-                      <p className="text-[12px] text-muted-foreground tabular-nums">{t.rung}단계, 세션 {t.sessions}회, {relativeDay(t.lastAt)}</p>
+                      <p className="text-[12px] text-muted-foreground tabular-nums">{t.rung}단계, 연습 {t.sessions}회, {relativeDay(t.lastAt)}</p>
                     </div>
                     <span className="text-[13px] font-bold text-accent shrink-0">이어 하기</span>
                   </button>

@@ -22,7 +22,7 @@ export default function RungComplete({ from, to, onClose }: { from: RungLevel; t
         </span>
         <h2 id="rung-done-title" className="mt-5 text-center text-[26px] font-black tracking-[-0.02em] text-foreground">{from}단계 완료</h2>
         <p className="mt-1.5 text-center text-[15px] leading-relaxed text-muted-foreground">
-          다음 세션부터 {to}단계 {nextTitle}{eulReul(nextTitle)} 해요.
+          다음 연습부터 {to}단계 {nextTitle}{eulReul(nextTitle)} 해요.
         </p>
 
         <ol className="mt-8 rounded-[24px] border border-border divide-y divide-border">
@@ -39,7 +39,7 @@ export default function RungComplete({ from, to, onClose }: { from: RungLevel; t
                   {r.level}단계 {r.title}
                 </span>
                 {state === 'done' && <span className="shrink-0 text-[13px] font-bold text-accent">완료</span>}
-                {state === 'next' && <span className="shrink-0 text-[13px] font-bold text-brand-text">다음 세션</span>}
+                {state === 'next' && <span className="shrink-0 text-[13px] font-bold text-brand-text">다음 연습</span>}
               </li>
             )
           })}
