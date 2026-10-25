@@ -9,11 +9,15 @@ import type { Variation } from '@/lib/curriculum'
 
 interface Props {
   eyebrow?: string
+  /** 몸 풀기와 도전을 한눈에 구분하는 표시. 있으면 eyebrow 대신 쓴다 */
+  badge?: { label: string; tone: 'warm' | 'challenge' }
+  /** 이 녹음을 왜 하는지 한 줄 (예: 도전 전에 목 풀기) */
+  reason?: string
   title: string
   /** 핵심 정보 한 줄 — 녹음 화면에서 가장 크게 보이는 것 */
   keyInfo?: string
   instructions: string[]
-  /** 이번 세션의 변형 (바꿀 조건 / 유지할 조건 / 관찰할 결과) */
+  /** 오늘 바꿔서 말해 볼 조건. 도전 녹음에만 준다 */
   variation?: Variation
   script?: string | null
   scriptLabel?: string
@@ -33,7 +37,7 @@ interface Props {
 }
 
 export default function RecordStep({
-  eyebrow, title, keyInfo, instructions, variation, script, scriptLabel = '읽어 주세요',
+  eyebrow, badge, reason, title, keyInfo, instructions, variation, script, scriptLabel = '읽어 주세요',
   maxSec, targetSec, prepSec, analyzing, onRecorded, doneLabel = '다음', silentNote, voiceLine = false, voiceLineMode = 'speech',
 }: Props) {
   const recorder = useAudioRecorder(maxSec)
@@ -69,20 +73,29 @@ export default function RecordStep({
 
   return (
     <section className="rounded-[28px] bg-secondary p-6 space-y-4">
-      <div className="space-y-1">
-        {eyebrow && <p className="eyebrow">{eyebrow}</p>}
+      <div className="space-y-1.5">
+        {badge ? (
+          <span className={`inline-flex items-center rounded-full px-3.5 py-1.5 text-[15px] font-black ${
+            badge.tone === 'challenge' ? 'bg-primary text-primary-foreground' : 'bg-card text-foreground border border-border'
+          }`}>{badge.label}</span>
+        ) : eyebrow && <p className="eyebrow">{eyebrow}</p>}
         <p className="text-[19px] font-black tracking-[-0.02em] text-foreground">{title}</p>
+        {reason && <p className="text-[14px] text-muted-foreground leading-relaxed">{reason}</p>}
       </div>
 
-      {(instructions.length > 0 || variation) && (
+      {instructions.length > 0 && (
         <ul className="space-y-1.5">
           {instructions.map((line, i) => (
             <li key={i} className="flex gap-2 text-[15px] text-foreground leading-relaxed"><span aria-hidden="true" className="mt-2 w-1.5 h-1.5 shrink-0 rounded-full bg-accent" />{line}</li>
           ))}
-          {variation && (
-            <li className="flex gap-2 text-[15px] text-foreground leading-relaxed"><span aria-hidden="true" className="mt-2 w-1.5 h-1.5 shrink-0 rounded-full bg-accent" />오늘은 {variation.change}</li>
-          )}
         </ul>
+      )}
+
+      {variation && (
+        <div className="rounded-2xl border-2 border-primary bg-primary/15 px-4 py-3">
+          <p className="text-[12px] font-bold text-brand-text">평소와 다르게, 오늘은 이렇게 말해요</p>
+          <p className="mt-0.5 text-[15px] font-bold text-foreground">{variation.change}</p>
+        </div>
       )}
 
       {script && (

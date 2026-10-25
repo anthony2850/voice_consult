@@ -189,11 +189,11 @@ export default function SessionClient() {
           return (
             <RecordStep
               key={`a-${r.id}`}
-              eyebrow={`몸 풀기, ${rungs.a}단계`}
-              title={r.title}
+              badge={{ label: '몸 풀기', tone: 'warm' }}
+              title={`${rungs.a}단계 ${r.title}`}
+              reason={rungs.a < rungs.b ? `${rungs.b}단계에 도전하기 전에, 이미 되는 ${rungs.a}단계로 목을 풀어요.` : '목을 풀며 오늘 단계를 한 번 먼저 해 봐요.'}
               keyInfo={track.keyInfo}
               instructions={r.practiceHint ? [r.practiceHint] : []}
-              variation={variation}
               script={r.script(scene, sessionIndex)}
               scriptLabel={r.scriptLabel}
               maxSec={r.maxSec}
@@ -213,8 +213,9 @@ export default function SessionClient() {
           return (
             <RecordStep
               key={`b-${r.id}`}
-              eyebrow={`도전, ${rungs.b}단계`}
-              title={r.title}
+              badge={{ label: '도전', tone: 'challenge' }}
+              title={`${rungs.b}단계 ${r.title}`}
+              reason="오늘 연습의 핵심이에요. 잘 안 돼도 괜찮아요." 
               keyInfo={track.keyInfo}
               instructions={r.practiceHint ? [r.practiceHint] : []}
               variation={variation}
