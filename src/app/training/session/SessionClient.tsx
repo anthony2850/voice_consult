@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTrack } from '@/hooks/useTrack'
 import { SCENE_SCRIPTS, TRACKS, getRung, type RungLevel } from '@/lib/curriculum'
@@ -10,6 +10,7 @@ import {
 } from '@/lib/trainingCycle'
 import { measureBlob } from '@/lib/trainingMeasure'
 import RecordStep from '@/components/training/RecordStep'
+import RungComplete from '@/components/training/RungComplete'
 import { trackEvent } from '@/lib/analytics'
 import { PageHeader, Pill } from '@/components/ds'
 
@@ -54,7 +55,11 @@ export default function SessionClient() {
   useEffect(() => () => { if (performanceUrl) URL.revokeObjectURL(performanceUrl) }, [performanceUrl])
 
   const track = profile.trackConcern ? TRACKS[profile.trackConcern] : null
-  const current: RungLevel = profile.trackRung ?? 1
+  // 세션을 시작한 단계로 고정한다. 저장하면서 트랙 단계가 올라가도 이 세션의 결과 문구와 제목은 그대로여야 한다.
+  const startRung = useRef<RungLevel | null>(null)
+  if (!loading && startRung.current == null && profile.trackRung != null) startRung.current = profile.trackRung
+  const current: RungLevel = startRung.current ?? profile.trackRung ?? 1
+  const [rungDone, setRungDone] = useState<{ from: RungLevel; to: RungLevel } | null>(null)
   const scene = profile.scene ?? 'daily'
   const sessionIndex = trackSessions.length
   const lastSession = trackSessions[0] ?? null
@@ -112,6 +117,7 @@ export default function SessionClient() {
         effort, pain, met_criterion: met, next_rung: next,
       })
       if (ok && next !== current) await setTrackRung(next)
+      if (ok && next > current) setRungDone({ from: current, to: next })
       // 힘든 정도와 통증은 건강 관련 자가 응답이라 분석 도구(GA, Meta)로 보내지 않는다. DB에만 저장.
       trackEvent('training_session_completed', {
         concern: track!.concern, rung: current, next_rung: next, met: met ?? 'na', verdict,
@@ -133,6 +139,8 @@ export default function SessionClient() {
         title={`${current}단계: ${getRung(current).title}`}
         chips={step !== 'saved' && <Pill tone="data">{stepNo} / {stepTotal}</Pill>}
       />
+
+      {rungDone && <RungComplete from={rungDone.from} to={rungDone.to} onClose={() => setRungDone(null)} />}
 
       <div className="px-5 pt-4 pb-8 space-y-4">
         {failNote && <p className="text-[13px] text-caution px-1">{failNote}</p>}
