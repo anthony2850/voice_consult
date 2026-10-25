@@ -196,6 +196,7 @@ export default function SessionClient() {
               onRecorded={(b) => measureOrRetry(b, rungs.a, (m) => { setRungMeasures((x) => [...x, m]); advance('exerciseA') })}
               doneLabel="저장하고 다음"
               voiceLine
+              voiceLineMode={r.level === 1 ? 'sustained' : 'speech'}
             />
           )
         })()}
@@ -220,6 +221,7 @@ export default function SessionClient() {
               onRecorded={(b) => measureOrRetry(b, rungs.b, (m) => { setRungMeasures((x) => [...x, m]); advance('exerciseB') })}
               doneLabel="저장하고 다음"
               voiceLine
+              voiceLineMode={r.level === 1 ? 'sustained' : 'speech'}
             />
           )
         })()}

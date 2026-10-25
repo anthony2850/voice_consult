@@ -2,26 +2,42 @@
 
 import { useEffect, useRef } from 'react'
 
-/** 무음으로 보는 크기 (dBFS). 이보다 작으면 선을 끊는다 */
+/** 무음으로 보는 크기 (dBFS). 이보다 작으면 소리가 없는 것으로 본다 */
 const SILENCE_DB = -50
-/** 화면 위아래 끝에 해당하는 크기 */
-const TOP_DB = -10
-/** 점 하나의 길이. 떨림(초당 4~8번)이 보일 만큼 촘촘하게 */
+/** 점 하나의 길이 */
 const STEP_MS = 50
+/** 내 평소 크기를 가운데 두고 위아래로 보여 줄 범위 (dB) */
+const HALF_RANGE_DB = 20
+/** 이보다 짧은 끊김(자음, 글자 사이)은 선을 잇는다. 진짜 쉼만 끊는다 */
+const BRIDGE_MS = 250
+
+/**
+ * 부드럽게 하는 정도.
+ * - speech: 글자마다 생기는 출렁임 대신 말의 큰 흐름이 보이게 0.2초쯤 평균 낸다.
+ * - sustained: "음~"처럼 길게 내는 소리. 흔들림이 보이게 덜 부드럽게 한다.
+ */
+export type VoiceLineMode = 'speech' | 'sustained'
+const SMOOTH_MS: Record<VoiceLineMode, number> = { speech: 200, sustained: 60 }
 
 interface VoiceLineOptions {
   analyser: AnalyserNode | null
   canvasRef: React.RefObject<HTMLCanvasElement | null>
   /** 화면 너비에 해당하는 시간. 넘으면 그만큼 눌러서 다 보여 준다 */
   spanSec: number
+  mode?: VoiceLineMode
+}
+
+function median(xs: number[]): number {
+  const s = [...xs].sort((a, b) => a - b)
+  return s[Math.floor(s.length / 2)]
 }
 
 /**
  * 연습 중 목소리 크기를 시간에 따라 선으로 그린다.
- * 소리가 고르면 곧은 선, 흔들리면 흔들리는 선, 끊기면 끊긴 선이 된다.
- * 녹음이 끝나면(analyser가 사라지면) 마지막 선을 그대로 남겨 둔다.
+ * 높이는 절대 크기가 아니라 이번 녹음의 평소 크기(중앙값)를 가운데 둔 상대 크기라,
+ * 마이크 거리나 기기에 덜 휘둘린다. 녹음이 끝나면(analyser가 사라지면) 마지막 선을 남긴다.
  */
-export function useVoiceLine({ analyser, canvasRef, spanSec }: VoiceLineOptions) {
+export function useVoiceLine({ analyser, canvasRef, spanSec, mode = 'speech' }: VoiceLineOptions) {
   const points = useRef<(number | null)[]>([])
 
   useEffect(() => {
@@ -48,26 +64,27 @@ export function useVoiceLine({ analyser, canvasRef, spanSec }: VoiceLineOptions)
       buf = new Float32Array(tap.fftSize)
     }
 
+    const alpha = 1 - Math.exp(-STEP_MS / SMOOTH_MS[mode])
+    const bridgeSteps = Math.round(BRIDGE_MS / STEP_MS)
     let smoothed: number | null = null
     let last = performance.now()
     let raf = 0
 
     const sample = () => {
       const now = performance.now()
-      if (tap && buf && now - last >= STEP_MS) {
-        last = now
-        tap.getFloatTimeDomainData(buf)
-        let sum = 0
-        for (let i = 0; i < buf.length; i++) sum += buf[i] * buf[i]
-        const db = 20 * Math.log10(Math.sqrt(sum / buf.length) + 1e-9)
-        if (db < SILENCE_DB) {
-          smoothed = null
-          points.current.push(null)
-        } else {
-          smoothed = smoothed == null ? db : smoothed * 0.4 + db * 0.6
-          points.current.push(smoothed)
-        }
+      if (!tap || !buf || now - last < STEP_MS) return
+      last = now
+      tap.getFloatTimeDomainData(buf)
+      let sum = 0
+      for (let i = 0; i < buf.length; i++) sum += buf[i] * buf[i]
+      const db = 20 * Math.log10(Math.sqrt(sum / buf.length) + 1e-9)
+      if (db < SILENCE_DB) {
+        // 짧은 틈 동안 값을 버리지 않아야 다시 소리가 날 때 선이 튀지 않는다
+        points.current.push(null)
+        return
       }
+      smoothed = smoothed == null ? db : smoothed + alpha * (db - smoothed)
+      points.current.push(smoothed)
     }
 
     const render = () => {
@@ -83,10 +100,13 @@ export function useVoiceLine({ analyser, canvasRef, spanSec }: VoiceLineOptions)
       ctx.stroke()
 
       const pts = points.current
+      const voiced = pts.filter((v): v is number => v != null)
+      if (voiced.length === 0) return
+      const mid = median(voiced)
       const n = Math.max(pts.length, Math.round((spanSec * 1000) / STEP_MS))
       const x = (i: number) => (i / (n - 1)) * w
       const y = (db: number) => {
-        const t = Math.min(1, Math.max(0, (db - SILENCE_DB) / (TOP_DB - SILENCE_DB)))
+        const t = Math.min(1, Math.max(0, (db - (mid - HALF_RANGE_DB)) / (2 * HALF_RANGE_DB)))
         return h - 4 - t * (h - 8)
       }
       ctx.strokeStyle = '#2D3A8C'
@@ -95,10 +115,13 @@ export function useVoiceLine({ analyser, canvasRef, spanSec }: VoiceLineOptions)
       ctx.lineJoin = 'round'
       ctx.beginPath()
       let pen = false
+      let gap = 0
       pts.forEach((db, i) => {
-        if (db == null) { pen = false; return }
-        if (pen) ctx.lineTo(x(i), y(db))
+        if (db == null) { gap++; return }
+        // 짧은 틈은 건너서 잇고, 긴 쉼이면 새로 시작한다
+        if (pen && gap <= bridgeSteps) ctx.lineTo(x(i), y(db))
         else { ctx.moveTo(x(i), y(db)); pen = true }
+        gap = 0
       })
       ctx.stroke()
     }
@@ -116,5 +139,5 @@ export function useVoiceLine({ analyser, canvasRef, spanSec }: VoiceLineOptions)
       ro.disconnect()
       if (tap) { try { analyser?.disconnect(tap) } catch { /* 이미 닫힌 경우 */ } }
     }
-  }, [analyser, canvasRef, spanSec])
+  }, [analyser, canvasRef, spanSec, mode])
 }

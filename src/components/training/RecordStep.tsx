@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Mic, Square, RotateCcw } from 'lucide-react'
 import { useAudioRecorder } from '@/hooks/useAudioRecorder'
 import { useWaveform } from '@/hooks/useWaveform'
-import { useVoiceLine } from '@/hooks/useVoiceLine'
+import { useVoiceLine, type VoiceLineMode } from '@/hooks/useVoiceLine'
 import type { Variation } from '@/lib/curriculum'
 
 interface Props {
@@ -30,17 +30,19 @@ interface Props {
   silentNote?: string
   /** 파형 대신 목소리 크기 선을 그린다. 연습 녹음에만 쓰고, 비교용 측정 녹음에는 쓰지 않는다 */
   voiceLine?: boolean
+  /** 선을 부드럽게 하는 정도. 길게 내는 소리(1단계)는 흔들림이 보이게 덜 부드럽게 */
+  voiceLineMode?: VoiceLineMode
 }
 
 export default function RecordStep({
   eyebrow, title, keyInfo, instructions, variation, script, scriptLabel = '읽어 주세요',
-  lastWord, maxSec, targetSec, prepSec, analyzing, onRecorded, doneLabel = '다음', silentNote, voiceLine = false,
+  lastWord, maxSec, targetSec, prepSec, analyzing, onRecorded, doneLabel = '다음', silentNote, voiceLine = false, voiceLineMode = 'speech',
 }: Props) {
   const recorder = useAudioRecorder(maxSec)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   useWaveform({ analyser: recorder.analyserNode, canvasRef, active: recorder.state === 'recording' })
   const lineRef = useRef<HTMLCanvasElement>(null)
-  useVoiceLine({ analyser: voiceLine ? recorder.analyserNode : null, canvasRef: lineRef, spanSec: targetSec ?? maxSec })
+  useVoiceLine({ analyser: voiceLine ? recorder.analyserNode : null, canvasRef: lineRef, spanSec: targetSec ?? maxSec, mode: voiceLineMode })
   const [prepLeft, setPrepLeft] = useState<number | null>(null)
   const prepTimer = useRef<number | null>(null)
 
