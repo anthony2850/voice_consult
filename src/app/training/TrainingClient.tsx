@@ -95,7 +95,6 @@ export default function TrainingClient() {
     <div className="flex flex-col min-h-[calc(100vh-84px)] pb-8">
       <PageHeader
         title="내 훈련"
-        sub="한 가지 고민을 한 트랙으로 깊게 연습해요."
         chips={tracks.length > 0 && (
           <>
             <Pill tone="data">이번 주 {weekDone}/{weeklyGoal}회</Pill>
@@ -106,18 +105,18 @@ export default function TrainingClient() {
 
       <div className="px-5 pt-4 space-y-4">
         {current ? (
-          <section className="rounded-[28px] bg-secondary p-6 space-y-5">
+          <section className="rounded-[28px] bg-foreground text-white p-6 space-y-5">
             <button onClick={() => router.push('/training/track')} className="w-full text-left">
               <div className="flex items-center justify-between">
-                <p className="eyebrow">지금 하는 트랙</p>
-                <span className="flex items-center text-[13px] font-semibold text-muted-foreground">자세히 <ChevronRight size={16} /></span>
+                <p className="text-[13px] font-bold text-primary">지금 하는 트랙</p>
+                <span className="flex items-center text-[13px] font-semibold text-white/70">자세히 <ChevronRight size={16} /></span>
               </div>
               <div className="mt-3 flex items-center gap-3">
-                {(() => { const Icon = SCENE_ICON[current.scene]; return <span className="w-11 h-11 shrink-0 rounded-2xl bg-card flex items-center justify-center"><Icon size={22} className="text-accent" aria-hidden="true" /></span> })()}
-                <p className="text-[22px] leading-tight font-black tracking-[-0.02em] text-foreground">{trackName(current)}</p>
+                {(() => { const Icon = SCENE_ICON[current.scene]; return <span className="w-11 h-11 shrink-0 rounded-2xl bg-white/10 flex items-center justify-center"><Icon size={22} className="text-primary" aria-hidden="true" /></span> })()}
+                <p className="text-[22px] leading-tight font-black tracking-[-0.02em]">{trackName(current)}</p>
               </div>
-              <p className="mt-3 text-[15px] font-semibold text-foreground">{current.rung}단계: {getRung(current.rung).title}</p>
-              <p className="mt-0.5 text-[13px] text-muted-foreground tabular-nums">세션 {current.sessions}회, 마지막 {relativeDay(current.lastAt)}</p>
+              <p className="mt-3 text-[15px] font-semibold">{current.rung}단계: {getRung(current.rung).title}</p>
+              <p className="mt-0.5 text-[13px] text-white/60 tabular-nums">세션 {current.sessions}회, 마지막 {relativeDay(current.lastAt)}</p>
             </button>
             <PrimaryButton
               onClick={() => {
@@ -127,7 +126,7 @@ export default function TrainingClient() {
             >
               오늘 세션 시작, 약 5분
             </PrimaryButton>
-            {doneToday && <p className="-mt-2 text-[13px] font-semibold text-good text-center">오늘 이미 한 번 했어요. 한 번 더 해도 돼요.</p>}
+            {doneToday && <p className="-mt-2 text-[13px] font-semibold text-white/80 text-center">오늘 이미 한 번 했어요. 한 번 더 해도 돼요.</p>}
           </section>
         ) : (
           <section className="rounded-[28px] bg-secondary p-6 space-y-2">
@@ -139,10 +138,9 @@ export default function TrainingClient() {
         )}
 
         {resting.length > 0 && (
-          <section className="rounded-[28px] bg-secondary p-6">
-            <p className="eyebrow">쉬고 있는 트랙</p>
-            <p className="mt-1 text-[13px] text-muted-foreground leading-relaxed">기록은 트랙마다 따로 남아요. 돌아가면 하던 단계부터 이어서 해요.</p>
-            <div className="mt-3 space-y-2">
+          <section className="pt-2">
+            <p className="px-1 text-[15px] font-black text-foreground">쉬고 있는 트랙</p>
+            <div className="mt-2 rounded-[20px] border border-border bg-card divide-y divide-border">
               {resting.map((t) => {
                 const Icon = SCENE_ICON[t.scene]
                 return (
@@ -150,7 +148,7 @@ export default function TrainingClient() {
                     key={`${t.scene}:${t.concern}`}
                     disabled={switching}
                     onClick={() => openResting(t)}
-                    className="w-full flex items-center gap-3 rounded-2xl bg-card px-4 py-3.5 text-left active:opacity-70 disabled:opacity-50"
+                    className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:bg-secondary disabled:opacity-50 first:rounded-t-[20px] last:rounded-b-[20px]"
                   >
                     <Icon size={20} className="shrink-0 text-foreground/55" aria-hidden="true" />
                     <div className="flex-1 min-w-0">
@@ -165,43 +163,46 @@ export default function TrainingClient() {
           </section>
         )}
 
-        <section className="rounded-[28px] bg-secondary p-6">
-          <p className="eyebrow">연습 전화</p>
-          <p className="mt-1 text-[14px] text-muted-foreground leading-relaxed">
-            정한 시간에 코치가 전화를 걸어 질문해요. 받아서 20초 대답하면 첫마디와 말 빠르기를 알려 드려요.
-          </p>
-          <div className="mt-4 flex gap-2">
+        <section className="rounded-[20px] bg-secondary px-4 py-4">
+          <div className="flex items-center gap-3">
+            <span className="w-10 h-10 shrink-0 rounded-full bg-card flex items-center justify-center" aria-hidden="true">
+              <Phone size={18} className="text-accent" />
+            </span>
+            <div className="flex-1 min-w-0">
+              <p className="text-[15px] font-bold text-foreground">연습 전화</p>
+              <p className="text-[12px] text-muted-foreground">
+                코치가 전화로 질문해요. {callPlan.weeklyGoal === 7 ? '매일' : `주 ${callPlan.weeklyGoal}회`} {callTime.label} {callTime.hh}:{String(callTime.mm).padStart(2, '0')}
+              </p>
+            </div>
+          </div>
+          <div className="mt-3 flex gap-2">
             <button
               type="button"
               onClick={() => router.push('/call?from=hub')}
-              className="flex-1 h-11 rounded-full bg-card flex items-center justify-center gap-1.5 text-[14px] font-bold text-foreground active:opacity-70"
+              className="flex-1 h-10 rounded-full bg-card text-[13px] font-bold text-foreground active:opacity-70"
             >
-              <Phone size={16} aria-hidden="true" /> 지금 받아 보기
+              지금 받아 보기
             </button>
             <button
               type="button"
               onClick={addCallToCalendar}
-              className="flex-1 h-11 rounded-full bg-card flex items-center justify-center gap-1.5 text-[14px] font-bold text-foreground active:opacity-70"
+              className="flex-1 h-10 rounded-full bg-card flex items-center justify-center gap-1.5 text-[13px] font-bold text-foreground active:opacity-70"
             >
-              <CalendarPlus size={16} aria-hidden="true" /> 캘린더에 추가
+              <CalendarPlus size={15} aria-hidden="true" /> 캘린더에 추가
             </button>
           </div>
-          <p className="mt-2 text-[12px] text-muted-foreground">{callPlan.weeklyGoal === 7 ? '매일' : `주 ${callPlan.weeklyGoal}회`} {callTime.label} {callTime.hh}:{String(callTime.mm).padStart(2, '0')}에 울려요.</p>
         </section>
 
         {current ? (
-          <>
-            <button
-              onClick={() => {
-                trackEvent('training_new_track_clicked', { tracks: tracks.length })
-                router.push('/training/start')
-              }}
-              className="w-full h-14 rounded-full border-2 border-dashed border-border flex items-center justify-center gap-2 text-[16px] font-bold text-foreground active:bg-secondary"
-            >
-              <Plus size={18} /> 새 트랙 시작
-            </button>
-            <p className="-mt-2 text-[13px] text-muted-foreground text-center">상황을 고르고 진단부터 해요. 한 트랙에 꾸준히 머물수록 변화가 빨라요.</p>
-          </>
+          <button
+            onClick={() => {
+              trackEvent('training_new_track_clicked', { tracks: tracks.length })
+              router.push('/training/start')
+            }}
+            className="w-full h-14 rounded-full border-2 border-dashed border-border flex items-center justify-center gap-2 text-[16px] font-bold text-foreground active:bg-secondary"
+          >
+            <Plus size={18} /> 새 트랙 시작
+          </button>
         ) : (
           <PrimaryButton
             onClick={() => {
