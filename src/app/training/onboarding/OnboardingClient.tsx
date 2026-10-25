@@ -69,6 +69,8 @@ export default function OnboardingClient() {
   }, [router, savePlan])
 
   const resume = params.get('resume') === '1'
+  // 로그인하고 돌아온 경우, 저장된 답을 확인하는 동안 질문 화면을 다시 보여 주지 않는다
+  const [restoring, setRestoring] = useState(resume)
   useEffect(() => {
     const supabase = getSupabase()
     supabase.auth.getSession().then(({ data }) => {
@@ -79,12 +81,14 @@ export default function OnboardingClient() {
       if (spoken) setScene((cur) => cur ?? getSpeakCategory(spoken.category).scene)
       // 로그인하고 돌아온 경우: 저장해 둔 답으로 이어서 진단으로 간다.
       // 로그인을 취소하고 돌아온 경우: 답을 채운 채 마지막 장으로.
-      const pending = resume && !resumed.current ? readPendingOnboarding() : null
-      if (!pending) return
+      if (resumed.current) return
+      const pending = resume ? readPendingOnboarding() : null
+      if (!pending) { setRestoring(false); return }
       resumed.current = true
       if (isAuthed) { void finish(pending); return }
       setScene(pending.scene); setConcern(pending.selfConcern ?? 'unknown'); setWeekly(pending.weeklyGoal); setTime(pending.time)
       setStep(QUESTION_STEPS)
+      setRestoring(false)
     })
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_, s) => setAuthed(!!s))
     return () => subscription.unsubscribe()
@@ -116,6 +120,20 @@ export default function OnboardingClient() {
     if (authed) { void finish(answers); return }
     writePendingOnboarding(answers)
     setStep(QUESTION_STEPS)
+  }
+
+  if (restoring) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-4 px-5 min-h-[calc(100vh-84px)] text-center" role="status">
+        <div className="w-8 h-8 rounded-full border-4 border-primary border-t-transparent animate-spin" aria-hidden="true" />
+        {finishing && (
+          <>
+            <p className="text-[16px] font-bold text-foreground">계획을 저장하고 있어요</p>
+            <p className="-mt-2 text-[13px] text-muted-foreground">곧 진단으로 넘어가요</p>
+          </>
+        )}
+      </div>
+    )
   }
 
   if (step === 0) {
