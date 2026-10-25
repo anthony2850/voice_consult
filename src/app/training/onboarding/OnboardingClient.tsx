@@ -4,22 +4,19 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import {
-  AudioWaveform, Briefcase, CalendarPlus, Check, CircleHelp, Gauge, MessageCircle, MessagesSquare,
-  MoonStar, Phone, Presentation, Sprout, Sun, Sunrise, TrendingUp, Volume1, Zap, type LucideIcon,
+  AudioWaveform, CalendarPlus, Check, CircleHelp, Gauge, MessageCircle,
+  MoonStar, Sprout, Sun, Sunrise, TrendingUp, Volume1, Zap, type LucideIcon,
 } from 'lucide-react'
 import { getSupabase } from '@/lib/supabase'
 import { useTrack } from '@/hooks/useTrack'
-import { SCENE_LABELS, SCENE_ORDER, TRACKS, type ConcernSlug, type Scene } from '@/lib/curriculum'
+import { TRACKS, type ConcernSlug } from '@/lib/curriculum'
 import {
   PRACTICE_TIME, buildPracticeIcs, readPendingOnboarding, writePendingOnboarding,
   type PendingOnboarding, type PracticeTime, type WeeklyGoal,
 } from '@/lib/plan'
 import { signIn } from '@/components/LoginRequired'
-import { getSpeakCategory, readStoredPrompt } from '@/lib/speakPrompts'
 import { trackEvent } from '@/lib/analytics'
 import { HoldButton, OnboardingShell, OnboardingTitle, OptionCard, PrimaryButton } from '@/components/onboarding/OnboardingParts'
-
-const SCENE_ICON: Record<Scene, LucideIcon> = { interview: Briefcase, presentation: Presentation, call: Phone, daily: MessagesSquare }
 
 type ConcernAnswer = ConcernSlug | 'unknown'
 const CONCERN_OPTIONS: { value: ConcernAnswer; icon: LucideIcon; title: string; sub: string }[] = [
@@ -39,7 +36,7 @@ const WEEKLY_OPTIONS: { value: WeeklyGoal; icon: LucideIcon; title: string; sub:
 const TIME_ICON: Record<PracticeTime, LucideIcon> = { morning: Sunrise, midday: Sun, evening: MoonStar }
 const TIME_ORDER: PracticeTime[] = ['morning', 'midday', 'evening']
 
-const QUESTION_STEPS = 5
+const QUESTION_STEPS = 4
 
 function timeText(t: PracticeTime) {
   const { label, hh, mm } = PRACTICE_TIME[t]
@@ -53,7 +50,6 @@ export default function OnboardingClient() {
   const { savePlan } = useTrack()
   const [authed, setAuthed] = useState<boolean | null>(null)
   const [step, setStep] = useState(0)
-  const [scene, setScene] = useState<Scene | null>(null)
   const [concern, setConcern] = useState<ConcernAnswer | null>(null)
   const [weekly, setWeekly] = useState<WeeklyGoal | null>(null)
   const [time, setTime] = useState<PracticeTime | null>(null)
@@ -64,8 +60,9 @@ export default function OnboardingClient() {
     setFinishing(true)
     await savePlan({ weeklyGoal: a.weeklyGoal, time: a.time, selfConcern: a.selfConcern })
     writePendingOnboarding(null)
-    trackEvent('onboarding_completed', { scene: a.scene, concern: a.selfConcern ?? 'unknown', weekly: a.weeklyGoal, time: a.time })
-    router.push(`/training/diagnose?scene=${a.scene}${a.selfConcern ? `&concern=${a.selfConcern}` : ''}`)
+    trackEvent('onboarding_completed', { concern: a.selfConcern ?? 'unknown', weekly: a.weeklyGoal, time: a.time })
+    // 연습 문장은 트랙 시작 화면에서 고른다
+    router.push(`/training/start${a.selfConcern ? `?concern=${a.selfConcern}` : ''}`)
   }, [router, savePlan])
 
   const resume = params.get('resume') === '1'
@@ -76,9 +73,6 @@ export default function OnboardingClient() {
     supabase.auth.getSession().then(({ data }) => {
       const isAuthed = !!data.session
       setAuthed(isAuthed)
-      // 방금 녹음에서 고른 말하기 방식에 맞는 상황을 미리 골라 둔다 (자기소개 → 면접)
-      const spoken = readStoredPrompt()
-      if (spoken) setScene((cur) => cur ?? getSpeakCategory(spoken.category).scene)
       // 로그인하고 돌아온 경우: 저장해 둔 답으로 이어서 진단으로 간다.
       // 로그인을 취소하고 돌아온 경우: 답을 채운 채 마지막 장으로.
       if (resumed.current) return
@@ -86,7 +80,7 @@ export default function OnboardingClient() {
       if (!pending) { setRestoring(false); return }
       resumed.current = true
       if (isAuthed) { void finish(pending); return }
-      setScene(pending.scene); setConcern(pending.selfConcern ?? 'unknown'); setWeekly(pending.weeklyGoal); setTime(pending.time)
+      setConcern(pending.selfConcern ?? 'unknown'); setWeekly(pending.weeklyGoal); setTime(pending.time)
       setStep(QUESTION_STEPS)
       setRestoring(false)
     })
@@ -97,10 +91,10 @@ export default function OnboardingClient() {
   useEffect(() => { trackEvent('onboarding_step_viewed', { step }) }, [step])
 
   const answers = useMemo<PendingOnboarding | null>(() => (
-    scene && concern && weekly && time
-      ? { scene, selfConcern: concern === 'unknown' ? null : concern, weeklyGoal: weekly, time }
+    concern && weekly && time
+      ? { selfConcern: concern === 'unknown' ? null : concern, weeklyGoal: weekly, time }
       : null
-  ), [scene, concern, weekly, time])
+  ), [concern, weekly, time])
 
   const back = () => (step === 0 ? router.push('/') : setStep(step - 1))
   const next = () => setStep(step + 1)
@@ -138,20 +132,7 @@ export default function OnboardingClient() {
 
   if (step === 0) {
     return (
-      <OnboardingShell step={0} total={QUESTION_STEPS} onBack={back} footer={<PrimaryButton disabled={!scene} onClick={next}>다음</PrimaryButton>}>
-        <OnboardingTitle sub="그 상황의 문장으로 처음부터 끝까지 연습해요.">{'어떤 상황에서\n말을 잘하고 싶나요?'}</OnboardingTitle>
-        <div className="space-y-3" role="radiogroup" aria-label="상황">
-          {SCENE_ORDER.map((s) => (
-            <OptionCard key={s} icon={SCENE_ICON[s]} title={SCENE_LABELS[s].label} sub={SCENE_LABELS[s].hint} selected={scene === s} onSelect={() => setScene(s)} />
-          ))}
-        </div>
-      </OnboardingShell>
-    )
-  }
-
-  if (step === 1) {
-    return (
-      <OnboardingShell step={1} total={QUESTION_STEPS} onBack={back} footer={<PrimaryButton disabled={!concern} onClick={next}>다음</PrimaryButton>}>
+      <OnboardingShell step={0} total={QUESTION_STEPS} onBack={back} footer={<PrimaryButton disabled={!concern} onClick={next}>다음</PrimaryButton>}>
         <OnboardingTitle sub="진단에서 실제로 재 보고, 고르신 것과 비교해 드려요.">{'말할 때 무엇이\n가장 걸리나요?'}</OnboardingTitle>
         <div className="space-y-3" role="radiogroup" aria-label="고민">
           {CONCERN_OPTIONS.map((o) => (
@@ -162,9 +143,9 @@ export default function OnboardingClient() {
     )
   }
 
-  if (step === 2) {
+  if (step === 1) {
     return (
-      <OnboardingShell step={2} total={QUESTION_STEPS} onBack={back} footer={<PrimaryButton disabled={!weekly} onClick={next}>다음</PrimaryButton>}>
+      <OnboardingShell step={1} total={QUESTION_STEPS} onBack={back} footer={<PrimaryButton disabled={!weekly} onClick={next}>다음</PrimaryButton>}>
         <OnboardingTitle sub="목도 쉬는 날이 필요해요. 쉬는 날에는 기록이 끊기지 않아요.">{'일주일에 몇 번\n연습할까요?'}</OnboardingTitle>
         <div className="space-y-3" role="radiogroup" aria-label="연습 횟수">
           {WEEKLY_OPTIONS.map((o) => (
@@ -175,9 +156,9 @@ export default function OnboardingClient() {
     )
   }
 
-  if (step === 3) {
+  if (step === 2) {
     return (
-      <OnboardingShell step={3} total={QUESTION_STEPS} onBack={back} footer={<PrimaryButton disabled={!time} onClick={next}>다음</PrimaryButton>}>
+      <OnboardingShell step={2} total={QUESTION_STEPS} onBack={back} footer={<PrimaryButton disabled={!time} onClick={next}>다음</PrimaryButton>}>
         <OnboardingTitle sub="시간을 정해 두면 실제로 지킬 확률이 높아져요. 그 시간에 캘린더 알림을 만들어 드릴게요.">{'언제 연습할까요?'}</OnboardingTitle>
         <div className="space-y-3" role="radiogroup" aria-label="연습 시간">
           {TIME_ORDER.map((t) => (
@@ -188,10 +169,10 @@ export default function OnboardingClient() {
     )
   }
 
-  if (step === 4 && answers) {
+  if (step === 3 && answers) {
     return (
       <OnboardingShell
-        step={4} total={QUESTION_STEPS} onBack={back} align="top"
+        step={3} total={QUESTION_STEPS} onBack={back} align="top"
         footer={
           <div className="space-y-2">
             <HoldButton onDone={start} disabled={finishing}>{finishing ? '준비 중…' : '꾹 눌러서 진단 시작'}</HoldButton>
@@ -229,7 +210,6 @@ export default function OnboardingClient() {
           <p className="eyebrow">내 계획</p>
           <dl className="mt-3 space-y-2.5 text-[15px]">
             {[
-              ['상황', SCENE_LABELS[answers.scene].label],
               ['고민', answers.selfConcern ? `${TRACKS[answers.selfConcern].label}, 진단으로 확인해요` : '진단으로 정해요'],
               ['횟수', answers.weeklyGoal === 7 ? '매일' : `주 ${answers.weeklyGoal}회`],
               ['시간', timeText(answers.time)],
@@ -250,7 +230,7 @@ export default function OnboardingClient() {
 
   // step 5 — 로그인 전 사용자
   return (
-    <OnboardingShell step={QUESTION_STEPS - 1} total={QUESTION_STEPS} onBack={() => setStep(4)} footer={
+    <OnboardingShell step={QUESTION_STEPS - 1} total={QUESTION_STEPS} onBack={() => setStep(3)} footer={
       <p className="text-[11px] text-muted-foreground text-center leading-relaxed">
         로그인하면 만 14세 이상이며 <Link href="/terms" className="underline underline-offset-2">이용약관</Link>과{' '}
         <Link href="/privacy" className="underline underline-offset-2">개인정보처리방침</Link>에 동의한 것으로 봐요.

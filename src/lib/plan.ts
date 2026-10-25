@@ -5,7 +5,7 @@
  * - 연습 시간: 실행 의도(Gollwitzer, 1999). "언제 하겠다"를 정하면 실천 확률이 오른다.
  *   웹 앱이라 푸시를 못 보내므로 캘린더 알림(.ics)으로 잇는다.
  */
-import type { ConcernSlug, Scene } from './curriculum'
+import type { ConcernSlug } from './curriculum'
 
 export type WeeklyGoal = 3 | 5 | 7
 export type PracticeTime = 'morning' | 'midday' | 'evening'
@@ -17,9 +17,8 @@ export interface Plan {
   selfConcern: ConcernSlug | null
 }
 
-export interface PendingOnboarding extends Plan {
-  scene: Scene
-}
+/** 온보딩 답. 연습 문장(상황)은 온보딩이 아니라 트랙을 시작할 때 고른다. */
+export type PendingOnboarding = Plan
 
 export const PRACTICE_TIME: Record<PracticeTime, { label: string; hint: string; hh: number; mm: number }> = {
   morning: { label: '아침', hint: '출근이나 등교 전에', hh: 8, mm: 0 },
@@ -109,7 +108,6 @@ function write(key: string, v: unknown) {
 export const readLocalPlan = () => read(PLAN_KEY, isPlan)
 export const writeLocalPlan = (p: Plan) => write(PLAN_KEY, p)
 
-const isPending = (v: unknown): v is PendingOnboarding =>
-  isPlan(v) && typeof (v as unknown as Record<string, unknown>).scene === 'string'
+const isPending = (v: unknown): v is PendingOnboarding => isPlan(v)
 export const readPendingOnboarding = () => read(PENDING_KEY, isPending)
 export const writePendingOnboarding = (p: PendingOnboarding | null) => write(PENDING_KEY, p)

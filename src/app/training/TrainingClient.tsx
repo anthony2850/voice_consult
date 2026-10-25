@@ -132,7 +132,7 @@ export default function TrainingClient() {
           <section className="rounded-[28px] bg-secondary p-6 space-y-2">
             <p className="text-[18px] font-black text-foreground">아직 트랙이 없어요</p>
             <p className="text-[14px] text-muted-foreground leading-relaxed">
-              트랙은 &lsquo;어떤 상황에서&rsquo;와 &lsquo;무엇이 고민인지&rsquo;의 조합이에요. 상황을 고르고 3분 진단을 하면, 결과를 보고 고민을 골라 시작해요.
+              연습할 문장을 고르고 3분 진단을 하면, 결과를 보고 고민을 골라 시작해요.
             </p>
           </section>
         )}

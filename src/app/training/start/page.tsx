@@ -1,10 +1,13 @@
+import { Suspense } from 'react'
 import LoginRequired from '@/components/LoginRequired'
 import StartClient from './StartClient'
 
 export default function StartPage() {
   return (
     <LoginRequired>
-      <StartClient />
+      <Suspense>
+        <StartClient />
+      </Suspense>
     </LoginRequired>
   )
 }
