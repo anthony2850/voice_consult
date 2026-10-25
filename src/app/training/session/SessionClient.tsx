@@ -175,8 +175,8 @@ export default function SessionClient() {
         {step === 'retention' && (
           <RecordStep
             eyebrow="시작 녹음"
-            title={sessionIndex === 0 ? '기준 문장을 평소대로 한 번' : '지난 연습의 문장을 그대로 한 번'}
-            instructions={['연습 전에 평소처럼 한 번 읽어요.']}
+            title="평소대로 한 번 읽어요"
+            instructions={[]}
             script={baseScript}
             maxSec={12}
             analyzing={analyzing}
@@ -192,11 +192,10 @@ export default function SessionClient() {
               eyebrow={`몸 풀기, ${rungs.a}단계`}
               title={r.title}
               keyInfo={track.keyInfo}
-              instructions={r.instructions.slice(0, -1)}
+              instructions={r.practiceHint ? [r.practiceHint] : []}
               variation={variation}
               script={r.script(scene, sessionIndex)}
               scriptLabel={r.scriptLabel}
-              lastWord={track.lastWord}
               maxSec={r.maxSec}
               targetSec={r.targetSec}
               prepSec={r.prepSec}
@@ -217,11 +216,10 @@ export default function SessionClient() {
               eyebrow={`도전, ${rungs.b}단계`}
               title={r.title}
               keyInfo={track.keyInfo}
-              instructions={r.instructions.slice(0, -1)}
+              instructions={r.practiceHint ? [r.practiceHint] : []}
               variation={variation}
               script={r.script(scene, sessionIndex)}
               scriptLabel={r.scriptLabel}
-              lastWord={track.lastWord}
               maxSec={r.maxSec}
               targetSec={r.targetSec}
               prepSec={r.prepSec}
@@ -237,11 +235,9 @@ export default function SessionClient() {
         {step === 'performance' && (
           <RecordStep
             eyebrow="마무리 녹음"
-            title="기준 문장을 다시 한 번"
-            keyInfo={track.keyInfo}
-            instructions={['연습한 느낌 그대로 한 번 더 읽어요.']}
+            title="연습한 느낌 그대로 한 번 더"
+            instructions={[]}
             script={baseScript}
-            lastWord={track.lastWord}
             maxSec={12}
             analyzing={analyzing}
             onRecorded={(b) => {

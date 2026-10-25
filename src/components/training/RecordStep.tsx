@@ -17,8 +17,6 @@ interface Props {
   variation?: Variation
   script?: string | null
   scriptLabel?: string
-  /** 녹음 직전 마지막 한마디 — 결과를 향한다 */
-  lastWord?: string
   maxSec: number
   targetSec?: number
   /** 준비 시간. 있으면 버튼을 누른 뒤 카운트다운 후 자동 시작 */
@@ -36,7 +34,7 @@ interface Props {
 
 export default function RecordStep({
   eyebrow, title, keyInfo, instructions, variation, script, scriptLabel = '읽어 주세요',
-  lastWord, maxSec, targetSec, prepSec, analyzing, onRecorded, doneLabel = '다음', silentNote, voiceLine = false, voiceLineMode = 'speech',
+  maxSec, targetSec, prepSec, analyzing, onRecorded, doneLabel = '다음', silentNote, voiceLine = false, voiceLineMode = 'speech',
 }: Props) {
   const recorder = useAudioRecorder(maxSec)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -76,27 +74,15 @@ export default function RecordStep({
         <p className="text-[19px] font-black tracking-[-0.02em] text-foreground">{title}</p>
       </div>
 
-      {keyInfo && (
-        <div className="rounded-2xl bg-card px-4 py-3">
-          <p className="eyebrow mb-1">녹음할 때 확인할 것</p>
-          <p className="text-[15px] font-bold text-foreground">{keyInfo}</p>
-        </div>
-      )}
-
-      <ul className="space-y-1.5">
-        {instructions.map((line, i) => (
-          <li key={i} className="flex gap-2 text-[14px] text-foreground leading-relaxed"><span aria-hidden="true" className="mt-2 w-1.5 h-1.5 shrink-0 rounded-full bg-accent" />{line}</li>
-        ))}
-        {targetSec && (
-          <li className="flex gap-2 text-[14px] text-foreground leading-relaxed"><span aria-hidden="true" className="mt-2 w-1.5 h-1.5 shrink-0 rounded-full bg-accent" />{targetSec}초면 충분해요.</li>
-        )}
-      </ul>
-
-      {variation && (
-        <div className="rounded-2xl bg-card px-4 py-3">
-          <p className="eyebrow mb-1">오늘은 이렇게: {variation.label}</p>
-          <p className="text-[14px] font-semibold text-foreground">{variation.change}</p>
-        </div>
+      {(instructions.length > 0 || variation) && (
+        <ul className="space-y-1.5">
+          {instructions.map((line, i) => (
+            <li key={i} className="flex gap-2 text-[15px] text-foreground leading-relaxed"><span aria-hidden="true" className="mt-2 w-1.5 h-1.5 shrink-0 rounded-full bg-accent" />{line}</li>
+          ))}
+          {variation && (
+            <li className="flex gap-2 text-[15px] text-foreground leading-relaxed"><span aria-hidden="true" className="mt-2 w-1.5 h-1.5 shrink-0 rounded-full bg-accent" />오늘은 {variation.change}</li>
+          )}
+        </ul>
       )}
 
       {script && (
@@ -110,7 +96,8 @@ export default function RecordStep({
 
       {idle && !analyzing && (
         <div className="flex flex-col items-center gap-3">
-          {lastWord && <p className="text-sm font-semibold text-foreground text-center">{lastWord}</p>}
+          {/* 녹음 직전 마지막으로 읽는 말은 결과를 향한다 (8교시) */}
+          {keyInfo && <p className="text-[15px] font-bold text-foreground text-center">확인할 것: {keyInfo}</p>}
           {silentNote && <p className="text-[11px] text-muted-foreground text-center">{silentNote}</p>}
           <button
             onClick={beginWithPrep}

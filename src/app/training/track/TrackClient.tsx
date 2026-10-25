@@ -55,10 +55,6 @@ export default function TrackClient() {
 
       <div className="px-5 pt-4 space-y-4">
         <section className="rounded-[28px] bg-secondary p-6 space-y-5">
-          <div>
-            <p className="eyebrow">녹음할 때 확인할 것</p>
-            <p className="mt-1.5 text-[17px] font-bold leading-snug text-foreground">{track.keyInfo}</p>
-          </div>
           <PrimaryButton
             onClick={() => {
               trackEvent('training_session_cta', { concern: track.concern, rung, from: 'track' })

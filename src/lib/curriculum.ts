@@ -94,6 +94,8 @@ export interface Rung {
   instructions: string[]
   /** 진단용 한 줄. 진단은 평소 목소리를 재는 곳이라 성공 기준을 보여 주지 않는다. */
   diagnoseHint?: string
+  /** 연습용 한 줄. 문장만 보고도 할 수 있는 단계(4, 5단계)는 비워 둔다. */
+  practiceHint?: string
   /** 녹음 상한(초). 한계까지 가지 않는다. */
   maxSec: number
   /** 1단 지속 목표(초) */
@@ -109,6 +111,7 @@ export const LADDER: Rung[] = [
   {
     level: 1,
     id: 'rung-1-hum',
+    practiceHint: '입을 다물고 "음~"을 한 높이로 5초 이어 가요.',
     diagnoseHint: '입을 다물고 "음~"을 편하게 5초 내요.',
     title: '"음~" 허밍',
     keeps: '소리만',
@@ -126,6 +129,7 @@ export const LADDER: Rung[] = [
   {
     level: 2,
     id: 'rung-2-vowel-contour',
+    practiceHint: '말할 때처럼 높낮이만 살려요.',
     diagnoseHint: '아래 문장을 "아~" 소리로만, 말하듯 높낮이를 살려 말해요.',
     title: '"아~"로 말 흉내 내기',
     keeps: '소리 + 말의 높낮이',
@@ -142,6 +146,7 @@ export const LADDER: Rung[] = [
   {
     level: 3,
     id: 'rung-3-sonorant',
+    practiceHint: '글자를 붙여 노래 가사처럼 이어 읽어요.',
     diagnoseHint: '아래 문장을 노래 가사처럼 이어 읽어요.',
     title: '부드러운 자음 문장',
     keeps: '소리 + 높낮이 + 부드러운 자음',
@@ -189,6 +194,7 @@ export const LADDER: Rung[] = [
   {
     level: 6,
     id: 'rung-6-pause-prep',
+    practiceHint: '"/"에서 숨을 쉬고 바로 이어 가요.',
     title: '쉬어 가며 바로 시작하기',
     keeps: '실제 문장',
     adds: '숨 쉬는 자리 + 짧은 준비 시간',
