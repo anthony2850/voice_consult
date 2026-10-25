@@ -86,16 +86,14 @@ export default function RecordStep({
           <li key={i} className="flex gap-2 text-[14px] text-foreground leading-relaxed"><span aria-hidden="true" className="mt-2 w-1.5 h-1.5 shrink-0 rounded-full bg-accent" />{line}</li>
         ))}
         {targetSec && (
-          <li className="flex gap-2 text-[14px] text-foreground leading-relaxed"><span aria-hidden="true" className="mt-2 w-1.5 h-1.5 shrink-0 rounded-full bg-accent" />목표 {targetSec}초, 최대 {maxSec}초예요. 길게 버티는 게 목적이 아니에요.</li>
+          <li className="flex gap-2 text-[14px] text-foreground leading-relaxed"><span aria-hidden="true" className="mt-2 w-1.5 h-1.5 shrink-0 rounded-full bg-accent" />{targetSec}초면 충분해요.</li>
         )}
       </ul>
 
       {variation && (
-        <div className="rounded-2xl bg-card px-4 py-3 space-y-1">
-          <p className="eyebrow">오늘은 이렇게 해 봐요: {variation.label}</p>
-          <p className="text-xs text-foreground"><span className="text-muted-foreground">방법</span> {variation.change}</p>
-          <p className="text-xs text-foreground"><span className="text-muted-foreground">유지</span> {variation.hold}</p>
-          <p className="text-xs text-foreground"><span className="text-muted-foreground">확인</span> {variation.observe}</p>
+        <div className="rounded-2xl bg-card px-4 py-3">
+          <p className="eyebrow mb-1">오늘은 이렇게: {variation.label}</p>
+          <p className="text-[14px] font-semibold text-foreground">{variation.change}</p>
         </div>
       )}
 

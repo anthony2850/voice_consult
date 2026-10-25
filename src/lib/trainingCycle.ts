@@ -366,28 +366,28 @@ export type VoiceUse = 'low' | 'normal' | 'high'
 export function retentionCopy(verdict: RetentionVerdict, voiceUse: VoiceUse): string {
   switch (verdict) {
     case 'first':
-      return '첫 기록이에요. 다음 세션의 시작 녹음을 오늘 마무리 녹음과 비교해요.'
+      return '첫 기록이에요. 다음 세션 시작 녹음과 비교해요.'
     case 'kept':
-      return '지난번 마무리 때의 목소리가 오늘 시작에도 그대로 나왔어요. 연습한 게 몸에 남은 거예요.'
+      return '지난번 마무리만큼 나왔어요. 연습한 게 남아 있어요.'
     case 'partly':
-      return '절반쯤 남아 있어요. 쉬고 난 뒤 첫 녹음은 원래 조금 낮게 나와요. 정상이에요. 오늘 마무리 녹음에서 다시 올라오는지 봐요.'
+      return '지난번 마무리의 절반쯤 남아 있어요. 쉬고 난 뒤 첫 녹음은 원래 조금 낮게 나와요.'
     case 'reset':
       return voiceUse === 'high'
-        ? '지난번 마무리와 차이가 있어요. 오늘 목을 많이 썼다고 했죠. 그 영향일 가능성이 커요. 실력이 줄어든 게 아니에요.'
-        : '지난번 마무리와 차이가 있어요. 컨디션이나 주변 환경이 달랐을 수 있어요. 실력이 줄어든 게 아니에요.'
+        ? '지난번 마무리보다 낮게 나왔어요. 오늘 목을 많이 쓴 영향일 수 있어요.'
+        : '지난번 마무리보다 낮게 나왔어요. 컨디션이나 주변 소음 영향일 수 있어요.'
     case 'na':
-      return '발음은 직접 들어 보고 판단해요. 녹음에서 모든 글자를 알아들을 수 있는지 확인해 보세요.'
+      return '녹음을 직접 듣고 판단해요.'
   }
 }
 
 /** 세션 끝 문구: 오늘 끝의 상승을 "학습"이라 부르지 않는다 (9교시 6쪽). */
 export function performanceCopy(met: boolean | null, next: RungLevel, current: RungLevel): string {
   const move = next > current ? '다음 세션은 한 단계 올라가요.'
-    : next < current ? '다음 세션은 한 단계 낮춰서 해요. 목을 쉬게 하면서 다시 다지는 거예요.'
+    : next < current ? '다음 세션은 한 단계 낮춰서 해요.'
     : '다음 세션도 같은 단계를 해요.'
-  if (met === true) return `오늘 마무리 녹음이 목표 안에 들어왔어요. 다만 방금 연습해서 몸이 풀린 효과일 수 있어서, 실력으로 남았는지는 다음 세션 시작에서 확인해요. ${move}`
-  if (met === false) return `오늘은 목표에 조금 못 미쳤어요. 말하는 방식을 조금 바꿔 같은 단계를 다시 해 보면 돼요. ${move}`
-  return `녹음을 직접 듣고 판단했어요. ${move}`
+  if (met === true) return `오늘 마무리 녹음이 기준 안이에요. ${move}`
+  if (met === false) return `오늘 마무리 녹음이 기준 밖이에요. ${move}`
+  return move
 }
 
 // ─── 공용 ────────────────────────────────────────────────────────────────────

@@ -6,7 +6,7 @@ import { useTrack } from '@/hooks/useTrack'
 import { SCENE_SCRIPTS, TRACKS, getRung, type RungLevel } from '@/lib/curriculum'
 import {
   METRIC_INFO, allowStrongVariations, meetsCriterion, metricValue, nextRung, performanceCopy,
-  pickVariation, retentionCopy, retentionVerdict, rungReason, sessionRungs, type Measure, type VoiceUse,
+  JITTER_LIMIT, LOUDNESS_TOLERANCE_DB, PACE_RANGE, pickVariation, retentionCopy, retentionVerdict, rungReason, sessionRungs, type Measure, type VoiceUse,
 } from '@/lib/trainingCycle'
 import { measureBlob } from '@/lib/trainingMeasure'
 import RecordStep from '@/components/training/RecordStep'
@@ -25,8 +25,9 @@ const VOICE_USE_OPTIONS: { value: VoiceUse; label: string; hint: string }[] = [
 
 function fmt(metric: keyof typeof METRIC_INFO, m: Measure | null): string {
   if (!m) return '—'
-  const v = metricValue(metric, m)
-  return metric === 'jitter' ? v.toFixed(2) : v.toFixed(1)
+  // 떨림은 기준과 같은 단위(%)로 보여 준다. metricValue는 기준으로 나눈 비율이다.
+  if (metric === 'jitter') return m.jitter_rel_pct.toFixed(1)
+  return metricValue(metric, m).toFixed(1)
 }
 
 export default function SessionClient() {
@@ -130,7 +131,6 @@ export default function SessionClient() {
         back={{ label: '나가기', onClick: () => router.push('/training/track') }}
         eyebrow={`${track.label} 트랙, ${sessionIndex + 1}번째 세션`}
         title={`${current}단계: ${getRung(current).title}`}
-        sub={track.keyInfo}
         chips={step !== 'saved' && <Pill tone="data">{stepNo} / {stepTotal}</Pill>}
       />
 
@@ -148,7 +148,6 @@ export default function SessionClient() {
             <div>
               <p className="eyebrow">오늘 상태</p>
               <p className="text-base font-bold text-foreground">오늘 목을 얼마나 썼나요?</p>
-              <p className="text-xs text-muted-foreground mt-1">결과를 읽을 때 같이 봐요. 피곤한 날의 낮은 값은 학습 실패가 아니에요.</p>
             </div>
             <div className="space-y-2">
               {VOICE_USE_OPTIONS.map((o) => (
@@ -169,12 +168,11 @@ export default function SessionClient() {
           <RecordStep
             eyebrow="시작 녹음"
             title={sessionIndex === 0 ? '기준 문장을 평소대로 한 번' : '지난 세션의 문장을 그대로 한 번'}
-            instructions={['연습 전에 평소처럼 한 번만 읽어요.', '지난번 마무리 녹음과 비교해서, 연습한 게 남아 있는지 봐요.']}
+            instructions={['연습 전에 평소처럼 한 번 읽어요.']}
             script={baseScript}
             maxSec={12}
             analyzing={analyzing}
             onRecorded={(b) => measureOrRetry(b, 4, (m) => { setRetention(m); advance('retention') })}
-            silentNote="점수는 보여주지 않아요"
           />
         )}
 
@@ -186,7 +184,7 @@ export default function SessionClient() {
               eyebrow={`연습 1: ${rungs.a}단계 (몸 풀기)`}
               title={r.title}
               keyInfo={track.keyInfo}
-              instructions={r.instructions}
+              instructions={r.instructions.slice(0, -1)}
               variation={variation}
               script={r.script(scene, sessionIndex)}
               scriptLabel={r.scriptLabel}
@@ -210,7 +208,7 @@ export default function SessionClient() {
               eyebrow={`연습 2: ${rungs.b}단계 (도전)`}
               title={r.title}
               keyInfo={track.keyInfo}
-              instructions={r.instructions}
+              instructions={r.instructions.slice(0, -1)}
               variation={variation}
               script={r.script(scene, sessionIndex)}
               scriptLabel={r.scriptLabel}
@@ -231,7 +229,7 @@ export default function SessionClient() {
             eyebrow="마무리 녹음"
             title="기준 문장을 다시 한 번"
             keyInfo={track.keyInfo}
-            instructions={['시작 녹음과 같은 문장이에요.', '연습한 뒤의 목소리를 기록해요. 다음 세션 시작 녹음과 비교할 거예요.']}
+            instructions={['연습한 느낌 그대로 한 번 더 읽어요.']}
             script={baseScript}
             lastWord={track.lastWord}
             maxSec={12}
@@ -249,7 +247,7 @@ export default function SessionClient() {
             <div>
               <p className="eyebrow">직접 들어 보기</p>
               <p className="text-base font-bold text-foreground">{track.keyInfo}</p>
-              <p className="text-xs text-muted-foreground mt-1">발음은 앱이 잴 수 없어서 직접 들어 보고 판단해요.</p>
+              <p className="text-xs text-muted-foreground mt-1">녹음을 듣고 골라 주세요.</p>
             </div>
             {performanceUrl && <audio controls src={performanceUrl} className="w-full h-10" />}
             <div className="grid grid-cols-2 gap-2">
@@ -264,7 +262,6 @@ export default function SessionClient() {
             <div>
               <p className="eyebrow">목 상태</p>
               <p className="text-base font-bold text-foreground">방금 말할 때 목이 얼마나 힘들었나요?</p>
-              <p className="text-xs text-muted-foreground mt-1">소리가 좋았어도 목이 힘들었다면 다음 단계로 올라가지 않아요.</p>
             </div>
             <div className="grid grid-cols-5 gap-1.5">
               {([1, 2, 3, 4, 5] as const).map((n) => (
@@ -313,13 +310,16 @@ export default function SessionClient() {
                     <div key={label} className="rounded-2xl bg-card px-2 py-3">
                       <p className="text-[10px] text-muted-foreground mb-1">{label}</p>
                       <p className="text-lg font-black tabular-nums text-foreground">{fmt(metric, m)}</p>
-                      <p className="text-[10px] text-muted-foreground">{METRIC_INFO[metric].unit}</p>
+                      <p className="text-[10px] text-muted-foreground">{metric === 'jitter' ? '%' : METRIC_INFO[metric].unit}</p>
                     </div>
                   ))}
                 </div>
-                <p className="text-[11px] text-muted-foreground leading-relaxed">
-                  {metric === 'jitter' ? '1.00 이하면 떨림이 괜찮은 범위예요. 낮을수록 고른 목소리예요.' : metric === 'pace' ? '2.5~5.5가 듣기 편한 빠르기예요.' : '진단 때보다 2dB 넘게 작아지지 않았으면 유지한 거예요.'}
-                  {' '}오늘 마무리가 좋아진 건 방금 연습한 효과일 수 있어요. 진짜 실력은 다음 세션의 시작 녹음에서 보여요.
+                <p className="text-[12px] text-muted-foreground">
+                  {metric === 'jitter'
+                    ? `기준 ${JITTER_LIMIT[performance?.jitter_source ?? retention?.jitter_source ?? 'praat']}% 이하`
+                    : metric === 'pace'
+                      ? `기준 1초에 ${PACE_RANGE.min}~${PACE_RANGE.max}글자`
+                      : `기준: 진단 때보다 ${LOUDNESS_TOLERANCE_DB}dB 넘게 작아지지 않기`}
                 </p>
               </div>
             )}
