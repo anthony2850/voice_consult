@@ -142,7 +142,7 @@ export default function DiagnoseClient() {
           <div className="flex-1 overflow-y-auto px-5 pt-16 pb-6 space-y-7">
             <div className="text-center space-y-2">
               <Eyebrow>내 계획</Eyebrow>
-              <Display sub="1일차 기준점과 답하신 내용으로 만들어요.">{'연습 계획을\n만들고 있어요'}</Display>
+              <Display>{'연습 계획을\n만들고 있어요'}</Display>
             </div>
             <ProgressBar value={planDone / items.length} label="계획 만드는 중" />
             <SurfaceCard><Checklist items={items} done={planDone} /></SurfaceCard>
@@ -161,27 +161,24 @@ export default function DiagnoseClient() {
         <div className="flex-1 overflow-y-auto px-5 pt-14 pb-6 space-y-6">
           <div className="text-center space-y-2">
             <Eyebrow>1일차 기준점</Eyebrow>
-            <Display sub="4번의 녹음으로 잰 값이에요. 앞으로 시작 녹음을 이 값과 비교해요.">{'오늘이 당신의\n1일차예요'}</Display>
+            <Display sub="앞으로 이 값과 비교해요.">{'오늘이 당신의\n1일차예요'}</Display>
           </div>
 
           <SurfaceCard className="py-2">
             {sustained && (
               <MetricRow
-                label="목소리 떨림" value={sustained.jitter_rel_pct.toFixed(2)} unit="%"
-                pill={jitterOk ? <Pill tone="good">안정</Pill> : <Pill tone="caution">흔들림</Pill>}
+                label="목소리 떨림" value={sustained.jitter_rel_pct.toFixed(2)} unit="%" hint={`"음~" 허밍에서, 기준 ${JITTER_LIMIT[sustained.jitter_source]}% 이하`}
+                pill={jitterOk ? <Pill tone="good">기준 안</Pill> : <Pill tone="caution">기준 넘음</Pill>}
               />
             )}
             {pace != null && (
               <MetricRow
-                label="말 빠르기" value={pace.toFixed(1)} unit="글자/초"
-                pill={paceTone === 'ok' ? <Pill tone="good">적당</Pill> : paceTone === 'fast' ? <Pill tone="caution">빠름</Pill> : <Pill>느긋</Pill>}
+                label="말 빠르기" value={pace.toFixed(1)} unit="글자/초" hint={`실제 첫 문장에서, 기준 ${PACE_RANGE.max}글자 이하`}
+                pill={paceTone === 'fast' ? <Pill tone="caution">기준 넘음</Pill> : <Pill tone="good">기준 안</Pill>}
               />
             )}
-            {speech && <MetricRow label="목소리 크기" value={speech.db_mean.toFixed(0)} unit="dB" pill={<Pill>기준</Pill>} />}
+            {speech && <MetricRow label="목소리 크기" value={speech.db_mean.toFixed(0)} unit="dB" pill={<Pill>첫 기록</Pill>} />}
           </SurfaceCard>
-          <p className="-mt-3 px-1 text-[12px] leading-relaxed text-muted-foreground">
-            떨림은 1단계 &ldquo;음~&rdquo; 허밍으로 쟀어요. 크기는 마이크마다 달라서 다음부터 오늘 값과 비교해요.
-          </p>
 
           {/* 스스로 고른 고민과 측정에서 먼저 드러난 고민 — 측정이 우리 차별점이 드러나는 순간 */}
           {plan?.selfConcern && suggestions[0] && (() => {
@@ -191,7 +188,7 @@ export default function DiagnoseClient() {
             // 측정에서 실제로 걸린 고민이 있을 때만 "먼저 눈에 띈다"고 말한다. 모두 괜찮으면 목록 첫 항목은 의미가 없다.
             const measuredIssue = suggestions[0].boundary !== null
             const line = !measuredIssue
-              ? `${self}${iGa(self)} 고민이라고 하셨는데, 이번 녹음에서는 모두 괜찮은 범위였어요. 고르신 고민부터 연습해 볼까요?`
+              ? `${self}${iGa(self)} 고민이라고 하셨는데, 이번 녹음에서는 모두 기준 안이었어요. 고르신 고민부터 연습해 볼까요?`
               : same
                 ? `고르신 ${self}${iGa(self)} 측정에서도 가장 먼저 보여요.`
                 : `${self}${iGa(self)} 고민이라고 하셨는데, 재 보니 ${top}${iGa(top)} 먼저 눈에 띄어요.`
@@ -205,14 +202,14 @@ export default function DiagnoseClient() {
 
           <div className="space-y-3">
             <h2 className="text-[20px] font-black tracking-[-0.02em] text-foreground">어떤 고민부터 연습할까요?</h2>
-            <p className="-mt-1 text-[13px] text-muted-foreground leading-relaxed">녹음에서 먼저 드러난 순서예요. 한 번에 하나만 집중하고, 나중에 바꿀 수 있어요.</p>
+            <p className="-mt-1 text-[13px] text-muted-foreground leading-relaxed">나중에 바꿀 수 있어요.</p>
             <div className="space-y-3" role="radiogroup" aria-label="연습할 고민">
               {suggestions.map((s, i) => (
                 <OptionCard
                   key={s.concern}
                   icon={CONCERN_ICON[s.concern]}
                   title={CONCERN_LABELS[s.concern]}
-                  sub={s.boundary !== null ? `${s.reason} ${s.boundary}단계부터 시작해요.` : s.reason}
+                  sub={s.reason}
                   badge={i === 0 && s.boundary !== null ? '제안' : undefined}
                   selected={picked === s.concern}
                   onSelect={() => setPicked(s.concern)}
@@ -239,7 +236,6 @@ export default function DiagnoseClient() {
         back={{ label: '나가기', onClick: () => router.push('/training') }}
         eyebrow={`진단, ${SCENE_LABELS[scene].label} 상황`}
         title="어디서부터 어려워지는지 찾아요"
-        sub="쉬운 소리부터 실제 문장까지 4번 녹음해요. 점수는 보여주지 않고, 끝나면 연습할 고민을 추천해요."
         chips={phase === 'climb' && <Pill tone="data">{levelIdx + 1} / {DIAGNOSIS_LEVELS.length}</Pill>}
       />
 
@@ -249,7 +245,7 @@ export default function DiagnoseClient() {
             <div className="space-y-1.5">
               <p className="text-[17px] font-black text-foreground">말을 나눠서, 하나씩 얹어 봐요</p>
               <p className="text-[14px] text-foreground leading-relaxed">
-                말은 소리, 높낮이, 자음이 겹쳐서 완성돼요. 가장 단순한 소리에서 시작해 하나씩 더하면서, 어느 요소를 얹을 때 목소리가 흔들리기 시작하는지 찾아요.
+                말은 소리, 높낮이, 자음이 겹쳐서 완성돼요. 하나씩 얹으며 어디서 흔들리는지 찾아요.
               </p>
             </div>
             <ol className="space-y-3">
@@ -267,7 +263,7 @@ export default function DiagnoseClient() {
               })}
             </ol>
             <p className="text-[13px] text-muted-foreground leading-relaxed">
-              잘하려고 애쓰지 않아도 돼요. 평소 그대로가 가장 정확한 진단이에요. 조용한 곳에서, 마이크에서 한 뼘 정도 떨어져 주세요.
+              평소처럼 하면 돼요. 조용한 곳에서 해 주세요.
             </p>
             <PrimaryButton onClick={() => { trackEvent('diagnosis_started', { scene }); setPhase('climb') }}>시작</PrimaryButton>
           </section>
@@ -280,15 +276,13 @@ export default function DiagnoseClient() {
               key={rung.id}
               eyebrow={`${level}단계`}
               title={rung.title}
-              instructions={rung.instructions}
+              instructions={[rung.diagnoseHint ?? rung.instructions[0]]}
               script={rung.script(scene, 0)}
               scriptLabel={rung.scriptLabel}
               maxSec={rung.maxSec}
-              targetSec={rung.targetSec}
               analyzing={analyzing}
               onRecorded={handleRecorded}
               doneLabel={levelIdx + 1 < DIAGNOSIS_LEVELS.length ? '다음 녹음' : '진단 결과 보기'}
-              silentNote="점수는 보여주지 않아요"
             />
           </>
         )}

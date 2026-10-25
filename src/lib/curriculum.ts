@@ -92,6 +92,8 @@ export interface Rung {
   adds: string
   /** 결과, 비유 언어. 마지막 줄은 결과를 향한다. */
   instructions: string[]
+  /** 진단용 한 줄. 진단은 평소 목소리를 재는 곳이라 성공 기준을 보여 주지 않는다. */
+  diagnoseHint?: string
   /** 녹음 상한(초). 한계까지 가지 않는다. */
   maxSec: number
   /** 1단 지속 목표(초) */
@@ -107,6 +109,7 @@ export const LADDER: Rung[] = [
   {
     level: 1,
     id: 'rung-1-hum',
+    diagnoseHint: '입을 다물고 "음~"을 편하게 5초 내요.',
     title: '"음~" 허밍',
     keeps: '소리만',
     adds: '소리만',
@@ -123,6 +126,7 @@ export const LADDER: Rung[] = [
   {
     level: 2,
     id: 'rung-2-vowel-contour',
+    diagnoseHint: '아래 문장을 "아~" 소리로만, 말하듯 높낮이를 살려 말해요.',
     title: '"아~"로 말 흉내 내기',
     keeps: '소리 + 말의 높낮이',
     adds: '말의 높낮이',
@@ -138,6 +142,7 @@ export const LADDER: Rung[] = [
   {
     level: 3,
     id: 'rung-3-sonorant',
+    diagnoseHint: '아래 문장을 노래 가사처럼 이어 읽어요.',
     title: '부드러운 자음 문장',
     keeps: '소리 + 높낮이 + 부드러운 자음',
     adds: '부드러운 자음(ㄴ, ㄹ, ㅁ, ㅇ)',
@@ -153,6 +158,7 @@ export const LADDER: Rung[] = [
   {
     level: 4,
     id: 'rung-4-base-sentence',
+    diagnoseHint: '앞사람에게 말하듯 평소처럼 읽어요.',
     title: '실제 첫 문장',
     keeps: '실제 문장',
     adds: '끊기는 자음(ㄱ, ㄷ, ㅂ, ㅅ 등)',

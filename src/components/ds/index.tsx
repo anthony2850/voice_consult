@@ -45,10 +45,13 @@ export function Pill({ children, tone = 'neutral' }: { children: React.ReactNode
 }
 
 /** 왼쪽 이름, 오른쪽 큰 숫자. 숫자는 고정폭. */
-export function MetricRow({ label, value, unit, pill }: { label: string; value: string; unit?: string; pill?: React.ReactNode }) {
+export function MetricRow({ label, value, unit, pill, hint }: { label: string; value: string; unit?: string; pill?: React.ReactNode; hint?: string }) {
   return (
     <div className="flex items-center gap-3 py-3.5 border-b border-border last:border-b-0">
-      <span className="flex-1 min-w-0 text-[15px] font-semibold text-foreground">{label}</span>
+      <span className="flex-1 min-w-0">
+        <span className="block text-[15px] font-semibold text-foreground">{label}</span>
+        {hint && <span className="block text-[12px] text-muted-foreground">{hint}</span>}
+      </span>
       {pill}
       <span className="text-[24px] font-black tracking-[-0.02em] text-foreground tabular-nums">
         {value}{unit && <span className="ml-0.5 text-[13px] font-semibold text-muted-foreground">{unit}</span>}

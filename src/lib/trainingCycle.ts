@@ -123,9 +123,10 @@ export function suggestConcernsFromDiagnosis(measures: Measure[]): DiagnosisSugg
   const out: DiagnosisSuggestion[] = []
   const byLevel = new Map(measures.filter((m) => m.level != null).map((m) => [m.level!, m]))
 
+  const jitterLimit = JITTER_LIMIT[measures[0]?.jitter_source ?? 'praat']
   const jitterBoundary = findBoundary('jitter', measures)
   if (jitterBoundary !== null) {
-    out.push({ concern: 'trembling', boundary: jitterBoundary, reason: `${jitterBoundary}단계부터 목소리가 떨리기 시작했어요.` })
+    out.push({ concern: 'trembling', boundary: jitterBoundary, reason: `${jitterBoundary}단계부터 떨림이 기준(${jitterLimit}%)을 넘었어요.` })
   }
 
   // 빨라지는 목소리는 빠를 때만 본다. 느린 건 이 트랙(늦추는 연습)의 문제가 아니고,
@@ -136,23 +137,23 @@ export function suggestConcernsFromDiagnosis(measures: Measure[]): DiagnosisSugg
     .find((m) => m.onsets_per_second > PACE_RANGE.max)
   const paceBoundary = fastStep?.level ?? null
   if (paceBoundary !== null) {
-    out.push({ concern: 'fast', boundary: paceBoundary, reason: `${paceBoundary}단계부터 말이 빨라졌어요.` })
+    out.push({ concern: 'fast', boundary: paceBoundary, reason: `${paceBoundary}단계부터 1초에 ${PACE_RANGE.max}글자를 넘었어요.` })
   }
 
   const first = byLevel.get(1)
   const base = byLevel.get(4)
   if (first && base && base.db_mean < first.db_mean - SMALL_VOICE_DROP_DB) {
-    out.push({ concern: 'small_voice', boundary: 4, reason: '허밍보다 실제 문장을 말할 때 목소리가 많이 작아졌어요.' })
+    out.push({ concern: 'small_voice', boundary: 4, reason: `실제 문장이 허밍보다 ${Math.round(first.db_mean - base.db_mean)}dB 작았어요. (기준 ${SMALL_VOICE_DROP_DB}dB 이내)` })
   }
 
+  const withinCopy: Record<ConcernSlug, string> = {
+    trembling: `떨림이 모든 단계에서 기준(${jitterLimit}%) 안이었어요.`,
+    fast: `빠르기가 기준(1초에 ${PACE_RANGE.max}글자) 안이었어요.`,
+    small_voice: `허밍과 실제 문장의 크기 차이가 기준(${SMALL_VOICE_DROP_DB}dB) 안이었어요.`,
+    diction: '녹음을 직접 들어 보고 판단해요.',
+  }
   for (const c of CONCERN_ORDER) {
-    if (!out.some((s) => s.concern === c)) {
-      out.push({
-        concern: c,
-        boundary: null,
-        reason: c === 'diction' ? '발음은 측정 대신 직접 들어 보고 판단해요.' : '녹음에서는 괜찮은 범위였어요.',
-      })
-    }
+    if (!out.some((s) => s.concern === c)) out.push({ concern: c, boundary: null, reason: withinCopy[c] })
   }
   return out
 }
@@ -179,21 +180,25 @@ export function diagnosisSteps(concern: ConcernSlug, measures: Measure[]): Diagn
   return levels.map((level): DiagnosisStep => {
     const m = byLevel.get(level)!
     if (concern === 'trembling') {
-      return meetsCriterion('jitter', m)
-        ? { level, state: 'ok', note: '괜찮았어요' }
-        : { level, state: 'off', note: '떨렸어요' }
+      const ok = meetsCriterion('jitter', m)
+      const note = `떨림 ${m.jitter_rel_pct.toFixed(1)}% (기준 ${JITTER_LIMIT[m.jitter_source]}% ${ok ? '이하' : '초과'})`
+      return { level, state: ok ? 'ok' : 'off', note }
     }
     if (concern === 'fast') {
-      if (level < 3) return { level, state: 'skip', note: '소리만이라 빠르기는 재지 않아요' }
-      if (m.onsets_per_second > PACE_RANGE.max) return { level, state: 'off', note: '빨랐어요' }
-      return { level, state: 'ok', note: m.onsets_per_second < PACE_RANGE.min ? '느긋했어요' : '괜찮았어요' }
+      if (level < 3) return { level, state: 'skip', note: '문장이 없어 빠르기는 재지 않아요' }
+      const fast = m.onsets_per_second > PACE_RANGE.max
+      const note = `1초에 ${m.onsets_per_second.toFixed(1)}글자 (기준 ${PACE_RANGE.max}글자 ${fast ? '초과' : '이하'})`
+      return { level, state: fast ? 'off' : 'ok', note }
     }
     // small_voice: 마이크 거리 때문에 절대값 대신 허밍과 실제 문장의 차이만 본다
-    if (level === 1) return { level, state: 'base', note: '이 크기를 기준으로 비교해요' }
+    if (level === 1) return { level, state: 'base', note: `비교 기준 ${Math.round(m.db_mean)}dB` }
     if (level !== 4 || !hum) return { level, state: 'skip', note: '중간 단계는 비교하지 않아요' }
-    return m.db_mean < hum.db_mean - SMALL_VOICE_DROP_DB
-      ? { level, state: 'off', note: '허밍보다 많이 작아졌어요' }
-      : { level, state: 'ok', note: '허밍만큼 나왔어요' }
+    const drop = Math.round(hum.db_mean - m.db_mean)
+    const quiet = m.db_mean < hum.db_mean - SMALL_VOICE_DROP_DB
+    const note = drop > 0
+      ? `허밍보다 ${drop}dB 작음 (기준 ${SMALL_VOICE_DROP_DB}dB ${quiet ? '초과' : '이내'})`
+      : `허밍보다 작지 않음 (기준 ${SMALL_VOICE_DROP_DB}dB 이내)`
+    return { level, state: quiet ? 'off' : 'ok', note }
   })
 }
 
@@ -272,9 +277,9 @@ export function nextRung(current: RungLevel, o: SessionOutcome): RungLevel {
 }
 
 const OFF_VERB: Record<Exclude<ConcernSlug, 'diction'>, string> = {
-  trembling: '목소리가 떨렸어요',
-  fast: '빠르기가 적당한 범위를 벗어났어요',
-  small_voice: '목소리가 작아졌어요',
+  trembling: '떨림이 기준을 넘었어요',
+  fast: '빠르기가 기준을 넘었어요',
+  small_voice: '목소리가 기준보다 작아졌어요',
 }
 
 /**
@@ -297,8 +302,8 @@ export function rungReason(
     return '지난번과 같은 단계예요. 기준을 지키고 목이 편하면 다음 단계로 올라가요.'
   }
   if (concern === 'diction') return '발음은 실제 문장인 4단계부터 연습해요.'
-  if (current >= 5) return '진단한 4단계까지는 괜찮았어요. 그다음 단계부터 연습해요.'
-  return `진단에서 ${current}단계부터 ${OFF_VERB[concern]}. 처음 어려워진 단계부터 연습해요.`
+  if (current >= 5) return '진단한 4단계까지 기준 안이었어요. 그다음 단계부터 연습해요.'
+  return `진단에서 ${current}단계부터 ${OFF_VERB[concern]}. 여기서부터 연습해요.`
 }
 
 /** 세션에서 연습할 두 계단: A = 성공 경험(한 계단 아래), B = 도전(현재 계단). */

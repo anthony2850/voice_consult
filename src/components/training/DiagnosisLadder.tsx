@@ -46,8 +46,8 @@ export default function DiagnosisLadder({ label, steps, start }: { label: string
       </ol>
       <p className="px-1 text-[13px] text-foreground leading-relaxed">
         {start > lastLevel
-          ? `${lastLevel}단계까지 괜찮았어요. 그다음인 ${start}단계 ${getRung(start).title}부터 시작해요.`
-          : `처음 어려워진 ${start}단계부터 시작해요. 아직 어려운 곳이라 연습 효과가 가장 커요.`}
+          ? `${lastLevel}단계까지 기준 안이었어요. ${start}단계 ${getRung(start).title}부터 시작해요.`
+          : `처음 기준을 넘은 ${start}단계부터 시작해요.`}
       </p>
     </section>
   )

@@ -103,7 +103,8 @@ describe('suggestConcernsFromDiagnosis', () => {
   it('does not flag slow speech as the fast concern', () => {
     const ms = [m({ level: 1 }), m({ level: 2 }), m({ level: 3, onsets_per_second: 1.8 }), m({ level: 4, onsets_per_second: 2.0 })]
     expect(suggestConcernsFromDiagnosis(ms).find((x) => x.concern === 'fast')?.boundary).toBeNull()
-    expect(diagnosisSteps('fast', ms)!.map((x) => x.note)).toEqual(['소리만이라 빠르기는 재지 않아요', '소리만이라 빠르기는 재지 않아요', '느긋했어요', '느긋했어요'])
+    expect(diagnosisSteps('fast', ms)!.map((x) => x.state)).toEqual(['skip', 'skip', 'ok', 'ok'])
+    expect(diagnosisSteps('fast', ms)![2].note).toBe('1초에 1.8글자 (기준 5.5글자 이하)')
   })
 
   it('ignores pace on rungs 1–2 (no syllables there)', () => {
@@ -251,6 +252,12 @@ describe('diagnosisSteps', () => {
   it('small voice compares the real sentence with the hum only', () => {
     expect(diagnosisSteps('small_voice', ms)!.map((x) => x.state)).toEqual(['base', 'skip', 'skip', 'off'])
   })
+  it('notes show the measured number with the criterion', () => {
+    expect(diagnosisSteps('trembling', ms)![1].note).toBe('떨림 1.0% (기준 3% 이하)')
+    expect(diagnosisSteps('trembling', ms)![2].note).toBe('떨림 4.0% (기준 3% 초과)')
+    expect(diagnosisSteps('small_voice', ms)![3].note).toBe('허밍보다 6dB 작음 (기준 4dB 초과)')
+    expect(suggestConcernsFromDiagnosis(ms).find((x) => x.concern === 'trembling')!.reason).toBe('3단계부터 떨림이 기준(3%)을 넘었어요.')
+  })
   it('diction has no measured steps', () => {
     expect(diagnosisSteps('diction', ms)).toBeNull()
   })
@@ -260,8 +267,8 @@ describe('rungReason', () => {
   const last = (o: Partial<{ rung: RungLevel; next_rung: RungLevel; met_criterion: boolean | null; effort: number; pain: boolean }>) =>
     ({ rung: 3 as RungLevel, next_rung: 3 as RungLevel, met_criterion: null, effort: 2, pain: false, ...o })
   it('first session explains the diagnosis', () => {
-    expect(rungReason('trembling', 3, null)).toBe('진단에서 3단계부터 목소리가 떨렸어요. 처음 어려워진 단계부터 연습해요.')
-    expect(rungReason('fast', 5, null)).toContain('4단계까지는 괜찮았어요')
+    expect(rungReason('trembling', 3, null)).toBe('진단에서 3단계부터 떨림이 기준을 넘었어요. 여기서부터 연습해요.')
+    expect(rungReason('fast', 5, null)).toContain('4단계까지 기준 안이었어요')
     expect(rungReason('diction', 4, null)).toContain('4단계부터')
   })
   it('later sessions explain the move from last time', () => {
