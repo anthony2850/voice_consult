@@ -20,12 +20,18 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const res = await fetch(modalUrl, {
+    const call = () => fetch(modalUrl, {
       method: 'POST',
       cache: 'no-store',
       headers: { 'Content-Type': 'audio/wav' },
       body: wav,
     })
+    // 측정 서버가 막 깨어나는 중이면 첫 요청이 실패할 수 있어 한 번만 다시 시도한다
+    let res = await call().catch(() => null)
+    if (!res || !res.ok) {
+      await new Promise((r) => setTimeout(r, 800))
+      res = await call()
+    }
 
     if (!res.ok) {
       console.warn('[voice-quality] Modal returned', res.status, (await res.text()).slice(0, 200))

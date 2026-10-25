@@ -2,6 +2,7 @@
 
 import { audioBlobToWav } from './audioToWav'
 import { syllableRate } from './syllableRate'
+import { trackEvent } from './analytics'
 
 /**
  * 'praat'  — jitter/shimmer are cycle-to-cycle values from Modal/parselmouth,
@@ -323,6 +324,8 @@ export async function extractAudioFeaturesWithPraat(
   // Modal이 꺼져 있으면 브라우저 근사치를 쓰되, 모음이 있으면 모음 구간의 근사치를 쓴다.
   if (vowelFeatures) features.voice_quality = { ...vowelFeatures.voice_quality }
   features.voice_quality.task = vowelBlob ? 'vowel' : 'speech'
+  // 대체 측정으로 넘어가면 기록해 둔다. 2026-10-25까지 운영 환경 주소가 비어 있어 아무도 모른 채 대체 측정만 썼다.
+  if (!praat) trackEvent('voice_quality_fallback', { task: features.voice_quality.task })
   if (praat) {
     features.voice_quality.jitter_rel_pct = praat.jitter_rel_pct
     features.voice_quality.shimmer_rel_pct = praat.shimmer_rel_pct
