@@ -36,7 +36,14 @@ export function toMeasure(f: AudioFeatures, level?: RungLevel): Measure {
 
 // ─── 기준 ────────────────────────────────────────────────────────────────────
 
-/** Praat = 주기별 jitter (임상 기준 3%). 브라우저 fallback은 프레임 단위라 ~10배 크다. */
+/**
+ * 떨림 판정 기준. 근거 없는 추정치라 보정이 필요하다.
+ * - praat 3%: 임상 기준이 아니다. 임상(MDVP) 병적 기준은 지속 모음에서 1.04%이고,
+ *   건강한 성인은 약 0.3~0.4%다(Praat 설명서, PMC7053781, PMC9445921).
+ *   훈련은 지속 모음이 아니라 녹음 전체(문장 포함)로 재서 값이 부풀기 때문에 위 수치와 바로 비교할 수 없다.
+ * - frame 50%: 브라우저 대체 측정(프레임 단위). Praat보다 훨씬 크게 나온다.
+ * 긴장으로 생기는 떨림은 3~12Hz의 느린 출렁임(진전)에 가까워 jitter가 잘 못 잡을 수 있다(검증 안 됨).
+ */
 export const JITTER_LIMIT = { praat: 3.0, frame: 50.0 } as const
 export const PACE_RANGE = { min: 2.5, max: 5.5 } as const
 /** 진단 때 기준 음량에서 이만큼 떨어지면 유지 실패로 본다. */
