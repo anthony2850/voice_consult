@@ -318,7 +318,7 @@ export default function SessionClient() {
             )}
 
             <div className="glass rounded-3xl p-5 space-y-2">
-              <p className="text-[11px] font-semibold text-muted-foreground">지난번 연습이 남아 있었나</p>
+              <p className="text-[11px] font-semibold text-muted-foreground">지난번 연습 효과가 오늘도 이어졌나</p>
               <p className="text-sm text-foreground leading-relaxed">{retentionCopy(verdict)}</p>
             </div>
 

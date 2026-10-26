@@ -177,8 +177,14 @@ describe('retentionVerdict', () => {
     expect(retentionVerdict('jitter', prev, m({ jitter_rel_pct: 5.5 }))).toBe('partly')
     expect(retentionVerdict('jitter', prev, m({ jitter_rel_pct: 7 }))).toBe('reset')
   })
-  it('jitter: anything inside the clinical limit counts as kept', () => {
-    expect(retentionVerdict('jitter', m({ jitter_rel_pct: 1 }), m({ jitter_rel_pct: 2.5 }))).toBe('kept')
+  it('jitter: getting worse is not called kept just because it is under the limit', () => {
+    expect(retentionVerdict('jitter', m({ jitter_rel_pct: 1 }), m({ jitter_rel_pct: 2.9 }))).toBe('reset')
+  })
+  it('jitter: differences within measurement noise count as kept', () => {
+    expect(retentionVerdict('jitter', m({ jitter_rel_pct: 0.3 }), m({ jitter_rel_pct: 0.45 }))).toBe('kept')
+  })
+  it('jitter: a change of measurement source restarts the comparison', () => {
+    expect(retentionVerdict('jitter', m({ jitter_rel_pct: 9, jitter_source: 'frame' }), m({ jitter_rel_pct: 2.7 }))).toBe('rebase')
   })
   it('loudness: within 2 dB kept, within 4 dB partly', () => {
     const prev = m({ db_mean: -20 })

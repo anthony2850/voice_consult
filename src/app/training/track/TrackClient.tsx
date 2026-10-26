@@ -68,7 +68,7 @@ export default function TrackClient() {
 
         {last && lastVerdict && (
           <section className="rounded-[28px] bg-secondary p-6 space-y-1.5">
-            <p className="eyebrow">지난번 연습이 남아 있었나</p>
+            <p className="eyebrow">지난번 연습 효과가 오늘도 이어졌나</p>
             <p className="text-[15px] text-foreground leading-relaxed">{retentionCopy(lastVerdict)}</p>
           </section>
         )}

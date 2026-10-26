@@ -362,7 +362,14 @@ export function pickVariation(track: Track, sessionIndex: number, allowStrong: b
 
 // ─── 파지 ────────────────────────────────────────────────────────────────────
 
-export type RetentionVerdict = 'first' | 'kept' | 'partly' | 'reset' | 'na'
+export type RetentionVerdict = 'first' | 'rebase' | 'kept' | 'partly' | 'reset' | 'na'
+
+/**
+ * 떨림 비교에서 측정 자체의 흔들림으로 보는 차이(%p). 건강한 성인의 지속 모음 jitter 표준편차가
+ * 약 0.15~0.2%라(PMC7053781, PMC9445921) 그 정도 차이는 "이어짐"으로 본다. 추정치, 보정 필요.
+ * frame은 Praat보다 약 15배 커서 같은 비율로 키웠다.
+ */
+const JITTER_NOISE = { praat: 0.2, frame: 3 } as const
 
 /**
  * 지난 세션 끝(prevEnd)과 오늘 시작(todayStart)을 비교해 무엇이 남았는지 판정한다.
@@ -379,8 +386,14 @@ export function retentionVerdict(
   const now = metricValue(metric, todayStart)
   switch (metric) {
     case 'jitter': {
-      if (now <= prev * 1.15 || now <= 1) return 'kept'
-      if (now <= prev * 1.5) return 'partly'
+      // 측정 방식이 다르면(브라우저 대체 측정과 Praat) 척도가 달라 비교할 수 없다
+      if (prevEnd.jitter_source !== todayStart.jitter_source) return 'rebase'
+      // 같은 방식끼리 실제 %로 비교한다. 예전에는 "기준 안이면 무조건 이어짐"이라 나빠져도 이어졌다고 말했다.
+      const p = prevEnd.jitter_rel_pct
+      const n = todayStart.jitter_rel_pct
+      const noise = JITTER_NOISE[todayStart.jitter_source]
+      if (n <= p * 1.15 || n - p <= noise) return 'kept'
+      if (n <= p * 1.5 || n - p <= noise * 2) return 'partly'
       return 'reset'
     }
     case 'pace': {
@@ -407,13 +420,15 @@ export type VoiceUse = 'low' | 'normal' | 'high'
 export function retentionCopy(verdict: RetentionVerdict): string {
   switch (verdict) {
     case 'first':
-      return '첫 기록이에요. 다음 연습 시작 녹음과 비교해요.'
+      return '첫 기록이에요. 다음 연습의 첫 녹음과 비교해요.'
+    case 'rebase':
+      return '측정 방식이 바뀌어서 이번부터 다시 비교해요.'
     case 'kept':
-      return '지난번 마무리만큼 나왔어요. 연습한 게 남아 있어요.'
+      return '지난번 연습 끝의 목소리가 오늘 첫 녹음에도 나왔어요. 연습이 몸에 남았어요.'
     case 'partly':
-      return '지난번 마무리의 절반쯤 남아 있어요. 쉬고 난 뒤 첫 녹음은 원래 조금 낮게 나와요.'
+      return '지난번 효과가 절반쯤 이어졌어요. 쉬고 난 뒤 첫 녹음은 원래 조금 낮게 나와요.'
     case 'reset':
-      return '지난번 마무리보다 낮게 나왔어요. 컨디션이나 목 사용, 주변 소음 영향일 수 있어요.'
+      return '오늘 첫 녹음은 지난번 연습 끝보다 낮았어요. 컨디션이나 목 사용, 주변 소음 영향일 수 있어요.'
     case 'na':
       return '녹음을 직접 듣고 판단해요.'
   }
