@@ -6,9 +6,10 @@ import { useTrack } from '@/hooks/useTrack'
 import { SCENE_LABELS, SCENE_SCRIPTS, TRACKS, getRung, type RungLevel } from '@/lib/curriculum'
 import {
   METRIC_INFO, allowStrongVariations, judgeStep, metricValue, nextRung, performanceCopy,
-  JITTER_LIMIT, LOUDNESS_TOLERANCE_DB, PACE_RANGE, pickVariation, retentionCopy, retentionVerdict, rungReason, sessionRungs, type Measure,
+  CLARITY_MIN, JITTER_LIMIT, LOUDNESS_TOLERANCE_DB, PACE_RANGE, pickVariation, retentionCopy, retentionVerdict, rungReason, sessionRungs, type Measure,
 } from '@/lib/trainingCycle'
 import { measureBlob } from '@/lib/trainingMeasure'
+import { clarityPct, transcribe } from '@/lib/clarity'
 import RecordStep from '@/components/training/RecordStep'
 import RungComplete from '@/components/training/RungComplete'
 import { trackEvent } from '@/lib/analytics'
@@ -22,6 +23,7 @@ function fmt(metric: keyof typeof METRIC_INFO, m: Measure | null): string {
   if (!m) return '—'
   // 떨림은 기준과 같은 단위(%)로 보여 준다. metricValue는 기준으로 나눈 비율이다.
   if (metric === 'jitter') return m.jitter_rel_pct.toFixed(1)
+  if (metric === 'clarity') return m.clarity_pct == null ? '—' : String(Math.round(m.clarity_pct))
   return metricValue(metric, m).toFixed(1)
 }
 
@@ -84,19 +86,28 @@ export default function SessionClient() {
 
   function advance(from: Step) {
     let i = STEP_ORDER.indexOf(from) + 1
-    if (STEP_ORDER[i] === 'selfJudge' && metric !== 'self') i += 1
+    if (STEP_ORDER[i] === 'selfJudge' && metric !== 'clarity') i += 1
     setStep(STEP_ORDER[i])
   }
 
-  async function measureOrRetry(blob: Blob, level: RungLevel | undefined, onOk: (m: Measure) => void) {
+  /**
+   * @param script 발음 트랙에서 알아들은 글자 비율을 잴 문장. 글자로 말하는 녹음에만 준다
+   *   (1단계 허밍, 2단계 "아~"는 글자가 없어 주지 않는다).
+   */
+  async function measureOrRetry(blob: Blob, level: RungLevel | undefined, onOk: (m: Measure) => void, script?: string | null) {
     setAnalyzing(true)
     setFailNote(null)
     try {
-      const m = await measureBlob(blob, level)
+      const [m, heard] = await Promise.all([
+        measureBlob(blob, level),
+        metric === 'clarity' && script ? transcribe(blob) : Promise.resolve(null),
+      ])
       if (!m) {
         setFailNote('소리가 잘 잡히지 않았어요. 마이크에 조금 더 가까이에서 다시 녹음해 주세요.')
         return
       }
+      // 인식에 실패하면 비율 없이 넘어가고, 그 녹음은 직접 듣고 고른 답으로 판정한다
+      if (metric === 'clarity' && script && heard != null) m.clarity_pct = clarityPct(script, heard)
       onOk(m)
     } finally {
       setAnalyzing(false)
@@ -135,8 +146,8 @@ export default function SessionClient() {
     }
   }
 
-  const stepNo = Math.max(1, STEP_ORDER.indexOf(step) + 1 - (metric !== 'self' && STEP_ORDER.indexOf(step) > STEP_ORDER.indexOf('selfJudge') ? 1 : 0))
-  const stepTotal = metric === 'self' ? 7 : 6
+  const stepNo = Math.max(1, STEP_ORDER.indexOf(step) + 1 - (metric !== 'clarity' && STEP_ORDER.indexOf(step) > STEP_ORDER.indexOf('selfJudge') ? 1 : 0))
+  const stepTotal = metric === 'clarity' ? 7 : 6
 
   return (
     <div className="min-h-[calc(100vh-84px)]">
@@ -166,7 +177,7 @@ export default function SessionClient() {
             script={baseScript}
             maxSec={12}
             analyzing={analyzing}
-            onRecorded={(b) => measureOrRetry(b, 4, (m) => { setRetention(m); advance('retention') })}
+            onRecorded={(b) => measureOrRetry(b, 4, (m) => { setRetention(m); advance('retention') }, baseScript)}
           />
         )}
 
@@ -212,8 +223,8 @@ export default function SessionClient() {
               prepSec={r.prepSec}
               analyzing={analyzing}
               onRecorded={(b) => {
-                if (metric === 'self') setChallengeUrl(URL.createObjectURL(b))
-                measureOrRetry(b, rungs.b, (m) => { setRungMeasures((x) => [...x, m]); advance('exerciseB') })
+                if (metric === 'clarity') setChallengeUrl(URL.createObjectURL(b))
+                measureOrRetry(b, rungs.b, (m) => { setRungMeasures((x) => [...x, m]); advance('exerciseB') }, rungs.b >= 3 ? r.script(scene, sessionIndex) : null)
               }}
               doneLabel="저장하고 다음"
               voiceLine
@@ -230,7 +241,7 @@ export default function SessionClient() {
             script={baseScript}
             maxSec={12}
             analyzing={analyzing}
-            onRecorded={(b) => measureOrRetry(b, 4, (m) => { setPerformance(m); advance('performance') })}
+            onRecorded={(b) => measureOrRetry(b, 4, (m) => { setPerformance(m); advance('performance') }, baseScript)}
             doneLabel="저장하고 다음"
           />
         )}
@@ -291,7 +302,7 @@ export default function SessionClient() {
 
         {(step === 'result' || step === 'saved') && (
           <div className="space-y-4">
-            {metric !== 'self' && (
+            {(
               <div className="glass rounded-3xl p-5 space-y-3">
                 <p className="text-sm font-bold text-foreground">{METRIC_INFO[metric].name}</p>
                 <div className="grid grid-cols-3 gap-2 text-center">
@@ -312,7 +323,9 @@ export default function SessionClient() {
                     ? `기준 ${JITTER_LIMIT[performance?.jitter_source ?? retention?.jitter_source ?? 'praat']}% 이하`
                     : metric === 'pace'
                       ? `기준 1초에 ${PACE_RANGE.min}~${PACE_RANGE.max}글자`
-                      : `기준: 진단 때보다 ${LOUDNESS_TOLERANCE_DB}dB 넘게 작아지지 않기`}
+                      : metric === 'clarity'
+                        ? `기준 알아들은 글자 ${CLARITY_MIN}% 이상`
+                        : `기준: 진단 때보다 ${LOUDNESS_TOLERANCE_DB}dB 넘게 작아지지 않기`}
                 </p>
               </div>
             )}
@@ -325,7 +338,7 @@ export default function SessionClient() {
             <div className="glass rounded-3xl p-5 space-y-2">
               <p className="text-[11px] font-semibold text-muted-foreground">오늘 결과와 다음 단계</p>
               <p className="text-sm text-foreground leading-relaxed">{performanceCopy(met, next, current, judgedLabel)}</p>
-              {metric !== 'self' && judged.measure && (
+              {judged.measure && (metric !== 'clarity' || judged.measure.clarity_pct != null) && (
                 <p className="text-[12px] text-muted-foreground tabular-nums">
                   {judged.on === 'challenge' ? `도전 ${rungs.b}단계` : '마무리 녹음'}: {fmt(metric, judged.measure)}{metric === 'jitter' ? '%' : ` ${METRIC_INFO[metric].unit}`}
                   {judged.on === 'final' && metric === 'pace' ? ' (1, 2단계는 글자가 없어 마무리 녹음으로 판정해요)' : ''}

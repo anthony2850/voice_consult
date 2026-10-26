@@ -32,14 +32,14 @@ describe('weeklyTrend', () => {
     expect(pts[1].end).toBeNull()
   })
 
-  it('self metric: share of sessions judged clear', () => {
-    const pts = weeklyTrend('self', [
-      s('2026-10-12', null, null, { met_criterion: true }),
-      s('2026-10-13', null, null, { met_criterion: false }),
-      s('2026-10-14', null, null, { met_criterion: true }),
-      s('2026-10-15', null, null, { met_criterion: true }),
+  it('clarity: weekly median of heard-syllable rates, skipping records without one', () => {
+    const pts = weeklyTrend('clarity', [
+      s('2026-10-12', { clarity_pct: 90 }, null),
+      s('2026-10-13', { clarity_pct: 96 }, null),
+      s('2026-10-14', { clarity_pct: 94 }, null),
+      s('2026-10-15', {}, null),
     ])
-    expect(pts[0].start).toBeCloseTo(0.75)
+    expect(pts[0].start).toBeCloseTo(94)
   })
 })
 

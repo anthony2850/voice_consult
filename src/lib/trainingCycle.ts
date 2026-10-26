@@ -20,6 +20,8 @@ export interface Measure {
   onsets_per_second: number
   db_mean: number
   duration_sec: number
+  /** 발음 트랙: 녹음을 글자로 바꿔 원래 문장과 맞은 글자 비율(0~100). 글자가 없는 녹음이나 인식 실패면 없음. */
+  clarity_pct?: number | null
 }
 
 export function toMeasure(f: AudioFeatures, level?: RungLevel): Measure {
@@ -50,6 +52,8 @@ export const PACE_RANGE = { min: 2.5, max: 5.5 } as const
 export const LOUDNESS_TOLERANCE_DB = 2
 /** 기준 음량이 없을 때의 바닥값 */
 export const DEFAULT_DB_FLOOR = -30
+/** 발음 트랙 성공 기준: 알아들은 글자 비율(%). 추정치, 실제 녹음으로 보정 필요. */
+export const CLARITY_MIN = 95
 
 /** 지표를 세션 간 비교 가능한 값으로 바꾼다. jitter는 기준 대비 비율(1.0 = 기준선). */
 export function metricValue(metric: Metric, m: Measure): number {
@@ -60,8 +64,8 @@ export function metricValue(metric: Metric, m: Measure): number {
       return m.onsets_per_second
     case 'loudness':
       return m.db_mean
-    case 'self':
-      return 0
+    case 'clarity':
+      return m.clarity_pct ?? NaN
   }
 }
 
@@ -69,7 +73,7 @@ export const METRIC_INFO: Record<Metric, { name: string; unit: string; lowerIsBe
   jitter: { name: '목소리 떨림', unit: '', lowerIsBetter: true },
   pace: { name: '말 빠르기 (1초에 말한 글자 수)', unit: '글자/초', lowerIsBetter: false },
   loudness: { name: '목소리 크기', unit: 'dB', lowerIsBetter: false },
-  self: { name: '발음 또렷함 (직접 판단)', unit: '', lowerIsBetter: false },
+  clarity: { name: '발음 또렷함 (알아들은 글자 비율)', unit: '%', lowerIsBetter: false },
 }
 
 /**
@@ -91,8 +95,10 @@ export function meetsCriterion(
       const floor = baseline ? baseline.db_mean - LOUDNESS_TOLERANCE_DB : DEFAULT_DB_FLOOR
       return m.db_mean >= floor
     }
-    case 'self':
-      return selfOk == null ? null : selfOk
+    case 'clarity':
+      // 글자가 없는 녹음(1, 2단계)이나 인식 실패면 직접 듣고 고른 답으로 판단한다
+      if (m.clarity_pct == null) return selfOk == null ? null : selfOk
+      return m.clarity_pct >= CLARITY_MIN
   }
 }
 
@@ -333,7 +339,9 @@ export function judgeStep(args: {
   selfOk: boolean | null
 }): { met: boolean | null; on: 'challenge' | 'final'; measure: Measure | null } {
   const { metric, rung, challenge, final, diagnosis, baseline, selfOk } = args
-  if (metric === 'self') return { met: selfOk, on: 'challenge', measure: challenge }
+  if (metric === 'clarity') {
+    return { met: challenge ? meetsCriterion('clarity', challenge, null, selfOk) : selfOk, on: 'challenge', measure: challenge }
+  }
   if (metric === 'pace' && rung < 3) {
     return { met: final ? meetsCriterion('pace', final) : null, on: 'final', measure: final }
   }
@@ -380,8 +388,16 @@ export function retentionVerdict(
   prevEnd: Measure | null | undefined,
   todayStart: Measure | null | undefined,
 ): RetentionVerdict {
-  if (metric === 'self') return 'na'
   if (!prevEnd || !todayStart) return 'first'
+  if (metric === 'clarity') {
+    if (todayStart.clarity_pct == null) return 'na'
+    // 예전 기록(직접 판단만 하던 때)에는 비율이 없다
+    if (prevEnd.clarity_pct == null) return 'rebase'
+    const d = todayStart.clarity_pct - prevEnd.clarity_pct
+    if (d >= -2) return 'kept'
+    if (d >= -5) return 'partly'
+    return 'reset'
+  }
   const prev = metricValue(metric, prevEnd)
   const now = metricValue(metric, todayStart)
   switch (metric) {
@@ -430,7 +446,7 @@ export function retentionCopy(verdict: RetentionVerdict): string {
     case 'reset':
       return '오늘 첫 녹음은 지난번 연습 끝보다 낮았어요. 컨디션이나 목 사용, 주변 소음 영향일 수 있어요.'
     case 'na':
-      return '녹음을 직접 듣고 판단해요.'
+      return '이번 녹음은 비교할 수치가 없어요.'
   }
 }
 

@@ -12,5 +12,5 @@ export const LEGAL = {
   privacyOfficer: '소병준',
   contactEmail: 'nirv1120@snu.ac.kr',
   /** 시행일 (YYYY년 M월 D일) */
-  effectiveDate: '2026년 10월 18일',
+  effectiveDate: '2026년 10월 26일',
 }

@@ -7,7 +7,7 @@
  * - 비교는 목표까지의 거리로만 하고 색으로 좋고 나쁨을 칠하지 않는다 (4교시 24쪽).
  */
 import type { Metric } from './curriculum'
-import { JITTER_LIMIT, LOUDNESS_TOLERANCE_DB, PACE_RANGE, DEFAULT_DB_FLOOR, metricValue, type Measure } from './trainingCycle'
+import { CLARITY_MIN, JITTER_LIMIT, LOUDNESS_TOLERANCE_DB, PACE_RANGE, DEFAULT_DB_FLOOR, metricValue, type Measure } from './trainingCycle'
 
 /** 추이를 보여 주기 시작하는 최소 세션 수 */
 export const TREND_MIN_SESSIONS = 3
@@ -57,15 +57,12 @@ export function weeklyTrend(metric: Metric, sessions: TrendSession[]): WeekPoint
   return [...byWeek.entries()]
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([week, ss]) => {
-      if (metric === 'self') {
-        const answered = ss.filter((s) => s.met_criterion != null)
-        const start = answered.length ? answered.filter((s) => s.met_criterion).length / answered.length : null
-        return { week, start, end: null, sessions: ss.length }
-      }
+      // 값이 없는 녹음(발음 트랙의 예전 기록 등)은 빼고 중앙값을 낸다
+      const vals = (ms: (Measure | null)[]) => ms.flatMap((m) => (m ? [metricValue(metric, m)] : [])).filter((v) => Number.isFinite(v))
       return {
         week,
-        start: median(ss.flatMap((s) => (s.retention ? [metricValue(metric, s.retention)] : []))),
-        end: median(ss.flatMap((s) => (s.performance ? [metricValue(metric, s.performance)] : []))),
+        start: median(vals(ss.map((s) => s.retention))),
+        end: median(vals(ss.map((s) => s.performance))),
         sessions: ss.length,
       }
     })
@@ -77,7 +74,7 @@ export function targetBand(metric: Metric, baseline: Measure | null): [number, n
     case 'jitter': return [0, 1]
     case 'pace': return [PACE_RANGE.min, PACE_RANGE.max]
     case 'loudness': return [baseline ? baseline.db_mean - LOUDNESS_TOLERANCE_DB : DEFAULT_DB_FLOOR, Infinity]
-    case 'self': return [0.8, 1]
+    case 'clarity': return [CLARITY_MIN, 100]
   }
 }
 
@@ -90,7 +87,7 @@ export function distanceToTarget(metric: Metric, value: number, baseline: Measur
 }
 
 /** 단위 차이를 흡수하는 "의미 있는 차이" */
-const EPS: Record<Metric, number> = { jitter: 0.05, pace: 0.2, loudness: 1, self: 0.1 }
+const EPS: Record<Metric, number> = { jitter: 0.05, pace: 0.2, loudness: 1, clarity: 2 }
 
 export type TrendVerdict = 'too-few' | 'one-week' | 'closer' | 'both-in' | 'flat'
 
@@ -117,7 +114,7 @@ export function trendCopy(v: TrendVerdict, totalSessions: number): string {
 
 /** 차트 y축 표시용 */
 export function formatMetric(metric: Metric, v: number): string {
-  if (metric === 'self') return `${Math.round(v * 100)}%`
+  if (metric === 'clarity') return `${Math.round(v)}%`
   if (metric === 'jitter') return v.toFixed(2)
   return v.toFixed(1)
 }

@@ -35,7 +35,7 @@ const METRIC_LABEL: Record<Metric, { title: string; unit: string; band: string }
   jitter: { title: '목소리 떨림', unit: '', band: '1.00 이하가 목표' },
   pace: { title: '말 빠르기', unit: '글자/초', band: '2.5~5.5가 목표' },
   loudness: { title: '목소리 크기', unit: 'dB', band: '진단 때 크기 −2dB 이상이 목표' },
-  self: { title: '또렷했다고 답한 비율', unit: '', band: '80% 이상이 목표' },
+  clarity: { title: '알아들은 글자 비율', unit: '%', band: '95% 이상이 목표' },
 }
 
 // ─── Trend chart ──────────────────────────────────────────────────────────────
@@ -51,8 +51,8 @@ function TrendChart({ metric, points, baseline }: { metric: Metric; points: Week
   const lo0 = Math.min(...values, ...finiteBand)
   const hi0 = Math.max(...values, ...finiteBand)
   const padY = (hi0 - lo0) * 0.15 || 1
-  const yMin = metric === 'self' || metric === 'jitter' ? Math.max(0, lo0 - padY) : lo0 - padY
-  const yMax = metric === 'self' ? Math.min(1, hi0 + padY) : hi0 + padY
+  const yMin = metric === 'clarity' || metric === 'jitter' ? Math.max(0, lo0 - padY) : lo0 - padY
+  const yMax = metric === 'clarity' ? Math.min(100, hi0 + padY) : hi0 + padY
   const yPos = (v: number) => PAD.t + (1 - (v - yMin) / (yMax - yMin || 1)) * PH
   const xPos = (i: number) => PAD.l + (points.length === 1 ? PW / 2 : (i / (points.length - 1)) * PW)
   const bandTop = yPos(Math.min(bandHi, yMax))

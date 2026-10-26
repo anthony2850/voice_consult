@@ -216,7 +216,7 @@ export function getRung(level: RungLevel): Rung {
 
 // ─── 트랙 ────────────────────────────────────────────────────────────────────
 
-export type Metric = 'jitter' | 'pace' | 'loudness' | 'self'
+export type Metric = 'jitter' | 'pace' | 'loudness' | 'clarity'
 
 export type VariationAxis = 'sound' | 'time' | 'body' | 'approach'
 
@@ -303,9 +303,9 @@ export const TRACKS: Record<ConcernSlug, Track> = {
     concern: 'diction',
     label: '또렷함',
     emoji: '🗣️',
-    metric: 'self',
+    metric: 'clarity',
     keyInfo: '글자 하나하나가 또렷이 들렸는가 (특히 받침)',
-    goal: '녹음을 들었을 때 모든 글자를 알아들을 수 있으면 성공이에요.',
+    goal: '처음 듣는 사람도 알아듣게, 문장 글자의 95% 이상을 알아들으면 성공이에요.',
     lastWord: '처음 듣는 사람도 한 번에 알아듣게.',
     variations: [
       { id: 'di-coda', axis: 'sound', label: '받침 살리기', change: '받침 있는 글자는 받침 소리까지 분명하게 낸 뒤 다음 글자로', hold: '빠르기와 문장은 그대로', observe: '받침이 들리는가', strength: 1 },

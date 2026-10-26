@@ -53,10 +53,11 @@ describe('meetsCriterion', () => {
     expect(meetsCriterion('loudness', m({ db_mean: -31 }))).toBe(false)
   })
 
-  it('self: null until the user answers', () => {
-    expect(meetsCriterion('self', m({}))).toBeNull()
-    expect(meetsCriterion('self', m({}), null, true)).toBe(true)
-    expect(meetsCriterion('self', m({}), null, false)).toBe(false)
+  it('clarity: 95% of syllables heard, else the self judgement when nothing was measured', () => {
+    expect(meetsCriterion('clarity', m({ clarity_pct: 96 }))).toBe(true)
+    expect(meetsCriterion('clarity', m({ clarity_pct: 90 }), null, true)).toBe(false)
+    expect(meetsCriterion('clarity', m({}))).toBeNull()
+    expect(meetsCriterion('clarity', m({}), null, true)).toBe(true)
   })
 })
 
@@ -168,8 +169,11 @@ describe('retentionVerdict', () => {
   it('first when there is no previous session', () => {
     expect(retentionVerdict('jitter', null, m({}))).toBe('first')
   })
-  it('na for self-judged tracks', () => {
-    expect(retentionVerdict('self', m({}), m({}))).toBe('na')
+  it('clarity: compares heard-syllable rates, restarts after old self-judged records', () => {
+    expect(retentionVerdict('clarity', m({ clarity_pct: 97 }), m({ clarity_pct: 96 }))).toBe('kept')
+    expect(retentionVerdict('clarity', m({ clarity_pct: 97 }), m({ clarity_pct: 88 }))).toBe('reset')
+    expect(retentionVerdict('clarity', m({}), m({ clarity_pct: 96 }))).toBe('rebase')
+    expect(retentionVerdict('clarity', m({ clarity_pct: 97 }), m({}))).toBe('na')
   })
   it('jitter: kept within 15%, partly within 50%, else reset', () => {
     const prev = m({ jitter_rel_pct: 4 })
@@ -312,8 +316,9 @@ describe('judgeStep', () => {
     expect(judgeStep({ ...base, metric: 'loudness', rung: 1, diagnosis, challenge: m({ level: 1, db_mean: -33 }), final: null }).met).toBe(true)
     expect(judgeStep({ ...base, metric: 'loudness', rung: 5, diagnosis, challenge: m({ level: 5, db_mean: -26 }), final: null }).met).toBe(false)
   })
-  it('diction uses the self judgement of the challenge', () => {
-    expect(judgeStep({ ...base, metric: 'self', rung: 4, selfOk: true, challenge: m({}), final: m({}) })).toMatchObject({ met: true, on: 'challenge' })
+  it('diction judges the heard-syllable rate of the challenge, falling back to the self answer', () => {
+    expect(judgeStep({ ...base, metric: 'clarity', rung: 4, selfOk: true, challenge: m({ clarity_pct: 80 }), final: m({}) })).toMatchObject({ met: false, on: 'challenge' })
+    expect(judgeStep({ ...base, metric: 'clarity', rung: 2, selfOk: true, challenge: m({}), final: m({}) })).toMatchObject({ met: true, on: 'challenge' })
   })
   it('result copy names what was judged', () => {
     expect(performanceCopy(true, 6, 5, '오늘 도전(5단계)')).toBe('오늘 도전(5단계)이 기준 안이에요. 다음 연습은 한 단계 올라가요.')

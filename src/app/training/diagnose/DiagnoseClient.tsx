@@ -89,7 +89,7 @@ export default function DiagnoseClient() {
   }
 
   function startRungFor(concern: ConcernSlug): RungLevel {
-    if (TRACKS[concern].metric === 'self') return 4
+    if (TRACKS[concern].metric === 'clarity') return 4
     return startRungFromBoundary(suggestions.find((x) => x.concern === concern)?.boundary ?? null)
   }
 
