@@ -13,6 +13,8 @@ import {
   pickFromPool,
   diagnosisSteps,
   rungReason,
+  judgeStep,
+  performanceCopy,
   type Measure,
 } from './trainingCycle'
 import { TRACKS, type RungLevel } from './curriculum'
@@ -284,5 +286,30 @@ describe('rungReason', () => {
   it('copy avoids middle dots', () => {
     const all = [rungReason('small_voice', 4, null), ...['trembling', 'fast', 'small_voice'].flatMap((c) => diagnosisSteps(c as 'trembling', [m({ level: 1 }), m({ level: 4 })])!.map((x) => x.note))]
     expect(all.join(' ')).not.toMatch(/\u00B7/)
+  })
+})
+
+describe('judgeStep', () => {
+  const base = { diagnosis: null, baseline: null, selfOk: null }
+  it('judges on the challenge recording, not the final base sentence', () => {
+    const r = judgeStep({ ...base, metric: 'jitter', rung: 5, challenge: m({ level: 5, jitter_rel_pct: 4 }), final: m({ level: 4, jitter_rel_pct: 1 }) })
+    expect(r).toMatchObject({ met: false, on: 'challenge' })
+  })
+  it('pace on hum and vowel steps falls back to the final recording', () => {
+    const r = judgeStep({ ...base, metric: 'pace', rung: 1, challenge: m({ level: 1, onsets_per_second: 0.3 }), final: m({ onsets_per_second: 4 }) })
+    expect(r).toMatchObject({ met: true, on: 'final' })
+    expect(judgeStep({ ...base, metric: 'pace', rung: 4, challenge: m({ onsets_per_second: 6.2 }), final: m({ onsets_per_second: 4 }) }).met).toBe(false)
+  })
+  it('loudness compares with the same step from the diagnosis', () => {
+    const diagnosis = [m({ level: 1, db_mean: -32 }), m({ level: 4, db_mean: -22 })]
+    // 허밍 -33dB: 진단 허밍(-32)과 비교하면 통과, 4단계(-22)와 비교했다면 실패였다
+    expect(judgeStep({ ...base, metric: 'loudness', rung: 1, diagnosis, challenge: m({ level: 1, db_mean: -33 }), final: null }).met).toBe(true)
+    expect(judgeStep({ ...base, metric: 'loudness', rung: 5, diagnosis, challenge: m({ level: 5, db_mean: -26 }), final: null }).met).toBe(false)
+  })
+  it('diction uses the self judgement of the challenge', () => {
+    expect(judgeStep({ ...base, metric: 'self', rung: 4, selfOk: true, challenge: m({}), final: m({}) })).toMatchObject({ met: true, on: 'challenge' })
+  })
+  it('result copy names what was judged', () => {
+    expect(performanceCopy(true, 6, 5, '오늘 도전(5단계)')).toBe('오늘 도전(5단계)이 기준 안이에요. 다음 연습은 한 단계 올라가요.')
   })
 })

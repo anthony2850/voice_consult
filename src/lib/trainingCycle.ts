@@ -306,6 +306,40 @@ export function rungReason(
   return `진단에서 ${current}단계부터 ${OFF_VERB[concern]}. 여기서부터 연습해요.`
 }
 
+/**
+ * 단계를 올릴지 판정하는 녹음과 결과. 판정은 지금 단계의 과제, 즉 도전 녹음으로 한다
+ * (6교시 3부 "목표 기능이 그 조건에서 유지되는지", 9교시 7쪽 "성공하면 다음 위치로").
+ * 마무리 녹음은 다음 연습 시작 녹음과 비교하는 데(파지) 쓴다.
+ *
+ * 예외:
+ * - 빠르기는 글자가 없는 1, 2단계(허밍, "아~")에서 잴 수 없어 마무리 녹음으로 판정한다.
+ * - 크기는 진단 때 같은 단계의 녹음과 비교한다. 허밍은 원래 문장보다 작아서, 늘 4단계 기준과 비교하면 안 된다.
+ * - 발음은 도전 녹음을 직접 듣고 고른 답(selfOk)이다.
+ */
+export function judgeStep(args: {
+  metric: Metric
+  rung: RungLevel
+  challenge: Measure | null
+  final: Measure | null
+  diagnosis: Measure[] | null
+  baseline: Measure | null
+  selfOk: boolean | null
+}): { met: boolean | null; on: 'challenge' | 'final'; measure: Measure | null } {
+  const { metric, rung, challenge, final, diagnosis, baseline, selfOk } = args
+  if (metric === 'self') return { met: selfOk, on: 'challenge', measure: challenge }
+  if (metric === 'pace' && rung < 3) {
+    return { met: final ? meetsCriterion('pace', final) : null, on: 'final', measure: final }
+  }
+  const m = challenge ?? final
+  const on = challenge ? 'challenge' : 'final'
+  if (!m) return { met: null, on, measure: null }
+  if (metric === 'loudness') {
+    const sameStep = diagnosis?.find((d) => d.level === Math.min(rung, 4)) ?? null
+    return { met: meetsCriterion('loudness', m, sameStep ?? baseline), on, measure: m }
+  }
+  return { met: meetsCriterion(metric, m), on, measure: m }
+}
+
 /** 세션에서 연습할 두 계단: A = 성공 경험(한 계단 아래), B = 도전(현재 계단). */
 export function sessionRungs(current: RungLevel): { a: RungLevel; b: RungLevel } {
   const a = Math.max(1, current - 1) as RungLevel
@@ -381,12 +415,12 @@ export function retentionCopy(verdict: RetentionVerdict, voiceUse: VoiceUse): st
 }
 
 /** 세션 끝 문구: 오늘 끝의 상승을 "학습"이라 부르지 않는다 (9교시 6쪽). */
-export function performanceCopy(met: boolean | null, next: RungLevel, current: RungLevel): string {
+export function performanceCopy(met: boolean | null, next: RungLevel, current: RungLevel, judged: string): string {
   const move = next > current ? '다음 연습은 한 단계 올라가요.'
     : next < current ? '다음 연습은 한 단계 낮춰서 해요.'
     : '다음 연습도 같은 단계를 해요.'
-  if (met === true) return `오늘 마무리 녹음이 기준 안이에요. ${move}`
-  if (met === false) return `오늘 마무리 녹음이 기준 밖이에요. ${move}`
+  if (met === true) return `${judged}이 기준 안이에요. ${move}`
+  if (met === false) return `${judged}이 기준 밖이에요. ${move}`
   return move
 }
 

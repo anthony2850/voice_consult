@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useTrack } from '@/hooks/useTrack'
 import { SCENE_LABELS, SCENE_SCRIPTS, TRACKS, getRung, type RungLevel } from '@/lib/curriculum'
 import {
-  METRIC_INFO, allowStrongVariations, meetsCriterion, metricValue, nextRung, performanceCopy,
+  METRIC_INFO, allowStrongVariations, judgeStep, metricValue, nextRung, performanceCopy,
   JITTER_LIMIT, LOUDNESS_TOLERANCE_DB, PACE_RANGE, pickVariation, retentionCopy, retentionVerdict, rungReason, sessionRungs, type Measure, type VoiceUse,
 } from '@/lib/trainingCycle'
 import { measureBlob } from '@/lib/trainingMeasure'
@@ -33,14 +33,15 @@ function fmt(metric: keyof typeof METRIC_INFO, m: Measure | null): string {
 
 export default function SessionClient() {
   const router = useRouter()
-  const { loading, profile, trackSessions, insertSession, setTrackRung } = useTrack()
+  const { loading, profile, sessions, trackSessions, insertSession, setTrackRung } = useTrack()
 
   const [step, setStep] = useState<Step>('status')
   const [voiceUse, setVoiceUse] = useState<VoiceUse | null>(null)
   const [retention, setRetention] = useState<Measure | null>(null)
   const [rungMeasures, setRungMeasures] = useState<Measure[]>([])
   const [performance, setPerformance] = useState<Measure | null>(null)
-  const [performanceUrl, setPerformanceUrl] = useState<string | null>(null)
+  // 발음 트랙: 도전 녹음을 직접 듣고 판단한다
+  const [challengeUrl, setChallengeUrl] = useState<string | null>(null)
   const [selfOk, setSelfOk] = useState<boolean | null>(null)
   const [effort, setEffort] = useState<1 | 2 | 3 | 4 | 5 | null>(null)
   const [pain, setPain] = useState(false)
@@ -52,7 +53,7 @@ export default function SessionClient() {
     if (!loading && !profile.trackConcern) router.replace('/training')
   }, [loading, profile.trackConcern, router])
 
-  useEffect(() => () => { if (performanceUrl) URL.revokeObjectURL(performanceUrl) }, [performanceUrl])
+  useEffect(() => () => { if (challengeUrl) URL.revokeObjectURL(challengeUrl) }, [challengeUrl])
 
   const track = profile.trackConcern ? TRACKS[profile.trackConcern] : null
   // 세션을 시작한 단계로 고정한다. 저장하면서 트랙 단계가 올라가도 이 세션의 결과 문구와 제목은 그대로여야 한다.
@@ -102,7 +103,12 @@ export default function SessionClient() {
   }
 
   // ── 판정 (result 단계에서 계산) ─────────────────────────────────────────────
-  const met = performance ? meetsCriterion(metric, performance, profile.baseline, selfOk) : null
+  // 단계 판정은 도전 녹음으로 한다. 마무리 녹음은 다음 연습 시작 녹음과 비교(파지)하는 데 쓴다.
+  const challenge = rungMeasures.length >= 2 ? rungMeasures[rungMeasures.length - 1] : null
+  const diagnosisMeasures = sessions.find((s) => s.kind === 'diagnosis' && s.scene === scene && s.rung_measures?.length)?.rung_measures ?? null
+  const judged = judgeStep({ metric, rung: rungs.b, challenge, final: performance, diagnosis: diagnosisMeasures, baseline: profile.baseline, selfOk })
+  const met = performance ? judged.met : null
+  const judgedLabel = judged.on === 'challenge' ? `오늘 도전(${rungs.b}단계)` : '오늘 마무리 녹음'
   const next = effort ? nextRung(current, { met, effort, pain }) : current
   const verdict = retentionVerdict(metric, lastSession?.performance ?? null, retention)
 
@@ -225,7 +231,10 @@ export default function SessionClient() {
               targetSec={r.targetSec}
               prepSec={r.prepSec}
               analyzing={analyzing}
-              onRecorded={(b) => measureOrRetry(b, rungs.b, (m) => { setRungMeasures((x) => [...x, m]); advance('exerciseB') })}
+              onRecorded={(b) => {
+                if (metric === 'self') setChallengeUrl(URL.createObjectURL(b))
+                measureOrRetry(b, rungs.b, (m) => { setRungMeasures((x) => [...x, m]); advance('exerciseB') })
+              }}
               doneLabel="저장하고 다음"
               voiceLine
               voiceLineMode={r.level === 1 ? 'sustained' : 'speech'}
@@ -241,10 +250,7 @@ export default function SessionClient() {
             script={baseScript}
             maxSec={12}
             analyzing={analyzing}
-            onRecorded={(b) => {
-              if (metric === 'self') setPerformanceUrl(URL.createObjectURL(b))
-              measureOrRetry(b, 4, (m) => { setPerformance(m); advance('performance') })
-            }}
+            onRecorded={(b) => measureOrRetry(b, 4, (m) => { setPerformance(m); advance('performance') })}
             doneLabel="저장하고 다음"
           />
         )}
@@ -254,9 +260,9 @@ export default function SessionClient() {
             <div>
               <p className="eyebrow">직접 들어 보기</p>
               <p className="text-base font-bold text-foreground">{track.keyInfo}</p>
-              <p className="text-xs text-muted-foreground mt-1">녹음을 듣고 골라 주세요.</p>
+              <p className="text-xs text-muted-foreground mt-1">도전 녹음을 듣고 골라 주세요.</p>
             </div>
-            {performanceUrl && <audio controls src={performanceUrl} className="w-full h-10" />}
+            {challengeUrl && <audio controls src={challengeUrl} className="w-full h-10" />}
             <div className="grid grid-cols-2 gap-2">
               <button onClick={() => { setSelfOk(true); advance('selfJudge') }} className="h-12 rounded-2xl bg-good-tint border border-good/40 text-sm font-bold text-good">네, 다 들렸어요</button>
               <button onClick={() => { setSelfOk(false); advance('selfJudge') }} className="h-12 rounded-2xl bg-card text-sm font-bold text-foreground">아니요, 뭉개진 데가 있어요</button>
@@ -338,7 +344,13 @@ export default function SessionClient() {
 
             <div className="glass rounded-3xl p-5 space-y-2">
               <p className="text-[11px] font-semibold text-muted-foreground">오늘 결과와 다음 단계</p>
-              <p className="text-sm text-foreground leading-relaxed">{performanceCopy(met, next, current)}</p>
+              <p className="text-sm text-foreground leading-relaxed">{performanceCopy(met, next, current, judgedLabel)}</p>
+              {metric !== 'self' && judged.measure && (
+                <p className="text-[12px] text-muted-foreground tabular-nums">
+                  {judged.on === 'challenge' ? `도전 ${rungs.b}단계` : '마무리 녹음'}: {fmt(metric, judged.measure)}{metric === 'jitter' ? '%' : ` ${METRIC_INFO[metric].unit}`}
+                  {judged.on === 'final' && metric === 'pace' ? ' (1, 2단계는 글자가 없어 마무리 녹음으로 판정해요)' : ''}
+                </p>
+              )}
               {pain && <p className="text-[13px] text-caution">통증이 있었어요. 오늘은 여기까지 하고, 내일도 아프면 쉬어 가세요.</p>}
             </div>
 
