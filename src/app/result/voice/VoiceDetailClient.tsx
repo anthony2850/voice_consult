@@ -19,8 +19,16 @@ import {
   getStabilityDesc,
   getPaceDesc,
   getExpressivenessDesc,
+  expressivenessCues,
   getPitchToneLabel,
 } from '@/lib/voiceScores'
+
+/** "억양 변화 18%, 세기 변화 95%" (평균 대비 출렁임) */
+function expressivenessDetail(f: AudioFeatures): string {
+  const { pitchCV, rmsCV } = expressivenessCues(f)
+  const pct = (x: number | null) => (x == null ? '측정 안 됨' : `${Math.round(x * 100)}%`)
+  return `억양 변화 ${pct(pitchCV)}, 세기 변화 ${pct(rmsCV)} (평균 대비 출렁임)`
+}
 
 // ── Score Card ────────────────────────────────────────────
 function ScoreCard({
@@ -204,7 +212,7 @@ export default function VoiceDetailClient() {
           title="생동감 및 표현력"
           score={scores.expressiveness}
           description={getExpressivenessDesc(scores.expressiveness)}
-          detail={`피치 변화폭 ${features.pitch.std_hz.toFixed(1)}Hz, 평균 음량 ${features.energy.db_mean.toFixed(1)}dB`}
+          detail={expressivenessDetail(features)}
           animate={animate}
         />
 

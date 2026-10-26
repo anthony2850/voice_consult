@@ -1,5 +1,6 @@
 import type { AudioFeatures } from '@/lib/extractAudioFeatures'
 import type { ConcernSlug } from '@/lib/curriculum'
+import { SCENE_REF } from '@/lib/voiceScene'
 
 // ── Score calculations ─────────────────────────────────────
 function remapTo60(raw: number): number {
@@ -7,7 +8,10 @@ function remapTo60(raw: number): number {
 }
 
 export function calcStabilityScore(vq: AudioFeatures['voice_quality']): number {
-  // Praat = cycle-to-cycle (clinical: jitter ≤ 3%, shimmer ≤ 6% ≈ steady voice).
+  // Praat = cycle-to-cycle. 3%, 6%는 임상 기준이 아니라 앱 자체 추정치다.
+  // 참고로 Praat 문서의 병적 경계는 jitter 1.04%, shimmer 3.81%("아~" 지속 모음 기준).
+  // 경계값을 0점에 두는 지금 공식에 그 값을 그대로 넣으면 경계 안쪽인 사람도 낮게 나온다.
+  // 실제 분포를 본 뒤 공식째 다시 정한다.
   // Frame = browser fallback, frame-to-frame (46 ms hop) — captures prosody
   // on top of tremor, so values run ~10× higher than clinical (calm announcer
   // sample measures ~21% / ~30%). Thresholds scale accordingly.
@@ -24,11 +28,26 @@ export function calcPaceScore(opsec: number): number {
   return remapTo60(raw)
 }
 
-export function calcExpressivenessScore(stdHz: number, dbMean: number): number {
-  // 실제 발화 pitch std 분포: 10~60Hz, dbMean: -40~-10dB
-  const pitchVar = Math.min(100, (stdHz / 50) * 100)
-  const dbScore = Math.min(100, Math.max(0, ((dbMean + 40) / 30) * 100))
-  return remapTo60(pitchVar * 0.6 + dbScore * 0.4)
+/** 표준편차 ÷ 평균. 값이 없으면 null */
+function cv(std: number | undefined, mean: number | undefined): number | null {
+  return mean && mean > 0 && Number.isFinite(std) ? std! / mean : null
+}
+
+/** 억양 출렁임과 세기 출렁임 (둘 다 평균 대비 비율) */
+export function expressivenessCues(f: AudioFeatures): { pitchCV: number | null; rmsCV: number | null } {
+  return { pitchCV: cv(f.pitch?.std_hz, f.pitch?.mean_hz), rmsCV: cv(f.energy?.rms_std, f.energy?.rms_mean) }
+}
+
+export function calcExpressivenessScore(f: AudioFeatures): number {
+  // 페르소나 판정(voiceScene.ts)과 같은 상대값을 쓴다. 성별(음높이)과 폰 거리(음량)에 휘둘리지 않게.
+  // 기준값은 SCENE_REF의 추정치. 기준과 같으면 raw 50, ±2 표준편차에서 100과 0.
+  const { pitchCV, rmsCV } = expressivenessCues(f)
+  const zs = [
+    pitchCV == null ? null : (pitchCV - SCENE_REF.pitchCV.mean) / SCENE_REF.pitchCV.sd,
+    rmsCV == null ? null : (rmsCV - SCENE_REF.rmsCV.mean) / SCENE_REF.rmsCV.sd,
+  ].filter((x): x is number => x != null)
+  const z = zs.length ? zs.reduce((a, b) => a + b, 0) / zs.length : 0
+  return remapTo60(50 + z * 25)
 }
 
 export interface VoiceScores {
@@ -41,7 +60,7 @@ export function calcVoiceScores(f: AudioFeatures): VoiceScores {
   return {
     stability: calcStabilityScore(f.voice_quality),
     pace: calcPaceScore(f.rhythm.onsets_per_second),
-    expressiveness: calcExpressivenessScore(f.pitch.std_hz, f.energy.db_mean),
+    expressiveness: calcExpressivenessScore(f),
   }
 }
 
@@ -52,7 +71,7 @@ export function suggestConcerns(s: VoiceScores): ConcernSlug[] {
   const out: ConcernSlug[] = []
   if (s.stability < CONCERN_THRESHOLD) out.push('trembling')
   if (s.pace < CONCERN_THRESHOLD) out.push('fast')
-  if (s.expressiveness < CONCERN_THRESHOLD) out.push('small_voice')
+  // 표현력은 억양과 세기의 출렁임이라 목소리 크기와 상관없다. 작은 목소리는 훈련 진단에서 판단한다.
   return out
 }
 
@@ -73,10 +92,10 @@ export function getPaceDesc(score: number, opsec: number): string {
 }
 
 export function getExpressivenessDesc(score: number): string {
-  if (score >= 80) return '에너지 넘치고 표현력이 풍부해요'
-  if (score >= 60) return '적절한 생동감이 느껴져요'
-  if (score >= 40) return '약간의 음성 변화가 있어요'
-  return '다소 단조로운 목소리 톤이에요'
+  // 점수 90 = 기준보다 1 표준편차 위, 70 = 1 표준편차 아래
+  if (score >= 90) return '억양과 세기가 크게 출렁이는 편이에요'
+  if (score >= 70) return '억양과 세기 변화가 적당해요'
+  return '억양과 세기 변화가 적은 편이에요'
 }
 
 export function getPitchToneLabel(hz: number): string {
