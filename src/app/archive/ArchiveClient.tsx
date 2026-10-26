@@ -81,7 +81,7 @@ function TrendChart({ metric, points, baseline }: { metric: Metric; points: Week
       {startPts.map((pt, i) => pt && (
         <circle
           key={`s${i}`} cx={pt[0]} cy={pt[1]} r={4}
-          fill={points[i].highUse ? 'white' : '#2D3A8C'} stroke="#2D3A8C" strokeWidth={2}
+          fill="#2D3A8C" stroke="#2D3A8C" strokeWidth={2}
         />
       ))}
       {points.map((p, i) => (
@@ -250,7 +250,6 @@ export default function ArchiveClient() {
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
                 <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-accent" />시작 녹음 (남아 있는 것)</span>
                 <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-gray-400/60" />마무리 녹음 (연습 직후)</span>
-                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full border-2 border-accent bg-white" />목을 많이 쓴 주</span>
                 <span className="flex items-center gap-1"><span className="w-3 h-2.5 rounded-sm bg-good/20" />{METRIC_LABEL[metric].band}</span>
               </div>
               {metric === 'jitter' && <p className="text-[11px] text-muted-foreground">{JITTER_NOTE}</p>}

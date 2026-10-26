@@ -6,7 +6,7 @@ import { useTrack } from '@/hooks/useTrack'
 import { SCENE_LABELS, SCENE_SCRIPTS, TRACKS, getRung, type RungLevel } from '@/lib/curriculum'
 import {
   METRIC_INFO, allowStrongVariations, judgeStep, metricValue, nextRung, performanceCopy,
-  JITTER_LIMIT, LOUDNESS_TOLERANCE_DB, PACE_RANGE, pickVariation, retentionCopy, retentionVerdict, rungReason, sessionRungs, type Measure, type VoiceUse,
+  JITTER_LIMIT, LOUDNESS_TOLERANCE_DB, PACE_RANGE, pickVariation, retentionCopy, retentionVerdict, rungReason, sessionRungs, type Measure,
 } from '@/lib/trainingCycle'
 import { measureBlob } from '@/lib/trainingMeasure'
 import RecordStep from '@/components/training/RecordStep'
@@ -14,15 +14,9 @@ import RungComplete from '@/components/training/RungComplete'
 import { trackEvent } from '@/lib/analytics'
 import { PageHeader, Pill } from '@/components/ds'
 
-type Step = 'status' | 'retention' | 'exerciseA' | 'exerciseB' | 'performance' | 'selfJudge' | 'cost' | 'result' | 'saved'
+type Step = 'retention' | 'exerciseA' | 'exerciseB' | 'performance' | 'selfJudge' | 'cost' | 'result' | 'saved'
 
-const STEP_ORDER: Step[] = ['status', 'retention', 'exerciseA', 'exerciseB', 'performance', 'selfJudge', 'cost', 'result']
-
-const VOICE_USE_OPTIONS: { value: VoiceUse; label: string; hint: string }[] = [
-  { value: 'low', label: '거의 안 썼어요', hint: '조용한 하루' },
-  { value: 'normal', label: '보통이에요', hint: '평소만큼' },
-  { value: 'high', label: '많이 썼어요', hint: '회의, 강의, 노래' },
-]
+const STEP_ORDER: Step[] = ['retention', 'exerciseA', 'exerciseB', 'performance', 'selfJudge', 'cost', 'result']
 
 function fmt(metric: keyof typeof METRIC_INFO, m: Measure | null): string {
   if (!m) return '—'
@@ -35,8 +29,7 @@ export default function SessionClient() {
   const router = useRouter()
   const { loading, profile, sessions, trackSessions, insertSession, setTrackRung } = useTrack()
 
-  const [step, setStep] = useState<Step>('status')
-  const [voiceUse, setVoiceUse] = useState<VoiceUse | null>(null)
+  const [step, setStep] = useState<Step>('retention')
   const [retention, setRetention] = useState<Measure | null>(null)
   const [rungMeasures, setRungMeasures] = useState<Measure[]>([])
   const [performance, setPerformance] = useState<Measure | null>(null)
@@ -54,6 +47,14 @@ export default function SessionClient() {
   }, [loading, profile.trackConcern, router])
 
   useEffect(() => () => { if (challengeUrl) URL.revokeObjectURL(challengeUrl) }, [challengeUrl])
+
+  // 연습 시작 기록. 예전에는 "오늘 목을 얼마나 썼나요?"에 답할 때 보냈다.
+  const started = useRef(false)
+  useEffect(() => {
+    if (loading || !profile.trackConcern || started.current) return
+    started.current = true
+    trackEvent('training_session_started', { concern: profile.trackConcern, rung: profile.trackRung ?? 1 })
+  }, [loading, profile.trackConcern, profile.trackRung])
 
   const track = profile.trackConcern ? TRACKS[profile.trackConcern] : null
   // 세션을 시작한 단계로 고정한다. 저장하면서 트랙 단계가 올라가도 이 세션의 결과 문구와 제목은 그대로여야 한다.
@@ -118,7 +119,7 @@ export default function SessionClient() {
     try {
       const ok = await insertSession({
         kind: 'session', concern: track!.concern, scene, rung: current, session_index: sessionIndex + 1,
-        voice_use: voiceUse, variation_id: variation!.id,
+        voice_use: null, variation_id: variation!.id,
         retention, performance, rung_measures: rungMeasures,
         effort, pain, met_criterion: met, next_rung: next,
       })
@@ -135,7 +136,7 @@ export default function SessionClient() {
   }
 
   const stepNo = Math.max(1, STEP_ORDER.indexOf(step) + 1 - (metric !== 'self' && STEP_ORDER.indexOf(step) > STEP_ORDER.indexOf('selfJudge') ? 1 : 0))
-  const stepTotal = metric === 'self' ? 8 : 7
+  const stepTotal = metric === 'self' ? 7 : 6
 
   return (
     <div className="min-h-[calc(100vh-84px)]">
@@ -151,31 +152,10 @@ export default function SessionClient() {
       <div className="px-5 pt-4 pb-8 space-y-4">
         {failNote && <p className="text-[13px] text-caution px-1">{failNote}</p>}
 
-        {step === 'status' && (
+        {step === 'retention' && (
           <p className="rounded-2xl border-2 border-accent/15 px-4 py-3 text-[14px] font-semibold text-foreground leading-relaxed" role="status">
             {rungReason(track.concern, current, lastSession)}
           </p>
-        )}
-
-        {step === 'status' && (
-          <div className="glass rounded-3xl p-6 space-y-4">
-            <div>
-              <p className="eyebrow">오늘 상태</p>
-              <p className="text-base font-bold text-foreground">오늘 목을 얼마나 썼나요?</p>
-            </div>
-            <div className="space-y-2">
-              {VOICE_USE_OPTIONS.map((o) => (
-                <button
-                  key={o.value}
-                  onClick={() => { setVoiceUse(o.value); trackEvent('training_session_started', { concern: track.concern, rung: current, voice_use: o.value }); advance('status') }}
-                  className="w-full flex items-center justify-between rounded-2xl bg-card hover:bg-card/80 px-4 py-3 text-left active:scale-[0.98] transition-all"
-                >
-                  <span className="text-sm font-semibold text-foreground">{o.label}</span>
-                  <span className="text-[11px] text-muted-foreground">{o.hint}</span>
-                </button>
-              ))}
-            </div>
-          </div>
         )}
 
         {step === 'retention' && (
@@ -339,7 +319,7 @@ export default function SessionClient() {
 
             <div className="glass rounded-3xl p-5 space-y-2">
               <p className="text-[11px] font-semibold text-muted-foreground">지난번 연습이 남아 있었나</p>
-              <p className="text-sm text-foreground leading-relaxed">{retentionCopy(verdict, voiceUse ?? 'normal')}</p>
+              <p className="text-sm text-foreground leading-relaxed">{retentionCopy(verdict)}</p>
             </div>
 
             <div className="glass rounded-3xl p-5 space-y-2">

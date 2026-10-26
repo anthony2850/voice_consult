@@ -23,13 +23,12 @@ describe('weeklyTrend', () => {
       s('2026-10-12', { jitter_rel_pct: 6 }, { jitter_rel_pct: 3 }),
       s('2026-10-13', { jitter_rel_pct: 3 }, { jitter_rel_pct: 3 }),
       s('2026-10-14', { jitter_rel_pct: 4.5 }, { jitter_rel_pct: 2.4 }),
-      s('2026-10-20', { jitter_rel_pct: 3 }, null, { voice_use: 'high' }),
+      s('2026-10-20', { jitter_rel_pct: 3 }, null),
     ])
     expect(pts.map((p) => p.week)).toEqual(['2026-10-12', '2026-10-19'])
     expect(pts[0].start).toBeCloseTo(1.5) // median 4.5% / 3%
     expect(pts[0].end).toBeCloseTo(1.0)
     expect(pts[0].sessions).toBe(3)
-    expect(pts[1].highUse).toBe(true)
     expect(pts[1].end).toBeNull()
   })
 
@@ -56,8 +55,8 @@ describe('distanceToTarget', () => {
 
 describe('trendVerdict', () => {
   const two = (a: number, b: number) => [
-    { week: 'w1', start: a, end: null, sessions: 2, highUse: false },
-    { week: 'w2', start: b, end: null, sessions: 2, highUse: false },
+    { week: 'w1', start: a, end: null, sessions: 2 },
+    { week: 'w2', start: b, end: null, sessions: 2 },
   ]
   it('needs at least 3 sessions and 2 weeks', () => {
     expect(trendVerdict('jitter', two(2, 1), 2, null)).toBe('too-few')

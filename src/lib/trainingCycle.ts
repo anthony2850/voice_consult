@@ -404,7 +404,7 @@ export function retentionVerdict(
 export type VoiceUse = 'low' | 'normal' | 'high'
 
 /** 낙인 없는 문구 (4교시 24쪽). 학생 탓이 아니라 조건을 본다 (9교시 52쪽). */
-export function retentionCopy(verdict: RetentionVerdict, voiceUse: VoiceUse): string {
+export function retentionCopy(verdict: RetentionVerdict): string {
   switch (verdict) {
     case 'first':
       return '첫 기록이에요. 다음 연습 시작 녹음과 비교해요.'
@@ -413,9 +413,7 @@ export function retentionCopy(verdict: RetentionVerdict, voiceUse: VoiceUse): st
     case 'partly':
       return '지난번 마무리의 절반쯤 남아 있어요. 쉬고 난 뒤 첫 녹음은 원래 조금 낮게 나와요.'
     case 'reset':
-      return voiceUse === 'high'
-        ? '지난번 마무리보다 낮게 나왔어요. 오늘 목을 많이 쓴 영향일 수 있어요.'
-        : '지난번 마무리보다 낮게 나왔어요. 컨디션이나 주변 소음 영향일 수 있어요.'
+      return '지난번 마무리보다 낮게 나왔어요. 컨디션이나 목 사용, 주변 소음 영향일 수 있어요.'
     case 'na':
       return '녹음을 직접 듣고 판단해요.'
   }

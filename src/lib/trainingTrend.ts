@@ -28,8 +28,6 @@ export interface WeekPoint {
   /** 마무리 녹음 중앙값 (self 지표는 null) */
   end: number | null
   sessions: number
-  /** 그 주에 목을 많이 쓴 날이 있었는지 */
-  highUse: boolean
 }
 
 function pad(n: number) { return String(n).padStart(2, '0') }
@@ -59,18 +57,16 @@ export function weeklyTrend(metric: Metric, sessions: TrendSession[]): WeekPoint
   return [...byWeek.entries()]
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([week, ss]) => {
-      const highUse = ss.some((s) => s.voice_use === 'high')
       if (metric === 'self') {
         const answered = ss.filter((s) => s.met_criterion != null)
         const start = answered.length ? answered.filter((s) => s.met_criterion).length / answered.length : null
-        return { week, start, end: null, sessions: ss.length, highUse }
+        return { week, start, end: null, sessions: ss.length }
       }
       return {
         week,
         start: median(ss.flatMap((s) => (s.retention ? [metricValue(metric, s.retention)] : []))),
         end: median(ss.flatMap((s) => (s.performance ? [metricValue(metric, s.performance)] : []))),
         sessions: ss.length,
-        highUse,
       }
     })
 }
