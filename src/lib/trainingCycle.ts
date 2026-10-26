@@ -151,7 +151,7 @@ export function suggestConcernsFromDiagnosis(measures: Measure[]): DiagnosisSugg
     out.push({ concern: 'trembling', boundary: jitterBoundary, reason: `${jitterBoundary}단계부터 떨림이 기준(${jitterLimit}%)을 넘었어요.` })
   }
 
-  // 빨라지는 목소리는 빠를 때만 본다. 느린 건 이 트랙(늦추는 연습)의 문제가 아니고,
+  // 빠른 말은 빠를 때만 본다. 느린 건 이 트랙(늦추는 연습)의 문제가 아니고,
   // 3단계는 이어 읽는 과제라 원래 느려진다. 세션 성공 기준은 지나치게 느려지지 않게 범위로 둔다.
   const fastStep = measures
     .filter((m) => (m.level ?? 0) >= 3)

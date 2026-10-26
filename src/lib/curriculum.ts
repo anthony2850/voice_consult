@@ -11,11 +11,12 @@
 
 export type ConcernSlug = 'small_voice' | 'trembling' | 'fast' | 'diction'
 
+/** 고민 이름. 화면 어디서나 이 이름 하나만 쓴다 (트랙 이름도 이것을 따른다). */
 export const CONCERN_LABELS: Record<ConcernSlug, string> = {
   small_voice: '작은 목소리',
-  trembling: '떨리는 목소리',
-  fast: '빨라지는 목소리',
-  diction: '발음 웅얼거림',
+  trembling: '떨림',
+  fast: '빠른 말',
+  diction: '발음',
 }
 
 export const CONCERN_ORDER: ConcernSlug[] = ['trembling', 'small_voice', 'fast', 'diction']
@@ -256,7 +257,7 @@ export interface Track {
 export const TRACKS: Record<ConcernSlug, Track> = {
   trembling: {
     concern: 'trembling',
-    label: '떨림',
+    label: CONCERN_LABELS.trembling,
     emoji: '〰️',
     metric: 'jitter',
     keyInfo: '문장 끝에서 목소리가 떨리지 않았나',
@@ -271,7 +272,7 @@ export const TRACKS: Record<ConcernSlug, Track> = {
   },
   small_voice: {
     concern: 'small_voice',
-    label: '전달력',
+    label: CONCERN_LABELS.small_voice,
     emoji: '📢',
     metric: 'loudness',
     keyInfo: '문장 끝이 처음만큼 크게 들리는가',
@@ -286,7 +287,7 @@ export const TRACKS: Record<ConcernSlug, Track> = {
   },
   fast: {
     concern: 'fast',
-    label: '여유',
+    label: CONCERN_LABELS.fast,
     emoji: '⏱️',
     metric: 'pace',
     keyInfo: '문장 사이에서 실제로 멈췄는가',
@@ -301,7 +302,7 @@ export const TRACKS: Record<ConcernSlug, Track> = {
   },
   diction: {
     concern: 'diction',
-    label: '또렷함',
+    label: CONCERN_LABELS.diction,
     emoji: '🗣️',
     metric: 'clarity',
     keyInfo: '글자 하나하나가 또렷이 들렸는가 (특히 받침)',
