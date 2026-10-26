@@ -9,11 +9,12 @@ import {
   type ConcernSlug, type RungLevel, type Scene,
 } from '@/lib/curriculum'
 import {
-  JITTER_LIMIT, PACE_RANGE, diagnosisSteps, startRungFromBoundary, suggestConcernsFromDiagnosis, type DiagnosisSuggestion, type Measure,
+  CLARITY_MIN, JITTER_LIMIT, PACE_RANGE, diagnosisSteps, dictionStartRung, startRungFromBoundary, suggestConcernsFromDiagnosis, type DiagnosisSuggestion, type Measure,
 } from '@/lib/trainingCycle'
 import { PRACTICE_TIME } from '@/lib/plan'
 import { Checklist, Display, Eyebrow, MetricRow, OptionCard, PageHeader, Pill, PrimaryButton, ProgressBar, SpecialButton, SurfaceCard } from '@/components/ds'
 import { measureBlob } from '@/lib/trainingMeasure'
+import { clarityPct, transcribe } from '@/lib/clarity'
 import RecordStep from '@/components/training/RecordStep'
 import DiagnosisLadder from '@/components/training/DiagnosisLadder'
 import { trackEvent } from '@/lib/analytics'
@@ -70,11 +71,14 @@ export default function DiagnoseClient() {
     setAnalyzing(true)
     setFailNote(null)
     try {
-      const m = await measureBlob(blob, level)
+      // 3, 4단계는 글자로 바꿔 알아들은 비율도 잰다(발음). 고민은 진단이 끝나야 고르니 모두에게 잰다.
+      const script = level >= 3 ? rung.script(scene, 0) : null
+      const [m, heard] = await Promise.all([measureBlob(blob, level), script ? transcribe(blob) : Promise.resolve(null)])
       if (!m) {
         setFailNote('소리가 잘 잡히지 않았어요. 마이크에 조금 더 가까이에서 다시 녹음해 주세요.')
         return
       }
+      if (script && heard != null) m.clarity_pct = clarityPct(script, heard)
       const next = [...measures.filter((x) => x.level !== level), m]
       setMeasures(next)
       trackEvent('diagnosis_rung_recorded', { level, jitter_source: m.jitter_source })
@@ -89,7 +93,7 @@ export default function DiagnoseClient() {
   }
 
   function startRungFor(concern: ConcernSlug): RungLevel {
-    if (TRACKS[concern].metric === 'clarity') return 4
+    if (TRACKS[concern].metric === 'clarity') return dictionStartRung(measures)
     return startRungFromBoundary(suggestions.find((x) => x.concern === concern)?.boundary ?? null)
   }
 
@@ -175,6 +179,12 @@ export default function DiagnoseClient() {
               <MetricRow
                 label="말 빠르기" value={pace.toFixed(1)} unit="글자/초" hint={`실제 첫 문장에서, 기준 ${PACE_RANGE.max}글자 이하`}
                 pill={paceTone === 'fast' ? <Pill tone="caution">기준 넘음</Pill> : <Pill tone="good">기준 안</Pill>}
+              />
+            )}
+            {speech?.clarity_pct != null && (
+              <MetricRow
+                label="발음 또렷함" value={String(Math.round(speech.clarity_pct))} unit="%" hint={`실제 첫 문장에서 알아들은 글자, 기준 ${CLARITY_MIN}% 이상`}
+                pill={speech.clarity_pct >= CLARITY_MIN ? <Pill tone="good">기준 안</Pill> : <Pill tone="caution">기준 미만</Pill>}
               />
             )}
             {speech && <MetricRow label="목소리 크기" value={speech.db_mean.toFixed(0)} unit="dB" pill={<Pill>첫 기록</Pill>} />}

@@ -116,6 +116,15 @@ export function findBoundary(metric: Metric, measures: Measure[], baseline?: Mea
   return null
 }
 
+/**
+ * 발음 트랙의 시작 단계. 진단에서 알아들은 비율을 쟀으면 다른 고민과 같은 규칙(처음 기준을 넘은 단계, 없으면 5단계),
+ * 재지 못했으면(인식 실패, 예전 진단) 실제 문장인 4단계부터.
+ */
+export function dictionStartRung(measures: Measure[] | null | undefined): RungLevel {
+  if (!measures?.some((m) => m.clarity_pct != null)) return 4
+  return startRungFromBoundary(suggestConcernsFromDiagnosis(measures).find((x) => x.concern === 'diction')?.boundary ?? null)
+}
+
 /** 경계에서 트랙의 시작 계단을 정한다. 경계가 없으면 5단(전체 답변)부터. */
 export function startRungFromBoundary(boundary: RungLevel | null): RungLevel {
   return boundary ?? 5
@@ -159,11 +168,21 @@ export function suggestConcernsFromDiagnosis(measures: Measure[]): DiagnosisSugg
     out.push({ concern: 'small_voice', boundary: 4, reason: `실제 문장이 허밍보다 ${Math.round(first.db_mean - base.db_mean)}dB 작았어요. (기준 ${SMALL_VOICE_DROP_DB}dB 이내)` })
   }
 
+  // 발음: 3, 4단계 녹음을 글자로 바꿔 알아들은 비율을 쟀을 때만 판단한다 (1, 2단계는 글자가 없다)
+  const clarityMeasured = measures.some((m) => m.clarity_pct != null)
+  const dictionStep = [...measures]
+    .filter((m) => (m.level ?? 0) >= 3 && m.clarity_pct != null)
+    .sort((a, b) => a.level! - b.level!)
+    .find((m) => m.clarity_pct! < CLARITY_MIN)
+  if (dictionStep) {
+    out.push({ concern: 'diction', boundary: dictionStep.level!, reason: `${dictionStep.level}단계에서 알아들은 글자가 ${Math.round(dictionStep.clarity_pct!)}%였어요. (기준 ${CLARITY_MIN}% 이상)` })
+  }
+
   const withinCopy: Record<ConcernSlug, string> = {
     trembling: `떨림이 모든 단계에서 기준(${jitterLimit}%) 안이었어요.`,
     fast: `빠르기가 기준(1초에 ${PACE_RANGE.max}글자) 안이었어요.`,
     small_voice: `허밍과 실제 문장의 크기 차이가 기준(${SMALL_VOICE_DROP_DB}dB) 안이었어요.`,
-    diction: '녹음을 직접 들어 보고 판단해요.',
+    diction: clarityMeasured ? `알아들은 글자가 모든 단계에서 기준(${CLARITY_MIN}%) 이상이었어요.` : '이번 진단에서는 발음을 재지 못했어요. 4단계부터 시작해요.',
   }
   for (const c of CONCERN_ORDER) {
     if (!out.some((s) => s.concern === c)) out.push({ concern: c, boundary: null, reason: withinCopy[c] })
@@ -186,12 +205,18 @@ export interface DiagnosisStep {
  * 발음은 측정하지 않으므로 null.
  */
 export function diagnosisSteps(concern: ConcernSlug, measures: Measure[]): DiagnosisStep[] | null {
-  if (concern === 'diction') return null
+  if (concern === 'diction' && !measures.some((m) => m.clarity_pct != null)) return null
   const byLevel = new Map(measures.filter((m) => m.level != null).map((m) => [m.level!, m]))
   const levels = [...byLevel.keys()].sort((a, b) => a - b)
   const hum = byLevel.get(1)
   return levels.map((level): DiagnosisStep => {
     const m = byLevel.get(level)!
+    if (concern === 'diction') {
+      if (level < 3) return { level, state: 'skip', note: '글자가 없어 발음은 재지 않아요' }
+      if (m.clarity_pct == null) return { level, state: 'skip', note: '이번 녹음은 글자로 바꾸지 못했어요' }
+      const ok = m.clarity_pct >= CLARITY_MIN
+      return { level, state: ok ? 'ok' : 'off', note: `알아들은 글자 ${Math.round(m.clarity_pct)}% (기준 ${CLARITY_MIN}% ${ok ? '이상' : '미만'})` }
+    }
     if (concern === 'trembling') {
       const ok = meetsCriterion('jitter', m)
       const note = `떨림 ${m.jitter_rel_pct.toFixed(1)}% (기준 ${JITTER_LIMIT[m.jitter_source]}% ${ok ? '이하' : '초과'})`
@@ -254,12 +279,13 @@ export function planTrackSwitch(
   const sameTrack = sessions.find((s) => s.kind === 'session' && s.concern === concern && s.scene === scene && s.next_rung)
   if (sameTrack?.next_rung) return { kind: 'resume', rung: sameTrack.next_rung, baseline }
 
-  if (concern === 'diction') return { kind: 'reuse', rung: 4, baseline }
+  // 발음은 진단 없이도 시작할 수 있다(4단계). 진단에서 발음을 쟀으면 그 결과로 시작 단계를 정한다.
+  if (concern === 'diction' && !diagnosis?.rung_measures?.some((m) => m.clarity_pct != null)) return { kind: 'reuse', rung: 4, baseline }
 
   if (!diagnosis?.rung_measures) return { kind: 'diagnose' }
 
   const s = suggestConcernsFromDiagnosis(diagnosis.rung_measures).find((x) => x.concern === concern)
-  const rung = startRungFromBoundary(s?.boundary ?? null)
+  const rung = concern === 'diction' ? dictionStartRung(diagnosis.rung_measures) : startRungFromBoundary(s?.boundary ?? null)
   const ageDays = Math.floor((now.getTime() - new Date(diagnosis.created_at).getTime()) / 86_400_000)
   if (ageDays > DIAGNOSIS_FRESH_DAYS) return { kind: 'suggest-rediagnose', rung, baseline, ageDays }
   return { kind: 'reuse', rung, baseline }
@@ -289,10 +315,11 @@ export function nextRung(current: RungLevel, o: SessionOutcome): RungLevel {
   return current
 }
 
-const OFF_VERB: Record<Exclude<ConcernSlug, 'diction'>, string> = {
+const OFF_VERB: Record<ConcernSlug, string> = {
   trembling: '떨림이 기준을 넘었어요',
   fast: '빠르기가 기준을 넘었어요',
   small_voice: '목소리가 기준보다 작아졌어요',
+  diction: '알아들은 글자가 기준보다 적었어요',
 }
 
 /**
@@ -303,6 +330,8 @@ export function rungReason(
   concern: ConcernSlug,
   current: RungLevel,
   last: { rung: RungLevel | null; next_rung: RungLevel | null; met_criterion: boolean | null; effort: number | null; pain: boolean } | null,
+  /** 이 상황의 진단 측정값. 발음을 쟀는지 알려고 쓴다 */
+  diagnosis?: Measure[] | null,
 ): string {
   if (last && last.rung != null && last.next_rung === current) {
     if (current > last.rung) return '지난번에 기준을 지켰고 목도 편했어요. 한 단계 올라왔어요.'
@@ -314,7 +343,8 @@ export function rungReason(
     if (last.met_criterion === true) return '지난번에 기준은 지켰지만 목이 조금 힘들었어요. 같은 단계를 한 번 더 해요.'
     return '지난번과 같은 단계예요. 기준을 지키고 목이 편하면 다음 단계로 올라가요.'
   }
-  if (concern === 'diction') return '발음은 실제 문장인 4단계부터 연습해요.'
+  // 발음을 진단에서 재지 못했으면 4단계는 "기준을 넘어서"가 아니라 기본값이다
+  if (concern === 'diction' && !diagnosis?.some((m) => m.clarity_pct != null)) return '발음은 실제 문장인 4단계부터 연습해요.'
   if (current >= 5) return '진단한 4단계까지 기준 안이었어요. 그다음 단계부터 연습해요.'
   return `진단에서 ${current}단계부터 ${OFF_VERB[concern]}. 여기서부터 연습해요.`
 }

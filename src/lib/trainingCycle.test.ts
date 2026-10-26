@@ -15,6 +15,7 @@ import {
   rungReason,
   judgeStep,
   performanceCopy,
+  dictionStartRung,
   type Measure,
 } from './trainingCycle'
 import { TRACKS, type RungLevel } from './curriculum'
@@ -322,5 +323,26 @@ describe('judgeStep', () => {
   })
   it('result copy names what was judged', () => {
     expect(performanceCopy(true, 6, 5, '오늘 도전(5단계)')).toBe('오늘 도전(5단계)이 기준 안이에요. 다음 연습은 한 단계 올라가요.')
+  })
+})
+
+describe('diction in the diagnosis', () => {
+  const base = [m({ level: 1 }), m({ level: 2 })]
+  it('suggests diction and starts at the first step under 95%', () => {
+    const ms = [...base, m({ level: 3, clarity_pct: 97 }), m({ level: 4, clarity_pct: 88 })]
+    const s = suggestConcernsFromDiagnosis(ms).find((x) => x.concern === 'diction')!
+    expect(s.boundary).toBe(4)
+    expect(s.reason).toBe('4단계에서 알아들은 글자가 88%였어요. (기준 95% 이상)')
+    expect(dictionStartRung(ms)).toBe(4)
+    expect(diagnosisSteps('diction', ms)!.map((x) => x.state)).toEqual(['skip', 'skip', 'ok', 'off'])
+  })
+  it('all clear starts at step 5; not measured falls back to step 4', () => {
+    expect(dictionStartRung([...base, m({ level: 3, clarity_pct: 98 }), m({ level: 4, clarity_pct: 96 })])).toBe(5)
+    expect(dictionStartRung([...base, m({ level: 3 }), m({ level: 4 })])).toBe(4)
+    expect(diagnosisSteps('diction', [...base, m({ level: 3 }), m({ level: 4 })])).toBeNull()
+  })
+  it('the reason line only claims a measured result when diction was measured', () => {
+    expect(rungReason('diction', 4, null, [m({ level: 4 })])).toBe('발음은 실제 문장인 4단계부터 연습해요.')
+    expect(rungReason('diction', 4, null, [m({ level: 4, clarity_pct: 88 })])).toContain('알아들은 글자가 기준보다 적었어요')
   })
 })

@@ -165,7 +165,7 @@ export default function SessionClient() {
 
         {step === 'retention' && (
           <p className="rounded-2xl border-2 border-accent/15 px-4 py-3 text-[14px] font-semibold text-foreground leading-relaxed" role="status">
-            {rungReason(track.concern, current, lastSession)}
+            {rungReason(track.concern, current, lastSession, diagnosisMeasures)}
           </p>
         )}
 
