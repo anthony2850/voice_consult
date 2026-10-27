@@ -2,11 +2,11 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useTrack } from '@/hooks/useTrack'
+import { useTrack, type TrainingSessionRow } from '@/hooks/useTrack'
 import { SCENE_LABELS, SCENE_SCRIPTS, TRACKS, getRung, type RungLevel } from '@/lib/curriculum'
 import {
   METRIC_INFO, allowStrongVariations, judgeStep, metricValue, nextRung, performanceCopy,
-  CLARITY_MIN, JITTER_LIMIT, LOUDNESS_TOLERANCE_DB, PACE_RANGE, pickVariation, retentionCopy, retentionVerdict, rungReason, sessionRungs, type Measure,
+  CLARITY_MIN, JITTER_LIMIT, LOUDNESS_TOLERANCE_DB, PACE_RANGE, SMALL_VOICE_DROP_DB, pickVariation, retentionCopy, retentionVerdict, rungReason, sessionRungs, type Measure,
 } from '@/lib/trainingCycle'
 import { measureBlob } from '@/lib/trainingMeasure'
 import { clarityPct, transcribe } from '@/lib/clarity'
@@ -43,6 +43,9 @@ export default function SessionClient() {
   const [analyzing, setAnalyzing] = useState(false)
   const [failNote, setFailNote] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
+  // 저장을 다시 누를 때 같은 연습을 두 번 넣지 않는다
+  const inserted = useRef(false)
 
   useEffect(() => {
     if (!loading && !profile.trackConcern) router.replace('/training')
@@ -65,8 +68,12 @@ export default function SessionClient() {
   const current: RungLevel = startRung.current ?? profile.trackRung ?? 1
   const [rungDone, setRungDone] = useState<{ from: RungLevel; to: RungLevel } | null>(null)
   const scene = profile.scene ?? 'daily'
-  const sessionIndex = trackSessions.length
-  const lastSession = trackSessions[0] ?? null
+  // 지난 연습과 회차도 시작할 때 값으로 고정한다. 저장하면 방금 한 연습이 목록 맨 앞에 들어와서,
+  // 고정하지 않으면 결과 카드가 오늘 녹음끼리 비교하게 된다.
+  const pinned = useRef<{ last: TrainingSessionRow | null; index: number } | null>(null)
+  if (!loading && pinned.current == null && profile.trackConcern) pinned.current = { last: trackSessions[0] ?? null, index: trackSessions.length }
+  const sessionIndex = pinned.current?.index ?? trackSessions.length
+  const lastSession = pinned.current ? pinned.current.last : (trackSessions[0] ?? null)
   const rungs = useMemo(() => sessionRungs(current), [current])
   const variation = useMemo(
     () => (track ? pickVariation(track, sessionIndex, allowStrongVariations(profile.baseline)) : null),
@@ -127,15 +134,23 @@ export default function SessionClient() {
   async function handleSave() {
     if (!effort) return
     setSaving(true)
+    setSaveError(null)
     try {
-      const ok = await insertSession({
-        kind: 'session', concern: track!.concern, scene, rung: current, session_index: sessionIndex + 1,
-        voice_use: null, variation_id: variation!.id,
-        retention, performance, rung_measures: rungMeasures,
-        effort, pain, met_criterion: met, next_rung: next,
-      })
-      if (ok && next !== current) await setTrackRung(next)
-      if (ok && next > current) setRungDone({ from: current, to: next })
+      if (!inserted.current) {
+        const ok = await insertSession({
+          kind: 'session', concern: track!.concern, scene, rung: current, session_index: sessionIndex + 1,
+          voice_use: null, variation_id: variation!.id,
+          retention, performance, rung_measures: rungMeasures,
+          effort, pain, met_criterion: met, next_rung: next,
+        })
+        if (!ok) { setSaveError('저장하지 못했어요. 연결을 확인하고 다시 눌러 주세요.'); return }
+        inserted.current = true
+      }
+      if (next !== current && !(await setTrackRung(next))) {
+        setSaveError('다음 단계를 저장하지 못했어요. 다시 눌러 주세요.')
+        return
+      }
+      if (next > current) setRungDone({ from: current, to: next })
       // 힘든 정도와 통증은 건강 관련 자가 응답이라 분석 도구(GA, Meta)로 보내지 않는다. DB에만 저장.
       // 다음 단계도 보내지 않는다. 단계가 내려가면 통증이나 힘든 정도 5라는 뜻이라 답이 드러난다.
       trackEvent('training_session_completed', {
@@ -326,7 +341,9 @@ export default function SessionClient() {
                       ? `기준 1초에 ${PACE_RANGE.min}~${PACE_RANGE.max}글자`
                       : metric === 'clarity'
                         ? `기준 알아들은 글자 ${CLARITY_MIN}% 이상`
-                        : `기준: 진단 때보다 ${LOUDNESS_TOLERANCE_DB}dB 넘게 작아지지 않기`}
+                        : diagnosisMeasures?.some((d) => d.level === 1)
+                          ? `기준: 진단 때 허밍보다 ${SMALL_VOICE_DROP_DB}dB 넘게 작아지지 않기`
+                          : `기준: 진단 때보다 ${LOUDNESS_TOLERANCE_DB}dB 넘게 작아지지 않기`}
                 </p>
               </div>
             )}
@@ -348,6 +365,7 @@ export default function SessionClient() {
               {pain && <p className="text-[13px] text-caution">통증이 있었어요. 오늘은 여기까지 하고, 내일도 아프면 쉬어 가세요.</p>}
             </div>
 
+            {saveError && <p className="text-[13px] text-destructive" role="alert">{saveError}</p>}
             {step === 'result' ? (
               <button
                 onClick={handleSave}

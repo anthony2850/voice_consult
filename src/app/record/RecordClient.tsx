@@ -128,6 +128,8 @@ export default function RecordClient() {
         extractAudioFeaturesWithPraat(speech, vowel),
       ])
 
+      // 목소리가 잡히지 않은 녹음은 감정 결과가 와도 보여 주지 않는다
+      if (!audioFeatures) throw new VoiceAnalysisError('no_voice', true)
       const emotionData = await readVoiceAnalysisResponse(emotionRes)
 
       sessionStorage.setItem('voiceEmotions', JSON.stringify(emotionData.emotions))
@@ -147,9 +149,11 @@ export default function RecordClient() {
       setAnalyzing(false)
       setAnalyzeProgress(0)
       setAnalyzeError(
-        err instanceof VoiceAnalysisError && !err.retryable
-          ? '현재 음성 분석 서비스 설정을 확인하고 있어요. 잠시 후 다시 시도해 주세요.'
-          : '음성 분석에 실패했어요. 녹음은 그대로 있으니 다시 시도해 주세요.',
+        err instanceof VoiceAnalysisError && err.code === 'no_voice'
+          ? '목소리가 잘 잡히지 않았어요. 조용한 곳에서 휴대폰을 입 가까이 두고 다시 녹음해 주세요.'
+          : err instanceof VoiceAnalysisError && !err.retryable
+            ? '현재 음성 분석 서비스 설정을 확인하고 있어요. 잠시 후 다시 시도해 주세요.'
+            : '음성 분석에 실패했어요. 녹음은 그대로 있으니 다시 시도해 주세요.',
       )
       trackEvent('analyze_failed', { error: err instanceof Error ? err.message.slice(0, 100) : 'unknown' })
     } finally {

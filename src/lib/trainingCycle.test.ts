@@ -17,6 +17,7 @@ import {
   performanceCopy,
   dictionStartRung,
   type Measure,
+  loudnessFloor,
 } from './trainingCycle'
 import { TRACKS, type RungLevel } from './curriculum'
 
@@ -311,11 +312,23 @@ describe('judgeStep', () => {
     expect(r).toMatchObject({ met: true, on: 'final' })
     expect(judgeStep({ ...base, metric: 'pace', rung: 4, challenge: m({ onsets_per_second: 6.2 }), final: m({ onsets_per_second: 4 }) }).met).toBe(false)
   })
-  it('loudness compares with the same step from the diagnosis', () => {
-    const diagnosis = [m({ level: 1, db_mean: -32 }), m({ level: 4, db_mean: -22 })]
-    // 허밍 -33dB: 진단 허밍(-32)과 비교하면 통과, 4단계(-22)와 비교했다면 실패였다
-    expect(judgeStep({ ...base, metric: 'loudness', rung: 1, diagnosis, challenge: m({ level: 1, db_mean: -33 }), final: null }).met).toBe(true)
-    expect(judgeStep({ ...base, metric: 'loudness', rung: 5, diagnosis, challenge: m({ level: 5, db_mean: -26 }), final: null }).met).toBe(false)
+  it('small voice passes only when the sentence is no longer far below the diagnosis hum', () => {
+    // 진단: 허밍 -20, 문장 -27 → 7dB 작아서 작은 목소리로 걸림
+    const diagnosis = [m({ level: 1, db_mean: -20 }), m({ level: 4, db_mean: -27 })]
+    const judge = (rung: 1 | 4 | 5 | 6, db: number) => judgeStep({ ...base, metric: 'loudness', rung, diagnosis, challenge: m({ level: rung, db_mean: db }), final: null }).met
+    // 진단 때와 똑같이 작게 말하면 통과하지 않는다 (예전에는 통과했다)
+    expect(judge(4, -27)).toBe(false)
+    expect(judge(5, -27)).toBe(false)
+    // 허밍보다 4dB 안으로 들어오면 통과
+    expect(judge(4, -23.5)).toBe(true)
+    expect(judge(6, -24)).toBe(true)
+    // 허밍 단계는 진단 허밍과 비교
+    expect(judge(1, -21)).toBe(true)
+  })
+  it('loudness falls back to the step-4 baseline when the diagnosis has no hum', () => {
+    const r = judgeStep({ ...base, metric: 'loudness', rung: 5, diagnosis: null, baseline: m({ level: 4, db_mean: -22 }), challenge: m({ level: 5, db_mean: -25 }), final: null })
+    expect(r.met).toBe(false)
+    expect(loudnessFloor(null, m({ db_mean: -22 }))).toBe(-24)
   })
   it('diction judges the heard-syllable rate of the challenge, falling back to the self answer', () => {
     expect(judgeStep({ ...base, metric: 'clarity', rung: 4, selfOk: true, challenge: m({ clarity_pct: 80 }), final: m({}) })).toMatchObject({ met: false, on: 'challenge' })

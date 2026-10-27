@@ -276,7 +276,7 @@ export const TRACKS: Record<ConcernSlug, Track> = {
     emoji: '📢',
     metric: 'loudness',
     keyInfo: '문장 끝이 처음만큼 크게 들리는가',
-    goal: '진단 때 낸 목소리 크기를 문장 끝까지 유지하면 성공이에요.',
+    goal: '문장을 말해도 진단 때 "음~" 허밍보다 많이 작아지지 않으면 성공이에요.',
     lastWord: '방 반대편 사람에게도 들리게 말합니다.',
     variations: [
       { id: 'sv-3m', axis: 'sound', label: '3m 앞 사람에게', change: '상대가 3m 떨어져 있다고 생각하고 말하기', hold: '문장과 빠르기는 그대로', observe: '끝까지 같은 크기인가', strength: 1 },

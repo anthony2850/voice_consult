@@ -112,11 +112,17 @@ export default function DiagnoseClient() {
       setPhase('choose')
       return
     }
-    await insertSession({
+    const saved = await insertSession({
       kind: 'diagnosis', concern: picked, scene, rung: startRung, session_index: 0,
       voice_use: null, variation_id: null, retention: null, performance: null,
       rung_measures: measures, effort: null, pain: false, met_criterion: null, next_rung: startRung,
     })
+    // 진단 기록이 없으면 이후 크기 기준, 발음 시작 단계, 트랙 전환이 모두 진단을 못 찾는다
+    if (!saved) {
+      setSaveError('진단 결과를 저장하지 못했어요. 연결을 확인하고 다시 눌러 주세요.')
+      setPhase('choose')
+      return
+    }
     trackEvent('diagnosis_completed', { concern: picked, start_rung: startRung, boundary: s?.boundary ?? 'none' })
     // 저장이 끝난 뒤에만 첫 체크를 켠다. 나머지는 이미 정해진 내용이라 차례로 보여 주기만 한다.
     setPlanDone(1)

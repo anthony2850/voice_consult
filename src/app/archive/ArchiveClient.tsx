@@ -6,7 +6,7 @@ import { Check, ChevronRight, ChevronLeft, Dumbbell, Mic, Search, TrendingUp } f
 import { PageHeader, Pill, PrimaryButton } from '@/components/ds'
 import { useTrack, type TrainingSessionRow } from '@/hooks/useTrack'
 import { SCENE_LABELS, TRACKS, getRung, type Metric } from '@/lib/curriculum'
-import type { Measure } from '@/lib/trainingCycle'
+import { loudnessFloor } from '@/lib/trainingCycle'
 import {
   TREND_MIN_SESSIONS, JITTER_NOTE, formatMetric, targetBand, trendCopy, trendVerdict, weeklyTrend,
   type WeekPoint,
@@ -34,7 +34,7 @@ const DOW_LABELS = ['월', '화', '수', '목', '금', '토', '일']
 const METRIC_LABEL: Record<Metric, { title: string; unit: string; band: string }> = {
   jitter: { title: '목소리 떨림', unit: '', band: '1.00 이하가 목표' },
   pace: { title: '말 빠르기', unit: '글자/초', band: '2.5~5.5가 목표' },
-  loudness: { title: '목소리 크기', unit: 'dB', band: '진단 때 크기 −2dB 이상이 목표' },
+  loudness: { title: '목소리 크기', unit: 'dB', band: '진단 때 허밍 −4dB 이상이 목표' },
   clarity: { title: '알아들은 글자 비율', unit: '%', band: '95% 이상이 목표' },
 }
 
@@ -44,9 +44,9 @@ const PAD = { l: 34, r: 10, t: 12, b: 26 }
 const PW = CW - PAD.l - PAD.r
 const PH = CH - PAD.t - PAD.b
 
-function TrendChart({ metric, points, baseline }: { metric: Metric; points: WeekPoint[]; baseline: Measure | null }) {
+function TrendChart({ metric, points, loudFloor }: { metric: Metric; points: WeekPoint[]; loudFloor: number }) {
   const values = points.flatMap((p) => [p.start, p.end]).filter((v): v is number => v != null)
-  const [bandLo, bandHi] = targetBand(metric, baseline)
+  const [bandLo, bandHi] = targetBand(metric, loudFloor)
   const finiteBand = [bandLo, bandHi].filter((v) => Number.isFinite(v))
   const lo0 = Math.min(...values, ...finiteBand)
   const hi0 = Math.max(...values, ...finiteBand)
@@ -177,7 +177,10 @@ export default function ArchiveClient() {
   // 오래된 세션 → 최근 세션
   const ordered = useMemo(() => [...trackSessions].reverse(), [trackSessions])
   const points = useMemo(() => (metric ? weeklyTrend(metric, ordered) : []), [metric, ordered])
-  const verdict = metric ? trendVerdict(metric, points, ordered.length, profile.baseline) : 'too-few'
+  // 크기 목표는 세션 성공 기준과 같은 값(진단 허밍 기준)
+  const diagnosisMeasures = sessions.find((s) => s.kind === 'diagnosis' && s.scene === profile.scene && s.rung_measures?.length)?.rung_measures ?? null
+  const loudFloor = loudnessFloor(diagnosisMeasures, profile.baseline)
+  const verdict = metric ? trendVerdict(metric, points, ordered.length, loudFloor) : 'too-few'
 
   const trainingDates = useMemo(() => new Set(sessions.map((s) => s.session_date)), [sessions])
   const weekDates = useMemo(() => getWeekDates(today), [today])
@@ -246,7 +249,7 @@ export default function ArchiveClient() {
 
           {metric && verdict !== 'too-few' && (
             <div className="rounded-2xl bg-card p-3 space-y-2">
-              <TrendChart metric={metric} points={points} baseline={profile.baseline} />
+              <TrendChart metric={metric} points={points} loudFloor={loudFloor} />
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
                 <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-accent" />시작 녹음 (남아 있는 것)</span>
                 <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-gray-400/60" />마무리 녹음 (연습 직후)</span>

@@ -196,7 +196,7 @@ export default function VoiceDetailClient() {
           title="목소리 안정감"
           score={scores.stability}
           description={getStabilityDesc(scores.stability)}
-          detail={`Jitter ${features.voice_quality.jitter_rel_pct.toFixed(2)}%, Shimmer ${features.voice_quality.shimmer_rel_pct.toFixed(2)}%, ${features.voice_quality.task === 'vowel' ? '"아~" 3초로 측정' : '문단 읽기로 측정한 참고값'}`}
+          detail={`Jitter ${features.voice_quality.jitter_rel_pct.toFixed(2)}%, Shimmer ${features.voice_quality.shimmer_rel_pct.toFixed(2)}%, ${features.voice_quality.task === 'vowel' ? '"아~" 3초로 측정' : '"아~"가 잡히지 않아 말하기 구간으로 잰 참고값'}`}
           animate={animate}
         />
         <ScoreCard

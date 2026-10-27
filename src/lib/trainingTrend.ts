@@ -7,7 +7,7 @@
  * - 비교는 목표까지의 거리로만 하고 색으로 좋고 나쁨을 칠하지 않는다 (4교시 24쪽).
  */
 import type { Metric } from './curriculum'
-import { CLARITY_MIN, JITTER_LIMIT, LOUDNESS_TOLERANCE_DB, PACE_RANGE, DEFAULT_DB_FLOOR, metricValue, type Measure } from './trainingCycle'
+import { CLARITY_MIN, JITTER_LIMIT, PACE_RANGE, DEFAULT_DB_FLOOR, metricValue, type Measure } from './trainingCycle'
 
 /** 추이를 보여 주기 시작하는 최소 세션 수 */
 export const TREND_MIN_SESSIONS = 3
@@ -68,19 +68,22 @@ export function weeklyTrend(metric: Metric, sessions: TrendSession[]): WeekPoint
     })
 }
 
-/** 목표 범위 [low, high]. 차트의 띠와 거리 계산에 쓴다. */
-export function targetBand(metric: Metric, baseline: Measure | null): [number, number] {
+/**
+ * 목표 범위 [low, high]. 차트의 띠와 거리 계산에 쓴다.
+ * @param loudFloor 크기 목표의 바닥값 (trainingCycle의 loudnessFloor). 세션 성공 기준과 같은 값이어야 한다.
+ */
+export function targetBand(metric: Metric, loudFloor: number | null): [number, number] {
   switch (metric) {
     case 'jitter': return [0, 1]
     case 'pace': return [PACE_RANGE.min, PACE_RANGE.max]
-    case 'loudness': return [baseline ? baseline.db_mean - LOUDNESS_TOLERANCE_DB : DEFAULT_DB_FLOOR, Infinity]
+    case 'loudness': return [loudFloor ?? DEFAULT_DB_FLOOR, Infinity]
     case 'clarity': return [CLARITY_MIN, 100]
   }
 }
 
 /** 목표 범위까지의 거리. 범위 안이면 0. */
-export function distanceToTarget(metric: Metric, value: number, baseline: Measure | null): number {
-  const [lo, hi] = targetBand(metric, baseline)
+export function distanceToTarget(metric: Metric, value: number, loudFloor: number | null): number {
+  const [lo, hi] = targetBand(metric, loudFloor)
   if (value < lo) return lo - value
   if (value > hi) return value - hi
   return 0
@@ -91,12 +94,12 @@ const EPS: Record<Metric, number> = { jitter: 0.05, pace: 0.2, loudness: 1, clar
 
 export type TrendVerdict = 'too-few' | 'one-week' | 'closer' | 'both-in' | 'flat'
 
-export function trendVerdict(metric: Metric, points: WeekPoint[], totalSessions: number, baseline: Measure | null): TrendVerdict {
+export function trendVerdict(metric: Metric, points: WeekPoint[], totalSessions: number, loudFloor: number | null): TrendVerdict {
   if (totalSessions < TREND_MIN_SESSIONS) return 'too-few'
   const withStart = points.filter((p) => p.start != null)
   if (withStart.length < 2) return 'one-week'
-  const first = distanceToTarget(metric, withStart[0].start!, baseline)
-  const last = distanceToTarget(metric, withStart[withStart.length - 1].start!, baseline)
+  const first = distanceToTarget(metric, withStart[0].start!, loudFloor)
+  const last = distanceToTarget(metric, withStart[withStart.length - 1].start!, loudFloor)
   if (first === 0 && last === 0) return 'both-in'
   if (last < first - EPS[metric]) return 'closer'
   return 'flat'

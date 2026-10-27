@@ -85,8 +85,12 @@ function detectPitchFrame(frame: Float32Array, sr: number): number | null {
     }
   }
 
-  return bestLag > 0 ? sr / bestLag : null
+  // 가장 짧은 지연(500Hz)에서 최대면 봉우리가 아니라 저음 잡음(에어컨, 바람 소리)이 이어진 것이다
+  return bestLag > minLag ? sr / bestLag : null
 }
+
+/** 목소리가 이만큼(초) 잡히지 않으면 분석하지 않는다. 무음이나 잡음만 있는 녹음이 "떨림 0%" 같은 결과로 통과하지 않게. */
+export const MIN_VOICED_SEC = 0.5
 
 // Remove outliers via IQR before computing pitch statistics
 function filterPitchOutliers(f0s: number[]): number[] {
@@ -103,6 +107,7 @@ function percentile(sorted: number[], p: number): number {
   return sorted[idx]
 }
 
+/** 녹음 하나의 음향 수치. 디코딩에 실패하거나 목소리가 MIN_VOICED_SEC만큼 잡히지 않으면 null. */
 export async function extractAudioFeatures(audioBlob: Blob): Promise<AudioFeatures | null> {
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -145,6 +150,7 @@ export async function extractAudioFeatures(audioBlob: Blob): Promise<AudioFeatur
     }
 
     const voicedRatio = totalFrames > 0 ? f0s.length / totalFrames : 0
+    if ((f0s.length * HOP) / dsSr < MIN_VOICED_SEC) return null
 
     // Filter outliers before computing statistics
     const cleanF0s = filterPitchOutliers(f0s)
@@ -179,7 +185,9 @@ export async function extractAudioFeatures(audioBlob: Blob): Promise<AudioFeatur
 
     const rmsMean = arrMean(rmsFrames)
     const activeDb = dbFrames.filter((d) => d > -100)
-    const dbMean = arrMean(activeDb)
+    // 목소리 크기는 목소리가 난 구간으로만 잰다. 말 사이 쉼까지 평균에 넣으면 쉼이 많은 문장이 실제보다 작게 나와
+    // 허밍(쉼 없음)과 문장을 비교할 수 없다.
+    const dbMean = arrMean(voicedRms.map((r) => 20 * Math.log10(r)))
     const dbMax = activeDb.length > 0 ? Math.max(...activeDb) : 0
     const dbMin = activeDb.length > 0 ? Math.min(...activeDb) : -80
 
@@ -314,16 +322,17 @@ export async function extractAudioFeaturesWithPraat(
    */
   vowelBlob?: Blob | null,
 ): Promise<AudioFeatures | null> {
-  const qualityBlob = vowelBlob ?? blob
-  const [features, praat, vowelFeatures] = await Promise.all([
+  // "아~" 구간에 목소리가 없으면(말하지 않았거나 너무 짧으면) 말하기 구간으로 떨림을 잰다.
+  const vowelFeatures = vowelBlob ? await extractAudioFeatures(vowelBlob) : null
+  const qualityBlob = vowelFeatures && vowelBlob ? vowelBlob : blob
+  const [features, praat] = await Promise.all([
     extractAudioFeatures(blob),
     fetchPraatVoiceQuality(qualityBlob),
-    vowelBlob ? extractAudioFeatures(vowelBlob) : Promise.resolve(null),
   ])
   if (!features) return null
   // Modal이 꺼져 있으면 브라우저 근사치를 쓰되, 모음이 있으면 모음 구간의 근사치를 쓴다.
   if (vowelFeatures) features.voice_quality = { ...vowelFeatures.voice_quality }
-  features.voice_quality.task = vowelBlob ? 'vowel' : 'speech'
+  features.voice_quality.task = vowelFeatures ? 'vowel' : 'speech'
   // 대체 측정으로 넘어가면 기록해 둔다. 2026-10-25까지 운영 환경 주소가 비어 있어 아무도 모른 채 대체 측정만 썼다.
   if (!praat) trackEvent('voice_quality_fallback', { task: features.voice_quality.task })
   if (praat) {

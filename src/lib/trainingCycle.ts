@@ -48,10 +48,23 @@ export function toMeasure(f: AudioFeatures, level?: RungLevel): Measure {
  */
 export const JITTER_LIMIT = { praat: 3.0, frame: 50.0 } as const
 export const PACE_RANGE = { min: 2.5, max: 5.5 } as const
-/** 진단 때 기준 음량에서 이만큼 떨어지면 유지 실패로 본다. */
+/** 진단에서 실제 문장이 허밍보다 이만큼 작아지면 작은 목소리로 본다 (dB). 훈련 성공 기준도 같은 값이다. */
+export const SMALL_VOICE_DROP_DB = 4
+/** 진단 허밍이 없을 때(예전 기록): 진단 4단 크기에서 이만큼 떨어지면 유지 실패로 본다. */
 export const LOUDNESS_TOLERANCE_DB = 2
 /** 기준 음량이 없을 때의 바닥값 */
 export const DEFAULT_DB_FLOOR = -30
+
+/**
+ * 작은 목소리 트랙의 성공 바닥값(dB). 진단에서 "허밍보다 4dB 넘게 작아짐"으로 걸렸으니,
+ * 성공도 같은 기준으로 본다: 진단 때 허밍보다 4dB 넘게 작아지지 않기.
+ * (예전에는 진단 때 작았던 그 문장과 비교해서, 진단 때만큼 작게 말해도 통과했다.)
+ */
+export function loudnessFloor(diagnosis: Measure[] | null | undefined, baseline: Measure | null | undefined): number {
+  const hum = diagnosis?.find((d) => d.level === 1)
+  if (hum) return hum.db_mean - SMALL_VOICE_DROP_DB
+  return baseline ? baseline.db_mean - LOUDNESS_TOLERANCE_DB : DEFAULT_DB_FLOOR
+}
 /** 발음 트랙 성공 기준: 알아들은 글자 비율(%). 추정치, 실제 녹음으로 보정 필요. */
 export const CLARITY_MIN = 95
 
@@ -91,10 +104,8 @@ export function meetsCriterion(
       return m.jitter_rel_pct <= JITTER_LIMIT[m.jitter_source]
     case 'pace':
       return m.onsets_per_second >= PACE_RANGE.min && m.onsets_per_second <= PACE_RANGE.max
-    case 'loudness': {
-      const floor = baseline ? baseline.db_mean - LOUDNESS_TOLERANCE_DB : DEFAULT_DB_FLOOR
-      return m.db_mean >= floor
-    }
+    case 'loudness':
+      return m.db_mean >= loudnessFloor(null, baseline)
     case 'clarity':
       // 글자가 없는 녹음(1, 2단계)이나 인식 실패면 직접 듣고 고른 답으로 판단한다
       if (m.clarity_pct == null) return selfOk == null ? null : selfOk
@@ -189,9 +200,6 @@ export function suggestConcernsFromDiagnosis(measures: Measure[]): DiagnosisSugg
   }
   return out
 }
-
-/** 진단에서 실제 문장이 허밍보다 이만큼 작아지면 작은 목소리로 본다 (dB) */
-const SMALL_VOICE_DROP_DB = 4
 
 export interface DiagnosisStep {
   level: RungLevel
@@ -356,7 +364,7 @@ export function rungReason(
  *
  * 예외:
  * - 빠르기는 글자가 없는 1, 2단계(허밍, "아~")에서 잴 수 없어 마무리 녹음으로 판정한다.
- * - 크기는 진단 때 같은 단계의 녹음과 비교한다. 허밍은 원래 문장보다 작아서, 늘 4단계 기준과 비교하면 안 된다.
+ * - 크기는 진단 때 허밍과 비교한다(loudnessFloor). 진단에서 작은 목소리를 거른 기준과 같다.
  * - 발음은 도전 녹음을 직접 듣고 고른 답(selfOk)이다.
  */
 export function judgeStep(args: {
@@ -378,10 +386,7 @@ export function judgeStep(args: {
   const m = challenge ?? final
   const on = challenge ? 'challenge' : 'final'
   if (!m) return { met: null, on, measure: null }
-  if (metric === 'loudness') {
-    const sameStep = diagnosis?.find((d) => d.level === Math.min(rung, 4)) ?? null
-    return { met: meetsCriterion('loudness', m, sameStep ?? baseline), on, measure: m }
-  }
+  if (metric === 'loudness') return { met: m.db_mean >= loudnessFloor(diagnosis, baseline), on, measure: m }
   return { met: meetsCriterion(metric, m), on, measure: m }
 }
 

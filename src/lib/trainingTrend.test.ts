@@ -49,7 +49,7 @@ describe('distanceToTarget', () => {
     expect(distanceToTarget('jitter', 1.4, null)).toBeCloseTo(0.4)
     expect(distanceToTarget('pace', 6.0, null)).toBeCloseTo(0.5)
     expect(distanceToTarget('pace', 2.0, null)).toBeCloseTo(0.5)
-    expect(distanceToTarget('loudness', -25, m({ db_mean: -20 }))).toBeCloseTo(3)
+    expect(distanceToTarget('loudness', -25, -22)).toBeCloseTo(3)
   })
 })
 
