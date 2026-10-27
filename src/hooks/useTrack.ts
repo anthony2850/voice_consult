@@ -5,6 +5,7 @@ import { getSupabase } from '@/lib/supabase'
 import type { ConcernSlug, RungLevel, Scene } from '@/lib/curriculum'
 import { planTrackSwitch, type Measure, type SwitchPlan, type VoiceUse } from '@/lib/trainingCycle'
 import { isPlan, readLocalPlan, writeLocalPlan, type Plan } from '@/lib/plan'
+import { toDateStr } from '@/lib/streak'
 
 export interface TrackProfile {
   scene: Scene | null
@@ -165,8 +166,9 @@ export function useTrack() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return false
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // 날짜는 폰의 날짜로 넣는다. DB 기본값(current_date)은 UTC라 한국 시간 오전 9시 전 연습이 전날로 저장됐다.
     const { data, error } = await (supabase as any)
-      .from('training_sessions').insert({ user_id: user.id, ...row }).select().single()
+      .from('training_sessions').insert({ user_id: user.id, session_date: toDateStr(new Date()), ...row }).select().single()
     if (error) {
       console.error('[useTrack] session save failed:', error)
       return false
