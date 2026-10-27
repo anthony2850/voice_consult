@@ -22,8 +22,8 @@ import { OptionCard, Pill, PrimaryButton } from '@/components/ds'
 const MAX_SECONDS = 40
 /** 자유 발화 길이. 이 시간이 되면 자동으로 "아~" 단계로 넘어간다. */
 const TALK_SECONDS = 30
-/** 말한 부분이 이보다 짧으면 억양과 말 속도를 믿을 수 없다 */
-const MIN_SPEECH_SECONDS = 15
+/** 말한 부분이 이보다 짧으면 억양과 말 속도를 믿기 어렵다. 짧을수록 결과가 녹음마다 더 흔들린다. */
+const MIN_SPEECH_SECONDS = 7
 /** "다 말했어요" 뒤 "아~" 녹음 길이 */
 const VOWEL_MS = 3500
 
