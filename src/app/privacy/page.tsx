@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { LEGAL } from '@/lib/legal'
+import { LEGAL, PRIVACY_REVISIONS } from '@/lib/legal'
 import { LegalPage, Section, Bullets, Table } from '@/components/legal/LegalPage'
 
 export const metadata: Metadata = { title: `개인정보처리방침 — ${LEGAL.serviceName}` }
@@ -133,7 +133,8 @@ export default function PrivacyPage() {
       <Section title="6. 이용자의 권리">
         <p>
           이용자는 언제든 자기 개인정보를 열람하거나 고치거나 지우도록 요청할 수 있고, 처리를 멈추라고 요청할 수 있습니다.
-          아래 이메일로 요청하시면 본인 확인 후 10일 안에 처리합니다. 탈퇴도 같은 방법으로 요청하실 수 있습니다.
+          아래 이메일로 요청하시면 본인 확인 후 열람, 정정, 처리정지는 10일 안에, 삭제와 탈퇴는 5일 안에 처리합니다.
+          탈퇴도 같은 방법으로 요청하실 수 있습니다.
         </p>
       </Section>
 
@@ -170,6 +171,17 @@ export default function PrivacyPage() {
         <p>
           이 방침을 바꾸면 시행 7일 전에 서비스 화면으로 알립니다. 이용자에게 불리한 변경은 30일 전에 알립니다.
         </p>
+      </Section>
+
+      <Section title="11. 개정 이력">
+        <div id="changes" className="space-y-3 scroll-mt-4">
+          {PRIVACY_REVISIONS.map((r) => (
+            <div key={r.isoDate} className="space-y-1">
+              <p className="font-semibold text-foreground">{r.date}</p>
+              <Bullets items={r.changes} />
+            </div>
+          ))}
+        </div>
       </Section>
     </LegalPage>
   )

@@ -3,13 +3,14 @@ import { Activity, AudioWaveform, Gauge, Volume2 } from 'lucide-react'
 import StartRecordButton, { StartRecordMic } from '@/components/StartRecordButton'
 import HomeHero from '@/components/HomeHero'
 import { LegalLinks } from '@/components/legal/LegalPage'
+import PolicyNotice from '@/components/legal/PolicyNotice'
 
 // What the analysis actually measures — keep in sync with lib/voiceScores.ts.
 const METRICS = [
   { icon: AudioWaveform, name: '목소리 떨림', how: '"아~" 3초로 재요' },
   { icon: Gauge, name: '말 속도', how: '1초에 말한 글자 수' },
   { icon: Activity, name: '억양 변화', how: '높낮이가 출렁이는 정도' },
-  { icon: Volume2, name: '목소리 크기', how: '평균 소리 세기' },
+  { icon: Volume2, name: '세기 변화', how: '소리 크기가 출렁이는 정도' },
 ]
 
 export default function HomePage() {
@@ -19,6 +20,7 @@ export default function HomePage() {
       <header className="flex items-center justify-between px-5 pt-5 pb-2">
         <Image src="/logo.png" alt="MyTone" width={96} height={32} className="object-contain" />
       </header>
+      <PolicyNotice />
 
       {/* ── Hero ───────────────────────────────────── */}
       <section className="flex-1 flex flex-col items-center justify-center px-5 pt-6 pb-8 text-center">
