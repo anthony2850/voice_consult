@@ -107,6 +107,7 @@ function write(key: string, v: unknown) {
 
 export const readLocalPlan = () => read(PLAN_KEY, isPlan)
 export const writeLocalPlan = (p: Plan) => write(PLAN_KEY, p)
+export const clearLocalPlan = () => write(PLAN_KEY, null)
 
 const isPending = (v: unknown): v is PendingOnboarding => isPlan(v)
 export const readPendingOnboarding = () => read(PENDING_KEY, isPending)

@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import Script from 'next/script'
 import './globals.css'
 import BottomNav from '@/components/BottomNav'
+import ClearStoredRecordings from '@/components/ClearStoredRecordings'
 
 const GA_ID = process.env.NEXT_PUBLIC_GA_TRACKING_ID
 const PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID
@@ -52,7 +53,9 @@ export default function RootLayout({
               window.dataLayer = window.dataLayer || [];
               function gtag(){dataLayer.push(arguments);}
               gtag('js', new Date());
-              gtag('config', '${GA_ID}');
+              // 예전 공유 링크(/result?d=…&s=…)는 감정 점수를 주소에 싣는다. 주소째 보내지 않게 뺀다.
+              var loc = new URL(location.href); loc.searchParams.delete('d'); loc.searchParams.delete('s');
+              gtag('config', '${GA_ID}', { page_location: loc.toString() });
             `}</Script>
           </>
         )}
@@ -79,6 +82,7 @@ export default function RootLayout({
           </main>
           <BottomNav />
         </div>
+        <ClearStoredRecordings />
       </body>
     </html>
   )

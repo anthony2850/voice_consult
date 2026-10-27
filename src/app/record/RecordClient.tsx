@@ -8,7 +8,7 @@ import {
 } from 'lucide-react'
 import { useAudioRecorder } from '@/hooks/useAudioRecorder'
 import { useWaveform } from '@/hooks/useWaveform'
-import { saveVoiceRecord } from '@/lib/voiceDB'
+import { saveNewAnalysis } from '@/lib/guest-migration'
 import { extractAudioFeaturesWithPraat } from '@/lib/extractAudioFeatures'
 import { splitRecordingToWav } from '@/lib/audioToWav'
 import { trackEvent } from '@/lib/analytics'
@@ -137,17 +137,8 @@ export default function RecordClient() {
       }))
       sessionStorage.setItem('audioFeatures', JSON.stringify(audioFeatures))
 
-      // IndexedDB에 오디오 + 분석 결과 저장 (비동기, 실패해도 결과 페이지 이동은 계속)
-      const rawEmotions = emotionData.emotions
-      const top5 = Object.entries(rawEmotions)
-        .map(([name, score]) => ({ name, score }))
-        .sort((a, b) => b.score - a.score)
-        .slice(0, 5)
-
-      saveVoiceRecord(audioBlob, {
-        emotions: top5,
-        audioFeatures: audioFeatures,
-      }).catch((e) => console.warn('[voiceDB] 저장 실패:', e))
+      // 녹음은 어디에도 남기지 않는다. 로그인했으면 수치만 계정에 저장한다.
+      void saveNewAnalysis(emotionData.emotions, audioFeatures)
 
       setAnalyzeProgress(100)
       setTimeout(() => router.push('/result'), 400)

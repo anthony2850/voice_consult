@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { User, LogOut, ChevronRight, Dumbbell, Archive } from 'lucide-react'
 import { getSupabase } from '@/lib/supabase'
+import { clearDeviceUserData } from '@/lib/guest-migration'
 import { LegalLinks } from '@/components/legal/LegalPage'
 import { PageHeader, Pill } from '@/components/ds'
 import type { User as SupabaseUser } from '@supabase/supabase-js'
@@ -21,6 +22,7 @@ export default function MyPageClient() {
 
   async function handleSignOut() {
     await getSupabase().auth.signOut()
+    clearDeviceUserData()
     router.replace('/')
   }
 

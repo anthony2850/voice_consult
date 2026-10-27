@@ -6,7 +6,7 @@ import { Share2, ChevronRight, Mic } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { trackEvent } from '@/lib/analytics'
 import { getPersona, sceneInk, sceneTint } from '@/lib/personas'
-import { acousticZ, decodeScene, encodeScene, pickScene, whySentence, type SceneResult } from '@/lib/voiceScene'
+import { acousticZ, decodeScene, parseSceneResult, pickScene, whySentence, type SceneResult } from '@/lib/voiceScene'
 import { calcVoiceScores, suggestConcerns } from '@/lib/voiceScores'
 import { TRACKS } from '@/lib/curriculum'
 import { validateEmotionMap } from '@/lib/voiceAnalysis'
@@ -14,16 +14,7 @@ import type { AudioFeatures } from '@/lib/voiceDB'
 import VoiceMap from '@/components/scene/VoiceMap'
 import { getSpeakCategory, readStoredPrompt } from '@/lib/speakPrompts'
 
-// ── Share link encoding (fallback when /api/share fails) ──
-function encodeEmotions(emotions: Record<string, number>): string {
-  const compact = Object.fromEntries(
-    Object.entries(emotions).map(([k, v]) => [k, Math.round(v * 1000) / 1000])
-  )
-  // URL-safe base64: +→-, /→_, 패딩 = 제거
-  return btoa(encodeURIComponent(JSON.stringify(compact)))
-    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '')
-}
-
+// ── 예전 공유 링크(/result?d=…) 읽기. 새 링크는 /r/[id]에서 결과를 직접 넘긴다. ──
 function decodeEmotions(encoded: string): Record<string, number> | null {
   try {
     const base64 = encoded.replace(/-/g, '+').replace(/_/g, '/')
@@ -50,7 +41,19 @@ interface Loaded {
   categoryLabel: string | null
 }
 
-function load(params: URLSearchParams): Loaded | null {
+/** 공유 링크(/r/[id])가 넘겨주는 보낸 사람의 결과 */
+interface SharedResult {
+  emotions: unknown
+  scene: unknown
+}
+
+function load(params: URLSearchParams, shared?: SharedResult): Loaded | null {
+  if (shared) {
+    const raw = validateEmotionMap(shared.emotions)
+    if (!raw) return null
+    const scene = parseSceneResult(shared.scene) ?? pickScene(raw, null)
+    return { raw, scene, features: null, isShared: true, meta: { source: '공유된 AI 분석' }, categoryLabel: null }
+  }
   const sharedData = params.get('d')
   if (sharedData) {
     const raw = validateEmotionMap(decodeEmotions(sharedData))
@@ -80,7 +83,7 @@ function load(params: URLSearchParams): Loaded | null {
 }
 
 // ── Main Component ────────────────────────────────────────
-export default function ResultClient() {
+export default function ResultClient({ shared }: { shared?: SharedResult } = {}) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [loaded, setLoaded] = useState<Loaded | null | undefined>(undefined)
@@ -89,7 +92,7 @@ export default function ResultClient() {
 
   useEffect(() => {
     // sessionStorage is client-only, so it has to be read after hydration.
-    const l = load(searchParams)
+    const l = load(searchParams, shared)
     setLoaded(l)
     if (!l) return
     trackEvent('analysis_completed')
@@ -99,7 +102,7 @@ export default function ResultClient() {
     }
     const t = setTimeout(() => setRevealed(true), 100)
     return () => clearTimeout(t)
-  }, [searchParams])
+  }, [searchParams, shared])
 
   const coach = useMemo(() => {
     if (!loaded?.features) return null
@@ -137,8 +140,8 @@ export default function ResultClient() {
 
   const handleShare = async () => {
     trackEvent('share_clicked', { content_type: 'result', persona_id: persona.id })
+    // 결과를 주소에 싣지 않는다. 짧은 링크를 못 만들면 다시 누르게 한다.
     let shareUrl: string
-    let urlSource: 'short' | 'encoded' = 'short'
     try {
       const res = await fetch('/api/share', {
         method: 'POST',
@@ -146,11 +149,12 @@ export default function ResultClient() {
         body: JSON.stringify({ emotions: raw, scene }),
       })
       const json = await res.json()
-      if (res.ok && json.id) shareUrl = `${window.location.origin}/r/${json.id}`
-      else throw new Error(json.error ?? 'no id')
+      if (!res.ok || !json.id) throw new Error(json.error ?? 'no id')
+      shareUrl = `${window.location.origin}/r/${json.id}`
     } catch {
-      shareUrl = `${window.location.origin}/result?d=${encodeEmotions(raw)}&s=${encodeScene(scene)}`
-      urlSource = 'encoded'
+      trackEvent('share_failed', { content_type: 'result' })
+      alert('공유 링크를 만들지 못했어요. 잠시 후 다시 눌러 주세요.')
+      return
     }
     try {
       await navigator.share({
@@ -158,10 +162,10 @@ export default function ResultClient() {
         text: `${persona.tagline}. 너는 어떤 페르소나일까?`,
         url: shareUrl,
       })
-      trackEvent('share', { method: 'web_share', content_type: 'result', persona_id: persona.id, url_source: urlSource })
+      trackEvent('share', { method: 'web_share', content_type: 'result', persona_id: persona.id })
     } catch {
       await navigator.clipboard.writeText(shareUrl).catch(() => {})
-      trackEvent('share', { method: 'clipboard', content_type: 'result', persona_id: persona.id, url_source: urlSource })
+      trackEvent('share', { method: 'clipboard', content_type: 'result', persona_id: persona.id })
       alert('링크가 복사됐어요!')
     }
   }

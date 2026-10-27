@@ -2,7 +2,7 @@
  * Canonical Korean labels for the 49-emotion taxonomy.
  *
  * Single source of truth — previously duplicated (with drift) across
- * ResultClient, PersonasClient, and VoiceCompare. Centralizing here
+ * ResultClient and PersonasClient. Centralizing here
  * prevents future "some emotions show as English" bugs when personas
  * or other consumers reference a new emotion.
  */

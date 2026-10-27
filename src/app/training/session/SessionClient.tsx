@@ -137,8 +137,9 @@ export default function SessionClient() {
       if (ok && next !== current) await setTrackRung(next)
       if (ok && next > current) setRungDone({ from: current, to: next })
       // 힘든 정도와 통증은 건강 관련 자가 응답이라 분석 도구(GA, Meta)로 보내지 않는다. DB에만 저장.
+      // 다음 단계도 보내지 않는다. 단계가 내려가면 통증이나 힘든 정도 5라는 뜻이라 답이 드러난다.
       trackEvent('training_session_completed', {
-        concern: track!.concern, rung: current, next_rung: next, met: met ?? 'na', verdict,
+        concern: track!.concern, rung: current, met: met ?? 'na', verdict,
       })
       setStep('saved')
     } finally {
