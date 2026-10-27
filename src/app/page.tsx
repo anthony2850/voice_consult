@@ -3,7 +3,6 @@ import { Activity, AudioWaveform, Gauge, Volume2 } from 'lucide-react'
 import StartRecordButton, { StartRecordMic } from '@/components/StartRecordButton'
 import HomeHero from '@/components/HomeHero'
 import { LegalLinks } from '@/components/legal/LegalPage'
-import PolicyNotice from '@/components/legal/PolicyNotice'
 
 // What the analysis actually measures — keep in sync with lib/voiceScores.ts.
 const METRICS = [
@@ -20,7 +19,6 @@ export default function HomePage() {
       <header className="flex items-center justify-between px-5 pt-5 pb-2">
         <Image src="/logo.png" alt="MyTone" width={96} height={32} className="object-contain" />
       </header>
-      <PolicyNotice />
 
       {/* ── Hero ───────────────────────────────────── */}
       <section className="flex-1 flex flex-col items-center justify-center px-5 pt-6 pb-8 text-center">

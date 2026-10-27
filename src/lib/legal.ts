@@ -15,10 +15,7 @@ export const LEGAL = {
   effectiveDate: '2026년 10월 27일',
 }
 
-/** 방침을 바꾸면 홈 화면에 이 기간(일) 동안 알린다 (방침 10절) */
-export const NOTICE_DAYS = 7
-
-/** 개인정보처리방침 개정 이력. 최근 것이 먼저. 홈 화면 안내는 첫 항목을 NOTICE_DAYS 동안 띄운다. */
+/** 개인정보처리방침 개정 이력. 최근 것이 먼저. 방침 11절에 그대로 보인다. */
 export const PRIVACY_REVISIONS: { date: string; isoDate: string; changes: string[] }[] = [
   {
     date: '2026년 10월 27일',
